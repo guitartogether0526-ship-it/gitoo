@@ -20,6 +20,8 @@ export default function FinanceManager({
 }) {
   const { user } = useAuth();
   const canEdit = can.editFinance(user?.role);
+  // 회비 납부 현황은 운영진(관리자·회장·총무·STAFF)만 열람
+  const canViewDues = can.manageMembers(user?.role);
 
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [dues, setDues] = useState<DuesPayment[]>(initialDues);
@@ -110,38 +112,42 @@ export default function FinanceManager({
         </p>
       )}
 
-      {/* 회비 납부 현황 */}
-      <div className="section-title">💳 6월 회비 납부 현황 ({paid}/{dues.length})</div>
-      <div className="card">
-        {dues.map((d, i) => (
-          <div
-            key={d.member_name}
-            className="flex between items-center"
-            style={{
-              padding: "10px 0",
-              borderBottom: i < dues.length - 1 ? "1px solid var(--border)" : "none",
-            }}
-          >
-            <span>
-              {d.member_name} <span className="dim" style={{ fontSize: 12 }}>{d.cohort}기</span>
-            </span>
-            {canEdit ? (
-              <button
-                className={`badge ${d.paid ? "ok" : "danger"}`}
-                style={{ cursor: "pointer" }}
-                onClick={() => togglePaid(d)}
-                title="납부 상태 변경"
+      {/* 회비 납부 현황 — 운영진(STAFF 이상)만 열람 */}
+      {canViewDues && (
+        <>
+          <div className="section-title">💳 6월 회비 납부 현황 ({paid}/{dues.length})</div>
+          <div className="card">
+            {dues.map((d, i) => (
+              <div
+                key={d.member_name}
+                className="flex between items-center"
+                style={{
+                  padding: "10px 0",
+                  borderBottom: i < dues.length - 1 ? "1px solid var(--border)" : "none",
+                }}
               >
-                {d.paid ? "납부 완료" : "미납"}
-              </button>
-            ) : (
-              <span className={`badge ${d.paid ? "ok" : "danger"}`}>
-                {d.paid ? "납부 완료" : "미납"}
-              </span>
-            )}
+                <span>
+                  {d.member_name} <span className="dim" style={{ fontSize: 12 }}>{d.cohort}기</span>
+                </span>
+                {canEdit ? (
+                  <button
+                    className={`badge ${d.paid ? "ok" : "danger"}`}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => togglePaid(d)}
+                    title="납부 상태 변경"
+                  >
+                    {d.paid ? "납부 완료" : "미납"}
+                  </button>
+                ) : (
+                  <span className={`badge ${d.paid ? "ok" : "danger"}`}>
+                    {d.paid ? "납부 완료" : "미납"}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
       {/* 지출 내역 */}
       <div className="section-title">🧾 지출 / 수입 내역</div>
