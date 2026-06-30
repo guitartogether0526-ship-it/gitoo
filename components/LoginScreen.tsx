@@ -66,7 +66,7 @@ function LoginForm({
             className="input"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="아이디 (admin 또는 가입한 아이디)"
+            placeholder="아이디 입력"
             autoCapitalize="none"
             autoComplete="username"
           />
