@@ -81,7 +81,10 @@ body {
   margin: 0 auto;
   min-height: 100dvh;
   position: relative;
-  background: linear-gradient(180deg, var(--bg-2), var(--bg) 240px);
+  background:
+    radial-gradient(90% 280px at 50% -40px, rgba(245, 185, 66, 0.22), transparent 70%),
+    radial-gradient(60% 200px at 50% -20px, rgba(245, 185, 66, 0.14), transparent 75%),
+    linear-gradient(180deg, var(--bg-2), var(--bg) 280px);
   border-left: 1px solid var(--border);
   border-right: 1px solid var(--border);
 }
@@ -160,9 +163,9 @@ body {
   margin: var(--space-2) 2px var(--space-5);
 }
 .page-head h1 {
-  font-size: 23px;
+  font-size: 26px;
   font-weight: 700;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.5px;
   line-height: 1.25;
   margin: 0;
 }
@@ -808,9 +811,17 @@ body {
 .nav-item svg {
   width: 22px;
   height: 22px;
+  padding: 6px;
+  border-radius: 12px;
+  box-sizing: content-box;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 .nav-item.active {
   color: var(--accent);
+}
+.nav-item.active svg {
+  color: var(--on-accent);
+  background: var(--accent-grad);
 }
 
 /* ---------- Modal ---------- */
@@ -909,11 +920,10 @@ body {
   margin-top: 12px;
 }
 .section-title {
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 700;
-  letter-spacing: 0.6px;
-  color: var(--text-dim);
-  text-transform: uppercase;
+  letter-spacing: -0.3px;
+  color: var(--text);
   margin: var(--space-5) 2px var(--space-3);
 }
 
@@ -936,14 +946,14 @@ body {
   margin: 0;
 }
 .section-link {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-dim);
+  color: var(--accent);
   text-decoration: none;
   white-space: nowrap;
 }
 .section-link:active {
-  color: var(--accent);
+  opacity: 0.7;
 }
 .stat-grid {
   display: grid;
@@ -967,15 +977,42 @@ body {
 .stat:active {
   transform: scale(0.98);
 }
+.stat .stat-icon {
+  width: 28px;
+  height: 28px;
+  color: var(--text);
+}
 .stat .s-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text);
 }
 .stat .s-value {
   font-size: 18px;
   font-weight: 800;
   margin-top: 4px;
+}
+
+/* 풀폭 외곽선(앰버) 링크 버튼 — 홈 선정곡 유튜브 */
+.yt-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: var(--space-3);
+  padding: 11px;
+  border: 1px solid var(--accent-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+.yt-link:active {
+  background: var(--accent-soft);
 }
 .title-row {
   display: flex;
@@ -984,7 +1021,7 @@ body {
   gap: 10px;
 }
 .item-name {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.2px;
   line-height: 1.35;

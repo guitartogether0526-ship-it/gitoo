@@ -54,12 +54,12 @@ export default async function DashboardPage() {
   return (
     <>
       <div className="page-head">
-        <h1>안녕하세요, {session?.name ?? "기타리스트"}님 🎸</h1>
+        <h1>안녕하세요, {session?.name ?? "기타리스트"}님</h1>
         <p>오늘의 동호회 소식을 확인하세요.</p>
       </div>
 
       <div className="section-head">
-        <div className="section-title">📢 공지사항</div>
+        <div className="section-title">공지사항</div>
         <Link href="/board" className="section-link">
           전체보기 ›
         </Link>
@@ -76,7 +76,7 @@ export default async function DashboardPage() {
           <div className="card" key={n.id}>
             <div className="title-row">
               <div className="item-name">{n.title}</div>
-              <span className="badge amber">📌 고정</span>
+              <span className="badge amber">고정</span>
             </div>
             <p className="item-sub" style={{ marginTop: 8, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
               {n.body}
@@ -91,7 +91,7 @@ export default async function DashboardPage() {
       {/* 내 합주일정 (본인 팀) */}
       <div className="section-head">
         <div className="section-title">
-          🥁 {myTeam ? `${myTeam.name} 합주일정` : "내 합주일정"}
+          {myTeam ? `${myTeam.name} 합주일정` : "내 합주일정"}
         </div>
         <Link href="/reservation" className="section-link">
           전체보기 ›
@@ -118,7 +118,7 @@ export default async function DashboardPage() {
                 <span className="item-name">{formatResDate(r.date)}</span>
                 <div className="item-sub">{r.time_label} · {r.purpose}</div>
               </div>
-              <span className="badge amber">🥁 합주</span>
+              <span className="badge amber">합주</span>
             </div>
           </div>
         ))
@@ -127,7 +127,7 @@ export default async function DashboardPage() {
       {/* 우리 팀 선정곡 */}
       <div className="section-head">
         <div className="section-title">
-          🎵 {myTeam ? `${myTeam.name} 선정곡` : "우리 팀 선정곡"}
+          {myTeam ? `${myTeam.name} 선정곡` : "우리 팀 선정곡"}
         </div>
         <Link href="/setlist" className="section-link">
           전체보기 ›
@@ -157,11 +157,9 @@ export default async function DashboardPage() {
               <span className="badge amber">★ 선정곡</span>
             </div>
             {s.youtube_url && (
-              <div className="sheet-links">
-                <a className="sheet-link" href={s.youtube_url} target="_blank" rel="noopener noreferrer">
-                  ▶ 유튜브로 보기
-                </a>
-              </div>
+              <a className="yt-link" href={s.youtube_url} target="_blank" rel="noopener noreferrer">
+                ▶ 유튜브로 보기
+              </a>
             )}
           </div>
         ))
@@ -171,11 +169,18 @@ export default async function DashboardPage() {
       <div className="section-title">바로가기</div>
       <div className="stat-grid">
         <Link href="/reservation" className="stat">
-          <div className="s-value" style={{ fontSize: 26 }}>📅</div>
+          <svg className="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4.5" width="18" height="16" rx="2" />
+            <path d="M3 9h18M8 2.5v4M16 2.5v4" />
+          </svg>
           <div className="s-label">연습실 예약</div>
         </Link>
         <Link href="/setlist" className="stat">
-          <div className="s-value" style={{ fontSize: 26 }}>🎼</div>
+          <svg className="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 18V5l11-2v13" />
+            <circle cx="6" cy="18" r="3" />
+            <circle cx="17" cy="16" r="3" />
+          </svg>
           <div className="s-label">합주곡 투표</div>
         </Link>
       </div>
