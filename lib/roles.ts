@@ -13,22 +13,24 @@ import type { MemberRole } from "./types";
  */
 
 export const ROLE_LABEL: Record<MemberRole, string> = {
+  admin: "관리자",
   president: "회장",
   treasurer: "총무",
   staff: "STAFF",
   member: "회원",
 };
 
-// 권한 변경 드롭다운/표시 순서
+// 회원 권한 변경 드롭다운 순서 (admin 은 특수 계정이라 제외)
 export const ROLE_ORDER: MemberRole[] = ["president", "treasurer", "staff", "member"];
 
 const isStaffOrAbove = (r?: MemberRole | null) =>
-  r === "president" || r === "treasurer" || r === "staff";
+  r === "admin" || r === "president" || r === "treasurer" || r === "staff";
 
-/** 각 행동에 대한 허용 여부 */
+/** 각 행동에 대한 허용 여부 (admin 은 모든 권한) */
 export const can = {
-  /** 회비·장부 편집 (납부 토글, 지출 추가) — 회장·총무만 */
-  editFinance: (r?: MemberRole | null) => r === "president" || r === "treasurer",
+  /** 회비·장부 편집 (납부 토글, 지출 추가) — 관리자·회장·총무 */
+  editFinance: (r?: MemberRole | null) =>
+    r === "admin" || r === "president" || r === "treasurer",
   /** 회원 관리 (권한 변경 등) — STAFF 이상 */
   manageMembers: (r?: MemberRole | null) => isStaffOrAbove(r),
   /** 합주실 예약 관리 (타인 예약 취소 등) — STAFF 이상 */

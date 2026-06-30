@@ -56,8 +56,8 @@ export interface Song {
   status: "candidate" | "confirmed"; // 후보 / 선정(확정)
 }
 
-/** 권한 등급 (높은 → 낮은): 회장 · 총무 · STAFF · 회원 */
-export type MemberRole = "president" | "treasurer" | "staff" | "member";
+/** 권한 등급 (높은 → 낮은): 관리자(admin) · 회장 · 총무 · STAFF · 회원 */
+export type MemberRole = "admin" | "president" | "treasurer" | "staff" | "member";
 export type MemberStatus = "active" | "rest";
 
 export interface Member {

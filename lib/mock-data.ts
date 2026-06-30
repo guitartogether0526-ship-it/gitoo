@@ -134,13 +134,8 @@ export const SONGS: Song[] = [
   },
 ];
 
-export const MEMBERS: Member[] = [
-  { id: "m1", name: "김지윤", cohort: 12, part: "보컬", status: "active", role: "president", initial: "지" },
-  { id: "m2", name: "박서준", cohort: 12, part: "기타", status: "active", role: "treasurer", initial: "서" },
-  { id: "m3", name: "이도윤", cohort: 14, part: "베이스", status: "active", role: "staff", initial: "도" },
-  { id: "m4", name: "정민서", cohort: 15, part: "드럼", status: "rest", role: "member", initial: "민" },
-  { id: "m5", name: "최하은", cohort: 14, part: "키보드", status: "active", role: "member", initial: "하" },
-];
+// 시드 계정 없음 — 로그인은 관리자(admin) 계정으로 진행 (lib/admin.ts)
+export const MEMBERS: Member[] = [];
 
 export const DUES: DuesPayment[] = [
   { member_name: "김지윤", cohort: 12, paid: true, month: "2026-06" },

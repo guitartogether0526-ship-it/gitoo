@@ -53,7 +53,7 @@ create table if not exists members (
   cohort integer not null,
   part text not null,
   status text not null default 'active',        -- active | rest
-  role text not null default 'member',          -- president | treasurer | staff | member
+  role text not null default 'member',          -- admin | president | treasurer | staff | member
   initial text not null
 );
 
@@ -142,13 +142,8 @@ insert into songs (id, team_id, title, artist, parts, sheets, likes, voted, stat
     9,false,'candidate')
 on conflict (id) do nothing;
 
-insert into members (id, name, cohort, part, status, role, initial) values
-  ('m1','김지윤',12,'보컬','active','president','지'),
-  ('m2','박서준',12,'기타','active','treasurer','서'),
-  ('m3','이도윤',14,'베이스','active','staff','도'),
-  ('m4','정민서',15,'드럼','rest','member','민'),
-  ('m5','최하은',14,'키보드','active','member','하')
-on conflict (id) do nothing;
+-- 시드 회원 계정 없음 (관리자 admin 계정으로 로그인 — 앱 코드 lib/admin.ts).
+-- 운영진이 회원을 추가하면 이 테이블에 채워집니다.
 
 insert into dues (member_name, cohort, paid, month) values
   ('김지윤',12,true,'2026-06'),

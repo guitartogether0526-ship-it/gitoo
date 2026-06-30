@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { can, ROLE_LABEL, ROLE_ORDER } from "@/lib/roles";
 
 const ROLE_BADGE: Record<MemberRole, string> = {
+  admin: "amber",
   president: "amber",
   treasurer: "amber",
   staff: "ok",
