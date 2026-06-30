@@ -59,7 +59,7 @@ const ITEMS: Item[] = [
   { href: "/", label: "홈", icon: I.home },
   { href: "/reservation", label: "예약", icon: I.calendar },
   { href: "/board", label: "게시판", icon: I.board },
-  { href: "/setlist", label: "셋리스트", icon: I.music },
+  { href: "/setlist", label: "합주곡", icon: I.music },
   { href: "/members", label: "회원", icon: I.users, opOnly: true },
   { href: "/finance", label: "회비", icon: I.wallet },
   { href: "/mypage", label: "마이페이지", icon: I.profile },

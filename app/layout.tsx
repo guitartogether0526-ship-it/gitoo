@@ -9,7 +9,7 @@ import { getSession } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "GUITAR TOGETHER",
-  description: "기타 밴드 동호회 전용 PWA — 공지 · 예약 · 장비 · 셋리스트 · 회원 · 회비",
+  description: "기타 밴드 동호회 전용 PWA — 공지 · 예약 · 합주곡 · 회원 · 회비",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

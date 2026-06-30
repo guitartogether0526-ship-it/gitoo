@@ -143,7 +143,7 @@ export default async function DashboardPage() {
       ) : myTeamSongs.length === 0 ? (
         <div className="card">
           <p className="dim" style={{ margin: 0, fontSize: 13 }}>
-            아직 선정된 곡이 없습니다. 셋리스트에서 곡을 선정해 보세요.
+            아직 선정된 곡이 없습니다. 합주곡에서 곡을 선정해 보세요.
           </p>
         </div>
       ) : (
@@ -156,7 +156,13 @@ export default async function DashboardPage() {
               </div>
               <span className="badge amber">★ 선정곡</span>
             </div>
-            <div className="meta-line">담당 파트: {s.parts.join(" · ") || "미정"}</div>
+            {s.youtube_url && (
+              <div className="sheet-links">
+                <a className="sheet-link" href={s.youtube_url} target="_blank" rel="noopener noreferrer">
+                  ▶ 유튜브로 보기
+                </a>
+              </div>
+            )}
           </div>
         ))
       )}
@@ -170,7 +176,7 @@ export default async function DashboardPage() {
         </Link>
         <Link href="/setlist" className="stat" style={{ textDecoration: "none", color: "inherit" }}>
           <div className="s-value" style={{ fontSize: 22 }}>🎼</div>
-          <div className="s-label" style={{ marginTop: 6 }}>셋리스트 투표</div>
+          <div className="s-label" style={{ marginTop: 6 }}>합주곡 투표</div>
         </Link>
       </div>
     </>

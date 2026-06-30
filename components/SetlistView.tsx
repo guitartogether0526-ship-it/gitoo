@@ -285,7 +285,7 @@ export default function SetlistView({
                   />
                 </div>
                 <button className="btn amber" onClick={addSong}>
-                  셋리스트에 올리기
+                  합주곡에 올리기
                 </button>
               </div>
             </div>
@@ -294,7 +294,7 @@ export default function SetlistView({
       )}
 
       <div className="section-title">
-        🎼 {activeTeamName} 셋리스트 ({teamSongs.length})
+        🎼 {activeTeamName} 합주곡 ({teamSongs.length})
         {!canManageActive && <span className="dim" style={{ fontSize: 12, fontWeight: 400 }}> · 선정곡만 표시</span>}
       </div>
 

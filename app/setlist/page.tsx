@@ -27,8 +27,8 @@ export default async function SetlistPage() {
   return (
     <>
       <div className="page-head">
-        <h1>합주곡 · 셋리스트</h1>
-        <p>팀별 셋리스트 · 곡 선정 · 유튜브 · 투표</p>
+        <h1>합주곡</h1>
+        <p>팀별 합주곡 · 곡 선정 · 유튜브 · 투표</p>
       </div>
       <SetlistView teams={teams} initial={songs} myTeamId={myTeamId} members={memberList} />
     </>
