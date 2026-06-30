@@ -21,6 +21,8 @@ export default function BoardView({
   const { user } = useAuth();
   const canManageBoards = can.manageBoards(user?.role);
   const canWriteNotice = can.writeNotice(user?.role);
+  // 운영진(회장·총무·STAFF, admin) — 게시글 삭제 권한
+  const isOperator = can.manageBoards(user?.role);
 
   const [boards, setBoards] = useState<Board[]>(initialBoards);
   const [posts, setPosts] = useState<Post[]>(initialPosts);
@@ -31,6 +33,38 @@ export default function BoardView({
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [pinned, setPinned] = useState(false);
+
+  // 수정 폼 (수정 중인 글 id)
+  const [editingId, setEditingId] = useState<string>("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [editPinned, setEditPinned] = useState(false);
+
+  const startEdit = (p: Post) => {
+    setEditingId(p.id);
+    setEditTitle(p.title);
+    setEditBody(p.body);
+    setEditPinned(p.pinned);
+  };
+  const cancelEdit = () => setEditingId("");
+
+  const saveEdit = async (p: Post) => {
+    if (!editTitle.trim() || !editBody.trim()) return;
+    const patch = { title: editTitle.trim(), body: editBody.trim(), pinned: editPinned };
+    const sb = getSupabase();
+    if (sb) await sb.from("posts").update(patch).eq("id", p.id);
+    setPosts((prev) => prev.map((x) => (x.id === p.id ? { ...x, ...patch } : x)));
+    setEditingId("");
+  };
+
+  const deletePost = async (p: Post) => {
+    if (!isOperator) return;
+    if (!window.confirm("이 게시글을 삭제할까요? 되돌릴 수 없습니다.")) return;
+    const sb = getSupabase();
+    if (sb) await sb.from("posts").delete().eq("id", p.id);
+    setPosts((prev) => prev.filter((x) => x.id !== p.id));
+    if (editingId === p.id) setEditingId("");
+  };
 
   const boardPosts = useMemo(
     () =>
@@ -179,24 +213,71 @@ export default function BoardView({
           </p>
         </div>
       ) : (
-        boardPosts.map((p) => (
-          <div className="card" key={p.id}>
-            <div className="title-row">
-              <div className="item-name">{p.title}</div>
-              {p.pinned && <span className="badge amber">📌 고정</span>}
+        boardPosts.map((p) => {
+          // 수정: 작성자 본인 또는 운영진 / 삭제: 운영진만
+          const canEditThis = isOperator || (!!user && user.name === p.author);
+          const isEditing = editingId === p.id;
+
+          if (isEditing) {
+            return (
+              <div className="card" key={p.id}>
+                <div className="form-grid">
+                  <div className="field">
+                    <label>제목</label>
+                    <input className="input" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="글 제목" />
+                  </div>
+                  <div className="field">
+                    <label>내용</label>
+                    <textarea
+                      className="input"
+                      value={editBody}
+                      onChange={(e) => setEditBody(e.target.value)}
+                      rows={4}
+                      style={{ resize: "vertical" }}
+                    />
+                  </div>
+                  <label className="flex items-center gap-8" style={{ fontSize: 13 }}>
+                    <input type="checkbox" checked={editPinned} onChange={(e) => setEditPinned(e.target.checked)} />
+                    상단 고정{current?.is_notice ? " (공지사항 고정글은 홈에 노출됩니다)" : ""}
+                  </label>
+                  <div className="btn-row">
+                    <button className="btn amber btn-sm" onClick={() => saveEdit(p)}>저장</button>
+                    <button className="btn ghost btn-sm" onClick={cancelEdit}>취소</button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="card" key={p.id}>
+              <div className="title-row">
+                <div className="item-name">{p.title}</div>
+                {p.pinned && <span className="badge amber">📌 고정</span>}
+              </div>
+              <p className="item-sub" style={{ marginTop: 8, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+                {p.body}
+              </p>
+              <div className="meta-line">
+                {p.author} · {formatDate(p.created_at)}
+              </div>
+              {(canEditThis || isOperator) && (
+                <div className="btn-row" style={{ marginTop: 8 }}>
+                  {canEditThis && (
+                    <button className="btn ghost btn-sm" onClick={() => startEdit(p)}>수정</button>
+                  )}
+                  {isOperator && (
+                    <button className="btn danger btn-sm" onClick={() => deletePost(p)}>삭제</button>
+                  )}
+                </div>
+              )}
             </div>
-            <p className="item-sub" style={{ marginTop: 8, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-              {p.body}
-            </p>
-            <div className="meta-line">
-              {p.author} · {formatDate(p.created_at)}
-            </div>
-          </div>
-        ))
+          );
+        })
       )}
 
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 8 }}>
-        ＋게시판 버튼으로 운영진이 새 게시판을 추가할 수 있어요. 공지사항 고정글은 홈에 표시됩니다.
+        수정은 작성자 본인 또는 운영진, 삭제는 운영진(STAFF 이상)만 가능합니다. 공지사항 고정글은 홈에 표시됩니다.
       </p>
     </>
   );
