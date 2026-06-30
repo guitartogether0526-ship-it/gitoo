@@ -152,7 +152,6 @@ export default function BoardView({
             className={`tab${activeBoard === b.id ? " active" : ""}`}
             onClick={() => setActiveBoard(b.id)}
           >
-            {b.is_notice ? "📢 " : ""}
             {b.name}
           </button>
         ))}
@@ -175,7 +174,7 @@ export default function BoardView({
       ) : (
         current?.is_notice && (
           <p className="dim" style={{ fontSize: 12, textAlign: "center", margin: "4px 0" }}>
-            🔒 공지사항 작성은 운영진(STAFF 이상)만 가능합니다.
+            공지사항 작성은 운영진(STAFF 이상)만 가능합니다.
           </p>
         )
       )}
@@ -210,7 +209,6 @@ export default function BoardView({
       )}
 
       <div className="section-title">
-        {current?.is_notice ? "📢 " : "📝 "}
         {current?.name} ({boardPosts.length})
       </div>
 
@@ -265,7 +263,7 @@ export default function BoardView({
             <div className="card" key={p.id}>
               <div className="title-row">
                 <div className="item-name">{p.title}</div>
-                {p.pinned && <span className="badge amber">📌 고정</span>}
+                {p.pinned && <span className="badge amber">고정</span>}
               </div>
               <p className="item-sub" style={{ marginTop: 8, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
                 {p.body}

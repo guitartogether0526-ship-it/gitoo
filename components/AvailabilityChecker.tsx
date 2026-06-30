@@ -90,7 +90,7 @@ export default function AvailabilityChecker({
 
   return (
     <>
-      <div className="section-title">🚫 안되는 일정 체크 (2주)</div>
+      <div className="section-title">안되는 일정 체크 (2주)</div>
       <div className="card">
         <div className="cal-head">
           <button className="cal-nav" onClick={() => setWeekStart((w) => addDays(w, -14))} aria-label="이전 2주">‹</button>
@@ -127,7 +127,7 @@ export default function AvailabilityChecker({
             : "로그인한 회원만 표시할 수 있습니다."}
         </p>
         <button className="btn amber" style={{ width: "100%", marginTop: 10 }} onClick={openList}>
-          📋 일정 보기 ({myTeamName ?? "내 팀"})
+          일정 보기 ({myTeamName ?? "내 팀"})
         </button>
       </div>
 
@@ -136,7 +136,7 @@ export default function AvailabilityChecker({
         <div className="modal-overlay" onClick={() => setShowList(false)}>
           <div className="card" style={{ margin: 0, width: "100%", maxWidth: 420, maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
             <div className="title-row">
-              <div className="section-title" style={{ margin: 0 }}>🚫 {myTeamName ?? "내 팀"} 안되는 일정</div>
+              <div className="section-title" style={{ margin: 0 }}>{myTeamName ?? "내 팀"} 안되는 일정</div>
               <button className="btn ghost btn-sm" onClick={() => setShowList(false)}>닫기</button>
             </div>
             {listBusy ? (

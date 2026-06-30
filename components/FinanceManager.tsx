@@ -108,14 +108,14 @@ export default function FinanceManager({
 
       {!canEdit && (
         <p className="dim" style={{ fontSize: 12, textAlign: "center", margin: "10px 0 0" }}>
-          🔒 읽기 전용 — 회비·장부 편집은 회장·총무만 가능합니다.
+          읽기 전용 — 회비·장부 편집은 회장·총무만 가능합니다.
         </p>
       )}
 
       {/* 회비 납부 현황 — 운영진(STAFF 이상)만 열람 */}
       {canViewDues && (
         <>
-          <div className="section-title">💳 6월 회비 납부 현황 ({paid}/{dues.length})</div>
+          <div className="section-title">6월 회비 납부 현황 ({paid}/{dues.length})</div>
           <div className="card">
             {dues.map((d, i) => (
               <div
@@ -150,7 +150,7 @@ export default function FinanceManager({
       )}
 
       {/* 지출 내역 */}
-      <div className="section-title">🧾 지출 / 수입 내역</div>
+      <div className="section-title">지출 / 수입 내역</div>
 
       {canEdit && (
         <>
@@ -212,7 +212,7 @@ export default function FinanceManager({
                   {e.amount.toLocaleString()}
                 </td>
                 <td style={{ textAlign: "center" }}>
-                  {e.has_receipt ? <span className="receipt" title="영수증 첨부됨">🧾</span> : <span className="dim">—</span>}
+                  {e.has_receipt ? <span className="receipt" title="영수증 첨부됨">✓</span> : <span className="dim">—</span>}
                 </td>
               </tr>
             ))}

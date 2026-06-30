@@ -82,7 +82,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
     return (
       <div className="card">
         <p className="dim" style={{ margin: 0, fontSize: 13 }}>
-          🔒 회원 목록은 운영진(관리자·회장·총무·STAFF)만 볼 수 있습니다.
+          회원 목록은 운영진(관리자·회장·총무·STAFF)만 볼 수 있습니다.
         </p>
       </div>
     );
@@ -93,7 +93,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
       {/* 가입 승인 대기 */}
       {pending.length > 0 && (
         <>
-          <div className="section-title">🕓 가입 승인 대기 ({pending.length})</div>
+          <div className="section-title">가입 승인 대기 ({pending.length})</div>
           {pending.map((m) => (
             <div className="card" key={m.id}>
               <div className="title-row">
@@ -119,7 +119,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
       )}
 
       {/* 회원 목록 */}
-      <div className="section-title">👥 회원 목록 ({approved.length})</div>
+      <div className="section-title">회원 목록 ({approved.length})</div>
       {approved.length === 0 ? (
         <div className="card">
           <p className="dim" style={{ margin: 0, fontSize: 13 }}>아직 승인된 회원이 없습니다.</p>

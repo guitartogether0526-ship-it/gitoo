@@ -177,7 +177,7 @@ export default function ReservationCalendar({
         </div>
       </div>
 
-      <div className="section-title">📅 {selectedLabel} 예약 현황</div>
+      <div className="section-title">{selectedLabel} 예약 현황</div>
       <div className="card">
         {selectedList.length === 0 ? (
           <p className="dim" style={{ fontSize: 13, margin: 0 }}>
@@ -208,7 +208,7 @@ export default function ReservationCalendar({
         )}
       </div>
 
-      <div className="section-title">➕ {selectedLabel} 예약 등록</div>
+      <div className="section-title">{selectedLabel} 예약 등록</div>
       <div className="card">
         <div className="form-grid">
           <div className="field">

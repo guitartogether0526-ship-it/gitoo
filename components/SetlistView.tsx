@@ -157,11 +157,11 @@ export default function SetlistView({
     const res = await setSongStatus(id, next);
     setStatusBusy("");
     if ("error" in res) {
-      setStatusMsg("❌ " + res.error);
+      setStatusMsg(res.error);
       return;
     }
     setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, status: next } : s)));
-    setStatusMsg(next === "confirmed" ? "✅ 선정곡으로 저장했습니다." : "후보로 되돌렸습니다.");
+    setStatusMsg(next === "confirmed" ? "선정곡으로 저장했습니다." : "후보로 되돌렸습니다.");
   };
 
   const addSong = async () => {
@@ -245,11 +245,11 @@ export default function SetlistView({
       {/* 팀 도구 버튼 */}
       <div className="flex items-center gap-8" style={{ marginTop: 8 }}>
         <button className="btn ghost btn-sm" onClick={() => setShowMembers(true)}>
-          👥 팀원 보기
+          팀원 보기
         </button>
         {canManageTeams && (
           <button className="btn ghost btn-sm" onClick={openTeamModal}>
-            ⚙ 팀 수정
+            팀 수정
           </button>
         )}
       </div>
@@ -294,7 +294,7 @@ export default function SetlistView({
       )}
 
       <div className="section-title">
-        🎼 {activeTeamName} 합주곡 ({teamSongs.length})
+        {activeTeamName} 합주곡 ({teamSongs.length})
         {!canManageActive && <span className="dim" style={{ fontSize: 12, fontWeight: 400 }}> · 선정곡만 표시</span>}
       </div>
 
@@ -357,11 +357,9 @@ export default function SetlistView({
               </div>
 
               {s.youtube_url && (
-                <div className="sheet-links">
-                  <a className="sheet-link" href={s.youtube_url} target="_blank" rel="noopener noreferrer">
-                    ▶ 유튜브로 보기
-                  </a>
-                </div>
+                <a className="yt-link" href={s.youtube_url} target="_blank" rel="noopener noreferrer">
+                  ▶ 유튜브로 보기
+                </a>
               )}
 
               {canManageActive && (
@@ -403,7 +401,7 @@ export default function SetlistView({
         <div className="modal-overlay" onClick={() => setShowMembers(false)}>
           <div className="card" style={{ margin: 0, width: "100%", maxWidth: 420, maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
             <div className="title-row">
-              <div className="section-title" style={{ margin: 0 }}>👥 {activeTeamName} 팀원 ({activeMembers.length})</div>
+              <div className="section-title" style={{ margin: 0 }}>{activeTeamName} 팀원 ({activeMembers.length})</div>
               <button className="btn ghost btn-sm" onClick={() => setShowMembers(false)}>닫기</button>
             </div>
             {activeMembers.length === 0 ? (
@@ -427,7 +425,7 @@ export default function SetlistView({
         <div className="modal-overlay" onClick={() => !teamBusy && setShowTeamModal(false)}>
           <div className="card" style={{ margin: 0, width: "100%", maxWidth: 440, maxHeight: "85vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
             <div className="title-row">
-              <div className="section-title" style={{ margin: 0 }}>⚙ 팀 수정</div>
+              <div className="section-title" style={{ margin: 0 }}>팀 수정</div>
               <button className="btn ghost btn-sm" onClick={() => setShowTeamModal(false)}>닫기</button>
             </div>
             <p className="dim" style={{ fontSize: 12, marginTop: 4 }}>이름을 수정하고 ▲▼로 순서를 바꾼 뒤 저장하세요.</p>

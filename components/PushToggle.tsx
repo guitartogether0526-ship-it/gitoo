@@ -84,7 +84,7 @@ export default function PushToggle() {
     <div className="card">
       <div className="title-row">
         <div className="grow">
-          <span className="m-name">🔔 공지 푸시 알림</span>
+          <span className="m-name">공지 푸시 알림</span>
           <div className="item-sub">새 공지사항이 올라오면 알림을 받습니다.</div>
         </div>
         {state === "on" && (
@@ -95,7 +95,7 @@ export default function PushToggle() {
         )}
         {state === "busy" && <button className="btn ghost btn-sm" disabled>처리 중…</button>}
       </div>
-      {state === "on" && <p className="dim" style={{ fontSize: 12, margin: "8px 0 0" }}>✅ 알림이 켜져 있습니다.</p>}
+      {state === "on" && <p className="dim" style={{ fontSize: 12, margin: "8px 0 0" }}>알림이 켜져 있습니다.</p>}
       {state === "denied" && (
         <p className="dim" style={{ fontSize: 12, margin: "8px 0 0" }}>
           브라우저에서 알림이 차단돼 있습니다. 사이트 설정에서 알림을 허용해 주세요.
