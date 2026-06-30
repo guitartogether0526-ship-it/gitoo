@@ -1,7 +1,7 @@
 import type {
-  Notice,
+  Board,
+  Post,
   Reservation,
-  Equipment,
   Team,
   Song,
   Member,
@@ -14,9 +14,16 @@ import type {
  * 실제 연동 시 이 파일은 제거되고 lib/db.ts 가 supabase client 를 호출한다.
  */
 
-export const NOTICES: Notice[] = [
+// 게시판 — 공지사항은 기본 게시판(is_notice). 운영진이 게시판을 추가할 수 있다.
+export const BOARDS: Board[] = [
+  { id: "b1", name: "공지사항", is_notice: true, created_at: "2026-01-01T00:00:00Z" },
+  { id: "b2", name: "자유게시판", is_notice: false, created_at: "2026-02-01T00:00:00Z" },
+];
+
+export const POSTS: Post[] = [
   {
-    id: "n1",
+    id: "p1",
+    board_id: "b1",
     title: "🎸 6월 정기 합주 일정 안내",
     body: "이번 달 정기 합주는 6월 28일(토) 오후 3시, 1번 연습실에서 진행됩니다. 셋리스트 투표를 미리 마감해 주세요!",
     author: "운영진 김지윤",
@@ -24,20 +31,22 @@ export const NOTICES: Notice[] = [
     created_at: "2026-06-25T09:00:00Z",
   },
   {
-    id: "n2",
-    title: "신규 앰프 도입 완료",
-    body: "Fender 65 Deluxe Reverb 앰프가 비품 목록에 추가되었습니다. 사용 후 전원 확인 부탁드려요.",
-    author: "총무 박서준",
-    pinned: false,
-    created_at: "2026-06-20T12:30:00Z",
-  },
-  {
-    id: "n3",
+    id: "p2",
+    board_id: "b1",
     title: "회비 납부 안내 (6월)",
     body: "6월 회비(월 20,000원) 납부 기한은 6월 30일입니다. 미납 회원분들은 총무에게 문의 바랍니다.",
     author: "총무 박서준",
     pinned: false,
     created_at: "2026-06-15T08:00:00Z",
+  },
+  {
+    id: "p3",
+    board_id: "b2",
+    title: "이번 주말 번개 합주 하실 분?",
+    body: "토요일 저녁에 합주실 비면 같이 잼 하실 분 댓글 주세요 🎶",
+    author: "이도윤",
+    pinned: false,
+    created_at: "2026-06-22T18:00:00Z",
   },
 ];
 
@@ -48,18 +57,6 @@ export const RESERVATIONS: Reservation[] = [
   { id: "rv3", date: "2026-07-02", time_label: "20:00 - 22:00", reserved_by: "어쿠스틱 팀", purpose: "합주" },
   { id: "rv4", date: "2026-07-05", time_label: "14:00 - 16:00", reserved_by: "이도윤", purpose: "개인 연습" },
   { id: "rv5", date: "2026-07-05", time_label: "18:00 - 20:00", reserved_by: "재즈 합주반", purpose: "합주" },
-];
-
-// 가나다순 정렬
-export const EQUIPMENT: Equipment[] = [
-  { id: "e1", name: "다이나믹 마이크 SM58", category: "음향", emoji: "🎤", image_url: null, quantity: 4, status: "available", rented_by: null },
-  { id: "e2", name: "마샬 기타 앰프 DSL40", category: "앰프", emoji: "🔊", image_url: null, quantity: 2, status: "rented", rented_by: "이도윤" },
-  { id: "e3", name: "베이스 앰프 Rumble 100", category: "앰프", emoji: "🔊", image_url: null, quantity: 1, status: "available", rented_by: null },
-  { id: "e4", name: "어쿠스틱 기타 (야마하 FG800)", category: "기타", emoji: "🎸", image_url: null, quantity: 3, status: "available", rented_by: null },
-  { id: "e5", name: "일렉 기타 (펜더 스트라토캐스터)", category: "기타", emoji: "🎸", image_url: null, quantity: 2, status: "repair", rented_by: null },
-  { id: "e6", name: "케이블 (10m, 캐논)", category: "케이블", emoji: "🔌", image_url: null, quantity: 12, status: "available", rented_by: null },
-  { id: "e7", name: "튜너 페달 (보스 TU-3)", category: "이펙터", emoji: "🎛️", image_url: null, quantity: 2, status: "available", rented_by: null },
-  { id: "e8", name: "하드케이스 (일렉용)", category: "기타", emoji: "🧳", image_url: null, quantity: 5, status: "rented", rented_by: "최하은" },
 ];
 
 // 합주 팀(밴드) — 셋리스트 탭으로 사용

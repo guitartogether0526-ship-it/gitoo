@@ -5,12 +5,20 @@
 -- ============================================================
 
 -- ---------- 테이블 ----------
-create table if not exists notices (
+create table if not exists boards (
   id text primary key default gen_random_uuid()::text,
+  name text not null,
+  is_notice boolean not null default false,     -- 공지사항 게시판(고정글이 홈에 노출)
+  created_at timestamptz not null default now()
+);
+
+create table if not exists posts (
+  id text primary key default gen_random_uuid()::text,
+  board_id text not null references boards(id) on delete cascade,
   title text not null,
   body text not null,
   author text not null,
-  pinned boolean not null default false,
+  pinned boolean not null default false,        -- 상단 고정
   created_at timestamptz not null default now()
 );
 
@@ -20,17 +28,6 @@ create table if not exists reservations (
   time_label text not null,
   reserved_by text not null,
   purpose text not null default '합주'
-);
-
-create table if not exists equipment (
-  id text primary key default gen_random_uuid()::text,
-  name text not null,
-  category text not null,
-  emoji text not null default '🎸',
-  image_url text,
-  quantity integer not null default 1,
-  status text not null default 'available',   -- available | rented | repair
-  rented_by text
 );
 
 create table if not exists teams (
@@ -80,9 +77,9 @@ create table if not exists expenses (
 -- ---------- RLS (Row Level Security) ----------
 -- ⚠️ 현재는 인증(로그인)이 없으므로 anon 에게 읽기/쓰기를 모두 허용합니다.
 --    운영 전환 시 Supabase Auth 를 붙이고 정책을 사용자 기준으로 조이세요.
-alter table notices       enable row level security;
+alter table boards        enable row level security;
+alter table posts         enable row level security;
 alter table reservations  enable row level security;
-alter table equipment     enable row level security;
 alter table teams         enable row level security;
 alter table songs         enable row level security;
 alter table members       enable row level security;
@@ -92,7 +89,7 @@ alter table expenses      enable row level security;
 do $$
 declare t text;
 begin
-  foreach t in array array['notices','reservations','equipment','teams','songs','members','dues','expenses']
+  foreach t in array array['boards','posts','reservations','teams','songs','members','dues','expenses']
   loop
     execute format('drop policy if exists "public_all" on %I;', t);
     execute format('create policy "public_all" on %I for all using (true) with check (true);', t);
@@ -100,10 +97,15 @@ begin
 end $$;
 
 -- ---------- 시드 데이터 ----------
-insert into notices (id, title, body, author, pinned, created_at) values
-  ('n1','🎸 6월 정기 합주 일정 안내','이번 달 정기 합주는 6월 28일(토) 오후 3시, 1번 연습실에서 진행됩니다. 셋리스트 투표를 미리 마감해 주세요!','운영진 김지윤',true,'2026-06-25T09:00:00Z'),
-  ('n2','신규 앰프 도입 완료','Fender 65 Deluxe Reverb 앰프가 비품 목록에 추가되었습니다. 사용 후 전원 확인 부탁드려요.','총무 박서준',false,'2026-06-20T12:30:00Z'),
-  ('n3','회비 납부 안내 (6월)','6월 회비(월 20,000원) 납부 기한은 6월 30일입니다. 미납 회원분들은 총무에게 문의 바랍니다.','총무 박서준',false,'2026-06-15T08:00:00Z')
+insert into boards (id, name, is_notice, created_at) values
+  ('b1','공지사항',true,'2026-01-01T00:00:00Z'),
+  ('b2','자유게시판',false,'2026-02-01T00:00:00Z')
+on conflict (id) do nothing;
+
+insert into posts (id, board_id, title, body, author, pinned, created_at) values
+  ('p1','b1','🎸 6월 정기 합주 일정 안내','이번 달 정기 합주는 6월 28일(토) 오후 3시, 1번 연습실에서 진행됩니다. 셋리스트 투표를 미리 마감해 주세요!','운영진 김지윤',true,'2026-06-25T09:00:00Z'),
+  ('p2','b1','회비 납부 안내 (6월)','6월 회비(월 20,000원) 납부 기한은 6월 30일입니다. 미납 회원분들은 총무에게 문의 바랍니다.','총무 박서준',false,'2026-06-15T08:00:00Z'),
+  ('p3','b2','이번 주말 번개 합주 하실 분?','토요일 저녁에 합주실 비면 같이 잼 하실 분 댓글 주세요 🎶','이도윤',false,'2026-06-22T18:00:00Z')
 on conflict (id) do nothing;
 
 insert into reservations (id, date, time_label, reserved_by, purpose) values
@@ -112,17 +114,6 @@ insert into reservations (id, date, time_label, reserved_by, purpose) values
   ('rv3','2026-07-02','20:00 - 22:00','어쿠스틱 팀','합주'),
   ('rv4','2026-07-05','14:00 - 16:00','이도윤','개인 연습'),
   ('rv5','2026-07-05','18:00 - 20:00','재즈 합주반','합주')
-on conflict (id) do nothing;
-
-insert into equipment (id, name, category, emoji, image_url, quantity, status, rented_by) values
-  ('e1','다이나믹 마이크 SM58','음향','🎤',null,4,'available',null),
-  ('e2','마샬 기타 앰프 DSL40','앰프','🔊',null,2,'rented','이도윤'),
-  ('e3','베이스 앰프 Rumble 100','앰프','🔊',null,1,'available',null),
-  ('e4','어쿠스틱 기타 (야마하 FG800)','기타','🎸',null,3,'available',null),
-  ('e5','일렉 기타 (펜더 스트라토캐스터)','기타','🎸',null,2,'repair',null),
-  ('e6','케이블 (10m, 캐논)','케이블','🔌',null,12,'available',null),
-  ('e7','튜너 페달 (보스 TU-3)','이펙터','🎛️',null,2,'available',null),
-  ('e8','하드케이스 (일렉용)','기타','🧳',null,5,'rented','최하은')
 on conflict (id) do nothing;
 
 insert into teams (id, name) values

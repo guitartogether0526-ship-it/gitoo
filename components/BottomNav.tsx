@@ -18,10 +18,10 @@ const I = {
       <path d="M3 9h18M8 2.5v4M16 2.5v4" />
     </svg>
   ),
-  box: (
+  board: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 8 12 3 3 8l9 5 9-5Z" />
-      <path d="M3 8v8l9 5 9-5V8M12 13v8" />
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M7 9h10M7 13h10M7 17h6" />
     </svg>
   ),
   music: (
@@ -48,7 +48,7 @@ const I = {
 const ITEMS: Item[] = [
   { href: "/", label: "홈", icon: I.home },
   { href: "/reservation", label: "예약", icon: I.calendar },
-  { href: "/equipment", label: "장비", icon: I.box },
+  { href: "/board", label: "게시판", icon: I.board },
   { href: "/setlist", label: "셋리스트", icon: I.music },
   { href: "/members", label: "회원", icon: I.users },
   { href: "/finance", label: "회비", icon: I.wallet },

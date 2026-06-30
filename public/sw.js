@@ -1,8 +1,8 @@
 /* GUITAR TOGETHER — 서비스 워커
    - 페이지(navigation): network-first (항상 최신, 오프라인 시 캐시)
    - 정적 자원: cache-first */
-const CACHE = "gt-shell-v2";
-const SHELL = ["/", "/reservation", "/equipment", "/setlist", "/members", "/finance"];
+const CACHE = "gt-shell-v3";
+const SHELL = ["/", "/reservation", "/board", "/setlist", "/members", "/finance"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

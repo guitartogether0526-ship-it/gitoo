@@ -4,12 +4,22 @@
  * 추후 `supabase gen types`로 자동 생성된 타입으로 교체 가능.
  */
 
-export interface Notice {
+/** 게시판 — 운영진이 추가 가능. 공지사항 게시판(is_notice)의 고정글은 홈에 노출 */
+export interface Board {
   id: string;
+  name: string;
+  is_notice: boolean; // 공지사항 게시판 여부
+  created_at: string; // ISO date
+}
+
+/** 게시글 — 특정 게시판에 속함 */
+export interface Post {
+  id: string;
+  board_id: string;
   title: string;
   body: string;
   author: string;
-  pinned: boolean;
+  pinned: boolean; // 상단 고정
   created_at: string; // ISO date
 }
 
@@ -20,19 +30,6 @@ export interface Reservation {
   time_label: string; // 예: "19:00 - 21:00"
   reserved_by: string;
   purpose: string; // 합주/개인연습 등
-}
-
-export type EquipmentStatus = "available" | "rented" | "repair";
-
-export interface Equipment {
-  id: string;
-  name: string;
-  category: string; // 대분류
-  emoji: string; // 목업 썸네일 (추후 image_url로 교체)
-  image_url: string | null;
-  quantity: number;
-  status: EquipmentStatus;
-  rented_by: string | null;
 }
 
 export interface SheetMusic {

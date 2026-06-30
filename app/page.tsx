@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getNotices, getReservations, getExpenses, getDues } from "@/lib/db";
+import { getBoards, getPosts, getReservations, getExpenses, getDues } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +14,17 @@ function shortDate(d: string) {
 }
 
 export default async function DashboardPage() {
-  const [notices, reservations, expenses, dues] = await Promise.all([
-    getNotices(),
+  const [boards, posts, reservations, expenses, dues] = await Promise.all([
+    getBoards(),
+    getPosts(),
     getReservations(),
     getExpenses(),
     getDues(),
   ]);
+
+  // 공지사항 게시판의 상단 고정글만 홈에 노출
+  const noticeBoardIds = new Set(boards.filter((b) => b.is_notice).map((b) => b.id));
+  const pinnedNotices = posts.filter((p) => noticeBoardIds.has(p.board_id) && p.pinned);
 
   const myNext = reservations.find((r) => r.reserved_by === "나");
   const balance = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -55,22 +60,35 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="section-title">📢 공지사항</div>
+      <div className="title-row" style={{ marginTop: 4 }}>
+        <div className="section-title" style={{ margin: 0 }}>📢 공지사항</div>
+        <Link href="/board" className="dim" style={{ fontSize: 12, textDecoration: "none" }}>
+          전체보기 ›
+        </Link>
+      </div>
 
-      {notices.map((n) => (
-        <div className="card" key={n.id}>
-          <div className="title-row">
-            <div className="item-name">{n.title}</div>
-            {n.pinned && <span className="badge amber">📌 고정</span>}
-          </div>
-          <p className="item-sub" style={{ marginTop: 8, lineHeight: 1.5 }}>
-            {n.body}
+      {pinnedNotices.length === 0 ? (
+        <div className="card">
+          <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+            상단 고정된 공지가 없습니다.
           </p>
-          <div className="meta-line">
-            {n.author} · {formatDate(n.created_at)}
-          </div>
         </div>
-      ))}
+      ) : (
+        pinnedNotices.map((n) => (
+          <div className="card" key={n.id}>
+            <div className="title-row">
+              <div className="item-name">{n.title}</div>
+              <span className="badge amber">📌 고정</span>
+            </div>
+            <p className="item-sub" style={{ marginTop: 8, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+              {n.body}
+            </p>
+            <div className="meta-line">
+              {n.author} · {formatDate(n.created_at)}
+            </div>
+          </div>
+        ))
+      )}
 
       <div className="section-title">바로가기</div>
       <div className="stat-grid">

@@ -1,7 +1,7 @@
 import {
-  NOTICES,
+  BOARDS,
+  POSTS,
   RESERVATIONS,
-  EQUIPMENT,
   TEAMS,
   SONGS,
   MEMBERS,
@@ -9,9 +9,9 @@ import {
   EXPENSES,
 } from "./mock-data";
 import type {
-  Notice,
+  Board,
+  Post,
   Reservation,
-  Equipment,
   Team,
   Song,
   Member,
@@ -41,8 +41,21 @@ async function read<T>(table: string, fallback: T[]): Promise<T[]> {
   return data as T[];
 }
 
-export async function getNotices(): Promise<Notice[]> {
-  const rows = await read<Notice>("notices", NOTICES);
+export async function getBoards(): Promise<Board[]> {
+  const rows = await read<Board>("boards", BOARDS);
+  // 공지사항 게시판을 맨 앞에, 이후 생성순
+  return rows.slice().sort((a, b) =>
+    a.is_notice === b.is_notice
+      ? a.created_at.localeCompare(b.created_at)
+      : a.is_notice
+        ? -1
+        : 1,
+  );
+}
+
+export async function getPosts(): Promise<Post[]> {
+  const rows = await read<Post>("posts", POSTS);
+  // 상단 고정 우선, 이후 최신순
   return rows.slice().sort((a, b) =>
     a.pinned === b.pinned
       ? b.created_at.localeCompare(a.created_at)
@@ -61,11 +74,6 @@ export async function getReservations(): Promise<Reservation[]> {
 
 export async function getTeams(): Promise<Team[]> {
   return read<Team>("teams", TEAMS);
-}
-
-export async function getEquipment(): Promise<Equipment[]> {
-  const rows = await read<Equipment>("equipment", EQUIPMENT);
-  return rows.slice().sort((a, b) => byKo(a.name, b.name));
 }
 
 export async function getSongs(): Promise<Song[]> {
