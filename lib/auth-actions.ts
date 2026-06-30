@@ -232,6 +232,29 @@ export async function changeRole(
   return { ok: true };
 }
 
+/** 마이페이지 — 본인 비밀번호 변경 (현재 비밀번호 확인 후 변경) */
+export async function changeMyPassword(input: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<{ ok: true } | { error: string }> {
+  const session = await getSession();
+  if (!session) return { error: "로그인이 필요합니다." };
+  if (session.id === ADMIN_USER.id) return { error: "관리자 계정은 여기서 변경할 수 없습니다." };
+  if (input.newPassword.length < 4) return { error: "새 비밀번호는 4자 이상이어야 합니다." };
+
+  const members = await getAllMembers();
+  const me = members.find((m) => m.id === session.id);
+  if (!me) return { error: "회원 정보를 찾을 수 없습니다." };
+
+  const cred = await getCredential(me.username);
+  if (!cred || !verifyPassword(input.currentPassword, cred.passwordHash)) {
+    return { error: "현재 비밀번호가 올바르지 않습니다." };
+  }
+
+  await setPasswordById(me.id, hashPassword(input.newPassword));
+  return { ok: true };
+}
+
 /** 마이페이지 — 본인 기본정보 수정. 변경된 세션 정보를 반환(쿠키 갱신용). */
 export async function updateMyProfile(input: {
   name: string;

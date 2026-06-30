@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Member, SessionUser } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { ROLE_LABEL } from "@/lib/roles";
-import { updateMyProfile } from "@/lib/auth-actions";
+import { updateMyProfile, changeMyPassword } from "@/lib/auth-actions";
 
 const PARTS = ["기타", "베이스", "드럼", "보컬", "키보드", "기타 파트"];
 
@@ -25,6 +25,38 @@ export default function MyPageForm({
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // 비밀번호 변경
+  const [curPw, setCurPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [newPw2, setNewPw2] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [pwSaved, setPwSaved] = useState(false);
+  const [pwBusy, setPwBusy] = useState(false);
+
+  const submitPw = async () => {
+    setPwError("");
+    setPwSaved(false);
+    if (newPw !== newPw2) {
+      setPwError("새 비밀번호가 일치하지 않습니다.");
+      return;
+    }
+    if (newPw.length < 4) {
+      setPwError("새 비밀번호는 4자 이상이어야 합니다.");
+      return;
+    }
+    setPwBusy(true);
+    const res = await changeMyPassword({ currentPassword: curPw, newPassword: newPw });
+    setPwBusy(false);
+    if ("error" in res) {
+      setPwError(res.error);
+      return;
+    }
+    setPwSaved(true);
+    setCurPw("");
+    setNewPw("");
+    setNewPw2("");
+  };
 
   if (!session) {
     return (
@@ -110,6 +142,29 @@ export default function MyPageForm({
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 10 }}>
         권한·팀 변경은 운영진에게 문의하세요. (아이디는 변경할 수 없습니다)
       </p>
+
+      <div className="section-title">🔒 비밀번호 변경</div>
+      <div className="card">
+        <div className="form-grid">
+          <div className="field">
+            <label>현재 비밀번호</label>
+            <input className="input" type="password" value={curPw} onChange={(e) => setCurPw(e.target.value)} placeholder="현재 비밀번호" autoComplete="current-password" />
+          </div>
+          <div className="field">
+            <label>새 비밀번호</label>
+            <input className="input" type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="4자 이상" autoComplete="new-password" />
+          </div>
+          <div className="field">
+            <label>새 비밀번호 확인</label>
+            <input className="input" type="password" value={newPw2} onChange={(e) => setNewPw2(e.target.value)} placeholder="다시 입력" autoComplete="new-password" />
+          </div>
+          {pwError && <p className="form-error">{pwError}</p>}
+          {pwSaved && <p className="dim" style={{ color: "var(--ok, #5ac88a)", fontSize: 13, margin: 0 }}>✅ 비밀번호가 변경되었습니다.</p>}
+          <button className="btn amber" disabled={pwBusy} onClick={submitPw}>
+            {pwBusy ? "변경 중…" : "비밀번호 변경"}
+          </button>
+        </div>
+      </div>
     </>
   );
 }

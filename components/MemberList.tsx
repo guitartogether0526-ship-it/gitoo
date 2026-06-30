@@ -142,6 +142,9 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
                 <tr key={m.id}>
                   <td>
                     <span className="m-name">{m.name}</span>
+                    <span className="dim" style={{ display: "block", fontSize: 11, marginTop: 2 }}>
+                      {m.username}
+                    </span>
                   </td>
                   <td>{m.part}</td>
                   <td className="role-cell">
