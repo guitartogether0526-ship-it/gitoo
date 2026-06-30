@@ -3,12 +3,18 @@
 import { useMemo, useState } from "react";
 import type { Reservation } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/roles";
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const pad = (n: number) => String(n).padStart(2, "0");
 const ymd = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
 
 export default function ReservationCalendar({ initial }: { initial: Reservation[] }) {
+  const { user } = useAuth();
+  const canManage = can.manageReservations(user?.role);
+  const myName = user?.name ?? "나";
+
   const today = useMemo(() => new Date(), []);
   const todayStr = ymd(today.getFullYear(), today.getMonth(), today.getDate());
 
@@ -18,7 +24,7 @@ export default function ReservationCalendar({ initial }: { initial: Reservation[
 
   // 예약 등록 폼
   const [time, setTime] = useState("19:00 - 21:00");
-  const [by, setBy] = useState("나");
+  const [by, setBy] = useState(myName);
   const [purpose, setPurpose] = useState("합주");
 
   const firstDay = new Date(view.y, view.m, 1).getDay();
@@ -58,6 +64,7 @@ export default function ReservationCalendar({ initial }: { initial: Reservation[
       setReservations((prev) => [...prev, { id: `rv-${selected}-${prev.length}`, ...payload }]);
     }
     setTime("19:00 - 21:00");
+    setBy(myName);
     setPurpose("합주");
   };
 
@@ -126,22 +133,27 @@ export default function ReservationCalendar({ initial }: { initial: Reservation[
             예약이 없습니다. 아래에서 등록하세요.
           </p>
         ) : (
-          selectedList.map((r) => (
-            <div key={r.id} className="res-item">
-              <span className="res-time">{r.time_label}</span>
-              <div className="grow">
-                <div className="res-by">{r.reserved_by}</div>
-                <div className="res-purpose">{r.purpose}</div>
+          selectedList.map((r) => {
+            const canCancel = canManage || r.reserved_by === myName;
+            return (
+              <div key={r.id} className="res-item">
+                <span className="res-time">{r.time_label}</span>
+                <div className="grow">
+                  <div className="res-by">{r.reserved_by}</div>
+                  <div className="res-purpose">{r.purpose}</div>
+                </div>
+                {canCancel && (
+                  <button
+                    className="btn ghost btn-sm"
+                    onClick={() => remove(r.id)}
+                    aria-label="예약 취소"
+                  >
+                    취소
+                  </button>
+                )}
               </div>
-              <button
-                className="btn ghost btn-sm"
-                onClick={() => remove(r.id)}
-                aria-label="예약 취소"
-              >
-                취소
-              </button>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

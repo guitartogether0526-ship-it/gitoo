@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import type { Board, Post } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/roles";
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -16,6 +18,10 @@ export default function BoardView({
   boards: Board[];
   posts: Post[];
 }) {
+  const { user } = useAuth();
+  const canManageBoards = can.manageBoards(user?.role);
+  const canWriteNotice = can.writeNotice(user?.role);
+
   const [boards, setBoards] = useState<Board[]>(initialBoards);
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [activeBoard, setActiveBoard] = useState<string>(initialBoards[0]?.id ?? "");
@@ -41,6 +47,8 @@ export default function BoardView({
   );
 
   const current = boards.find((b) => b.id === activeBoard);
+  // 공지사항 게시판은 STAFF 이상만, 그 외 게시판은 로그인한 회원이면 작성 가능
+  const canWriteHere = current?.is_notice ? canWriteNotice : !!user;
 
   // 운영진: 게시판 추가
   const addBoard = async () => {
@@ -73,7 +81,7 @@ export default function BoardView({
       board_id: activeBoard,
       title: title.trim(),
       body: body.trim(),
-      author: "나",
+      author: user?.name ?? "나",
       pinned,
     };
     const sb = getSupabase();
@@ -106,21 +114,31 @@ export default function BoardView({
             {b.name}
           </button>
         ))}
-        <button className="tab" onClick={addBoard} title="운영진 전용 · 게시판 추가">
-          ＋ 게시판
-        </button>
+        {canManageBoards && (
+          <button className="tab" onClick={addBoard} title="운영진(STAFF 이상) 전용 · 게시판 추가">
+            ＋ 게시판
+          </button>
+        )}
       </div>
 
-      {/* 글쓰기 */}
-      <button
-        className="btn amber"
-        style={{ width: "100%" }}
-        onClick={() => setShowForm((v) => !v)}
-      >
-        {showForm ? "닫기" : "＋ 글쓰기"}
-      </button>
+      {/* 글쓰기 — 권한 있는 경우에만 */}
+      {canWriteHere ? (
+        <button
+          className="btn amber"
+          style={{ width: "100%" }}
+          onClick={() => setShowForm((v) => !v)}
+        >
+          {showForm ? "닫기" : current?.is_notice ? "＋ 공지 작성" : "＋ 글쓰기"}
+        </button>
+      ) : (
+        current?.is_notice && (
+          <p className="dim" style={{ fontSize: 12, textAlign: "center", margin: "4px 0" }}>
+            🔒 공지사항 작성은 운영진(STAFF 이상)만 가능합니다.
+          </p>
+        )
+      )}
 
-      {showForm && (
+      {showForm && canWriteHere && (
         <div className="card mt-12">
           <div className="form-grid">
             <div className="field">

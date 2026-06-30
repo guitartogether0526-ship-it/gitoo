@@ -1,23 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import type { Member } from "@/lib/types";
+import type { Member, MemberRole } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth";
+import { can, ROLE_LABEL, ROLE_ORDER } from "@/lib/roles";
+
+const ROLE_BADGE: Record<MemberRole, string> = {
+  president: "amber",
+  treasurer: "amber",
+  staff: "ok",
+  member: "",
+};
 
 export default function MemberList({ initial }: { initial: Member[] }) {
+  const { user } = useAuth();
+  const canManage = can.manageMembers(user?.role);
   const [members, setMembers] = useState<Member[]>(initial);
 
-  const toggle = (id: string, key: "is_staff" | "is_treasurer") => {
-    let next = false;
-    setMembers((prev) =>
-      prev.map((m) => {
-        if (m.id !== id) return m;
-        next = !m[key];
-        return { ...m, [key]: next };
-      }),
-    );
+  const setRole = (id: string, role: MemberRole) => {
+    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, role } : m)));
     const sb = getSupabase();
-    if (sb) void sb.from("members").update({ [key]: next }).eq("id", id);
+    if (sb) void sb.from("members").update({ role }).eq("id", id);
   };
 
   return (
@@ -28,8 +32,7 @@ export default function MemberList({ initial }: { initial: Member[] }) {
             <tr>
               <th>이름</th>
               <th>파트</th>
-              <th className="role-cell">운영진</th>
-              <th className="role-cell">총무</th>
+              <th className="role-cell">권한</th>
               <th>상태</th>
             </tr>
           </thead>
@@ -42,22 +45,22 @@ export default function MemberList({ initial }: { initial: Member[] }) {
                 </td>
                 <td>{m.part}</td>
                 <td className="role-cell">
-                  <button
-                    className={`switch sm${m.is_staff ? " on" : ""}`}
-                    role="switch"
-                    aria-checked={m.is_staff}
-                    aria-label={`${m.name} 운영진 권한`}
-                    onClick={() => toggle(m.id, "is_staff")}
-                  />
-                </td>
-                <td className="role-cell">
-                  <button
-                    className={`switch sm${m.is_treasurer ? " on" : ""}`}
-                    role="switch"
-                    aria-checked={m.is_treasurer}
-                    aria-label={`${m.name} 총무 권한`}
-                    onClick={() => toggle(m.id, "is_treasurer")}
-                  />
+                  {canManage ? (
+                    <select
+                      className="select sm"
+                      value={m.role}
+                      onChange={(e) => setRole(m.id, e.target.value as MemberRole)}
+                      aria-label={`${m.name} 권한 변경`}
+                    >
+                      {ROLE_ORDER.map((r) => (
+                        <option key={r} value={r}>
+                          {ROLE_LABEL[r]}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className={`badge ${ROLE_BADGE[m.role]}`}>{ROLE_LABEL[m.role]}</span>
+                  )}
                 </td>
                 <td>
                   <span className={`badge ${m.status === "active" ? "ok" : ""}`}>
@@ -70,7 +73,9 @@ export default function MemberList({ initial }: { initial: Member[] }) {
         </table>
       </div>
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 10 }}>
-        운영진 전용 화면 · 앰버 토글로 권한을 변경하세요 (좌우 스크롤)
+        {canManage
+          ? "STAFF 이상만 권한을 변경할 수 있어요 · 드롭다운으로 등급 선택 (좌우 스크롤)"
+          : "권한 변경은 운영진(STAFF 이상) 전용입니다 (좌우 스크롤)"}
       </p>
     </>
   );

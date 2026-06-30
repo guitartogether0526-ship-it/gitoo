@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getBoards, getPosts, getReservations, getExpenses, getDues } from "@/lib/db";
+import { getSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,8 @@ function shortDate(d: string) {
 }
 
 export default async function DashboardPage() {
-  const [boards, posts, reservations, expenses, dues] = await Promise.all([
+  const [session, boards, posts, reservations, expenses, dues] = await Promise.all([
+    getSession(),
     getBoards(),
     getPosts(),
     getReservations(),
@@ -26,14 +28,15 @@ export default async function DashboardPage() {
   const noticeBoardIds = new Set(boards.filter((b) => b.is_notice).map((b) => b.id));
   const pinnedNotices = posts.filter((p) => noticeBoardIds.has(p.board_id) && p.pinned);
 
-  const myNext = reservations.find((r) => r.reserved_by === "나");
+  const myName = session?.name ?? "나";
+  const myNext = reservations.find((r) => r.reserved_by === myName);
   const balance = expenses.reduce((sum, e) => sum + e.amount, 0);
   const paidCount = dues.filter((d) => d.paid).length;
 
   return (
     <>
       <div className="page-head">
-        <h1>안녕하세요, 기타리스트님 🎸</h1>
+        <h1>안녕하세요, {session?.name ?? "기타리스트"}님 🎸</h1>
         <p>오늘의 동호회 소식을 확인하세요.</p>
       </div>
 

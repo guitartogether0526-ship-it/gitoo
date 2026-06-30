@@ -53,8 +53,7 @@ create table if not exists members (
   cohort integer not null,
   part text not null,
   status text not null default 'active',        -- active | rest
-  is_staff boolean not null default false,
-  is_treasurer boolean not null default false,
+  role text not null default 'member',          -- president | treasurer | staff | member
   initial text not null
 );
 
@@ -143,12 +142,12 @@ insert into songs (id, team_id, title, artist, parts, sheets, likes, voted, stat
     9,false,'candidate')
 on conflict (id) do nothing;
 
-insert into members (id, name, cohort, part, status, is_staff, is_treasurer, initial) values
-  ('m1','김지윤',12,'보컬','active',true,false,'지'),
-  ('m2','박서준',12,'기타','active',true,true,'서'),
-  ('m3','이도윤',14,'베이스','active',false,false,'도'),
-  ('m4','정민서',15,'드럼','rest',false,false,'민'),
-  ('m5','최하은',14,'키보드','active',false,false,'하')
+insert into members (id, name, cohort, part, status, role, initial) values
+  ('m1','김지윤',12,'보컬','active','president','지'),
+  ('m2','박서준',12,'기타','active','treasurer','서'),
+  ('m3','이도윤',14,'베이스','active','staff','도'),
+  ('m4','정민서',15,'드럼','rest','member','민'),
+  ('m5','최하은',14,'키보드','active','member','하')
 on conflict (id) do nothing;
 
 insert into dues (member_name, cohort, paid, month) values

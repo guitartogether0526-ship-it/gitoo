@@ -56,7 +56,8 @@ export interface Song {
   status: "candidate" | "confirmed"; // 후보 / 선정(확정)
 }
 
-export type MemberRole = "member";
+/** 권한 등급 (높은 → 낮은): 회장 · 총무 · STAFF · 회원 */
+export type MemberRole = "president" | "treasurer" | "staff" | "member";
 export type MemberStatus = "active" | "rest";
 
 export interface Member {
@@ -65,9 +66,18 @@ export interface Member {
   cohort: number; // 기수
   part: string; // 담당 파트 (기타/베이스/드럼/보컬/키보드 등)
   status: MemberStatus;
-  is_staff: boolean; // 운영진
-  is_treasurer: boolean; // 총무
+  role: MemberRole; // 권한 등급
   initial: string; // 아바타 이니셜
+}
+
+/** 로그인 세션 사용자 (쿠키에 저장 — 비밀번호 등 민감정보 미포함) */
+export interface SessionUser {
+  id: string;
+  name: string;
+  role: MemberRole;
+  part: string;
+  cohort: number;
+  initial: string;
 }
 
 export interface DuesPayment {

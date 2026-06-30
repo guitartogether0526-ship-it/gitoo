@@ -4,6 +4,10 @@ import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import InstallBanner from "@/components/InstallBanner";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import { AuthProvider } from "@/lib/auth";
+import AuthGate from "@/components/AuthGate";
+import { getMembers } from "@/lib/db";
+import { getSession } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "GUITAR TOGETHER",
@@ -23,20 +27,26 @@ export const viewport: Viewport = {
   themeColor: "#181311",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [members, session] = await Promise.all([getMembers(), getSession()]);
+
   return (
     <html lang="ko">
       <body>
-        <div className="app-shell">
-          <AppHeader />
-          <main className="app-main">{children}</main>
-          <InstallBanner />
-          <BottomNav />
-        </div>
+        <AuthProvider initialUser={session}>
+          <AuthGate members={members}>
+            <div className="app-shell">
+              <AppHeader />
+              <main className="app-main">{children}</main>
+              <InstallBanner />
+              <BottomNav />
+            </div>
+          </AuthGate>
+        </AuthProvider>
         <ServiceWorkerRegister />
       </body>
     </html>

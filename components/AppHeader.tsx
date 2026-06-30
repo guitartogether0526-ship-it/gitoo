@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Logo from "./Logo";
+import UserMenu from "./UserMenu";
 
 const TITLES: Record<string, { page: string; sub: string }> = {
   "/": { page: "대시보드", sub: "오늘의 동호회 소식" },
@@ -23,6 +24,7 @@ export default function AppHeader() {
         <span className="ht-page">{t.page}</span>
         <span className="ht-sub">{t.sub}</span>
       </div>
+      <UserMenu />
     </header>
   );
 }
