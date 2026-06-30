@@ -1,6 +1,7 @@
 import { getReservations, getMembers, getTeams } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import ReservationCalendar from "@/components/ReservationCalendar";
+import AvailabilityChecker from "@/components/AvailabilityChecker";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export default async function ReservationPage() {
         <p>캘린더에서 날짜를 골라 예약하세요.</p>
       </div>
       <ReservationCalendar initial={reservations} myTeamName={myTeamName} />
+      <AvailabilityChecker myTeamName={myTeamName} />
     </>
   );
 }

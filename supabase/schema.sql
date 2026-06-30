@@ -123,6 +123,13 @@ create table if not exists push_subscriptions (
   created_at timestamptz not null default now()
 );
 
+-- 안되는 일정(불참) 체크 — 회원이 2주 단위로 안되는 날 표시. 팀별 조회. service_role 접근.
+create table if not exists unavailable_dates (
+  member_id text not null references members(id) on delete cascade,
+  date date not null,
+  primary key (member_id, date)
+);
+
 -- ---------- RLS (Row Level Security) ----------
 -- ⚠️ 현재는 인증(로그인)이 없으므로 anon 에게 읽기/쓰기를 모두 허용합니다.
 --    운영 전환 시 Supabase Auth 를 붙이고 정책을 사용자 기준으로 조이세요.
@@ -141,6 +148,9 @@ alter table member_auth   enable row level security;
 
 -- push_subscriptions: RLS 활성화 + 공개 정책 없음 → 서버(service_role)만 접근
 alter table push_subscriptions enable row level security;
+
+-- unavailable_dates: RLS 활성화 + 공개 정책 없음 → 서버(service_role)만 접근
+alter table unavailable_dates enable row level security;
 
 do $$
 declare t text;

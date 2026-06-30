@@ -532,6 +532,41 @@ body {
   background: var(--danger, #e5484d);
   box-shadow: 0 0 8px rgba(229, 72, 77, 0.6);
 }
+
+/* ---------- 안되는 일정 체크 (2주 그리드) ---------- */
+.av-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.av-dow {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  padding-bottom: 2px;
+}
+.av-cell {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.av-cell.on {
+  background: var(--danger, #e5484d);
+  color: #fff;
+  border-color: transparent;
+}
+.av-cell.past {
+  opacity: 0.35;
+  cursor: default;
+}
 .cal-cell.sun {
   color: var(--danger);
 }
