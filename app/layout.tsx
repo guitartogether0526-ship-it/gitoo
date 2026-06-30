@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "GUITAR TOGETHER",
+    title: "기타투게더",
   },
 };
 

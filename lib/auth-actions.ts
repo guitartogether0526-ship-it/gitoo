@@ -15,9 +15,11 @@ import {
   setPasswordById,
   setProfile,
   setRole,
+  setStatus,
   setTeam,
   usernameTaken,
 } from "./member-store";
+import type { MemberStatus } from "./types";
 import { isEmailConfigured, sendMail } from "./email";
 import { randomBytes } from "node:crypto";
 
@@ -238,6 +240,27 @@ export async function updateMyProfile(input: {
     initial: name.charAt(0) || "?",
   };
   return { user };
+}
+
+/** 회원 상태 변경 (STAFF 이상) — 활동중(active) / 휴식(rest) */
+export async function changeStatus(
+  id: string,
+  status: MemberStatus,
+): Promise<{ ok: true } | { error: string }> {
+  const session = await getSession();
+  if (!can.manageMembers(session?.role)) return { error: "권한이 없습니다." };
+  if (status !== "active" && status !== "rest") return { error: "잘못된 상태입니다." };
+  await setStatus(id, status);
+  return { ok: true };
+}
+
+/** 강퇴 = 계정 삭제 (STAFF 이상). 아이디가 비워져 재가입 가능. */
+export async function kickMember(id: string): Promise<{ ok: true } | { error: string }> {
+  const session = await getSession();
+  if (!can.manageMembers(session?.role)) return { error: "권한이 없습니다." };
+  if (session?.id === id) return { error: "본인 계정은 강퇴할 수 없습니다." };
+  await removeMember(id);
+  return { ok: true };
 }
 
 /** 팀 배정/변경 (STAFF 이상) — teamId=null 이면 미배정 */

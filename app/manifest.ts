@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "GUITAR TOGETHER",
-    short_name: "GUITAR",
+    name: "기타투게더",
+    short_name: "기타투게더",
     description: "기타 밴드 동호회 전용 PWA",
     start_url: "/",
     display: "standalone",

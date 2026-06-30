@@ -159,6 +159,16 @@ export async function setProfile(
   if (row) Object.assign(row, patch);
 }
 
+export async function setStatus(id: string, status: Member["status"]): Promise<void> {
+  const sb = getSupabaseAdmin();
+  if (sb) {
+    await sb.from("members").update({ status }).eq("id", id);
+    return;
+  }
+  const row = mem.rows.find((r) => r.id === id);
+  if (row) row.status = status;
+}
+
 export async function setTeam(id: string, teamId: string | null): Promise<void> {
   const sb = getSupabaseAdmin();
   if (sb) {

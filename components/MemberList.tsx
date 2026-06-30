@@ -1,26 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import type { Member, MemberRole, Team } from "@/lib/types";
+import type { Member, MemberRole, MemberStatus, Team } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { can, ROLE_LABEL, ROLE_ORDER } from "@/lib/roles";
-import { approveMember, rejectMember, changeRole, changeTeam } from "@/lib/auth-actions";
-
-const ROLE_BADGE: Record<MemberRole, string> = {
-  admin: "amber",
-  president: "amber",
-  treasurer: "amber",
-  staff: "ok",
-  member: "",
-};
+import {
+  approveMember,
+  rejectMember,
+  changeRole,
+  changeTeam,
+  changeStatus,
+  kickMember,
+} from "@/lib/auth-actions";
 
 export default function MemberList({ initial, teams }: { initial: Member[]; teams: Team[] }) {
   const { user } = useAuth();
   const canManage = can.manageMembers(user?.role);
   const [members, setMembers] = useState<Member[]>(initial);
   const [busy, setBusy] = useState<string>("");
-
-  const teamName = (id: string | null) => teams.find((t) => t.id === id)?.name ?? "미배정";
 
   const pending = members.filter((m) => !m.approved);
   const approved = members.filter((m) => m.approved);
@@ -46,7 +43,6 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, team_id: teamId } : m)));
     const res = await changeTeam(id, teamId);
     if ("error" in res) {
-      // 롤백
       setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, team_id: prevTeam } : m)));
       alert(res.error);
     }
@@ -57,16 +53,45 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, role } : m)));
     const res = await changeRole(id, role);
     if ("error" in res) {
-      // 롤백
       setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, role: prevRole ?? "member" } : m)));
       alert(res.error);
     }
   };
 
+  const onStatus = async (id: string, status: MemberStatus) => {
+    const prevStatus = members.find((m) => m.id === id)?.status;
+    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, status } : m)));
+    const res = await changeStatus(id, status);
+    if ("error" in res) {
+      setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, status: prevStatus ?? "active" } : m)));
+      alert(res.error);
+    }
+  };
+
+  const onKick = async (m: Member) => {
+    if (!window.confirm(`${m.name} 님을 강퇴(계정 삭제)할까요?\n같은 아이디로 재가입은 가능합니다.`)) return;
+    setBusy(m.id);
+    const res = await kickMember(m.id);
+    setBusy("");
+    if ("ok" in res) setMembers((prev) => prev.filter((x) => x.id !== m.id));
+    else alert(res.error);
+  };
+
+  // 회원 목록은 운영진(관리자·회장·총무·STAFF)만 열람
+  if (!canManage) {
+    return (
+      <div className="card">
+        <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+          🔒 회원 목록은 운영진(관리자·회장·총무·STAFF)만 볼 수 있습니다.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* 가입 승인 대기 */}
-      {canManage && pending.length > 0 && (
+      {pending.length > 0 && (
         <>
           <div className="section-title">🕓 가입 승인 대기 ({pending.length})</div>
           {pending.map((m) => (
@@ -108,7 +133,8 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
                 <th>파트</th>
                 <th className="role-cell">팀</th>
                 <th className="role-cell">권한</th>
-                <th>상태</th>
+                <th className="role-cell">상태</th>
+                <th>관리</th>
               </tr>
             </thead>
             <tbody>
@@ -119,46 +145,54 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
                   </td>
                   <td>{m.part}</td>
                   <td className="role-cell">
-                    {canManage ? (
-                      <select
-                        className="select sm"
-                        value={m.team_id ?? ""}
-                        onChange={(e) => onTeam(m.id, e.target.value || null)}
-                        aria-label={`${m.name} 팀 배정`}
-                      >
-                        <option value="">미배정</option>
-                        {teams.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className={`badge ${m.team_id ? "ok" : ""}`}>{teamName(m.team_id)}</span>
-                    )}
+                    <select
+                      className="select sm"
+                      value={m.team_id ?? ""}
+                      onChange={(e) => onTeam(m.id, e.target.value || null)}
+                      aria-label={`${m.name} 팀 배정`}
+                    >
+                      <option value="">미배정</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="role-cell">
-                    {canManage ? (
-                      <select
-                        className="select sm"
-                        value={m.role}
-                        onChange={(e) => onRole(m.id, e.target.value as MemberRole)}
-                        aria-label={`${m.name} 권한 변경`}
-                      >
-                        {ROLE_ORDER.map((r) => (
-                          <option key={r} value={r}>
-                            {ROLE_LABEL[r]}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className={`badge ${ROLE_BADGE[m.role]}`}>{ROLE_LABEL[m.role]}</span>
-                    )}
+                    <select
+                      className="select sm"
+                      value={m.role}
+                      onChange={(e) => onRole(m.id, e.target.value as MemberRole)}
+                      aria-label={`${m.name} 권한 변경`}
+                    >
+                      {ROLE_ORDER.map((r) => (
+                        <option key={r} value={r}>
+                          {ROLE_LABEL[r]}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="role-cell">
+                    <select
+                      className="select sm"
+                      value={m.status}
+                      onChange={(e) => onStatus(m.id, e.target.value as MemberStatus)}
+                      aria-label={`${m.name} 상태 변경`}
+                    >
+                      <option value="active">활동중</option>
+                      <option value="rest">휴식</option>
+                    </select>
                   </td>
                   <td>
-                    <span className={`badge ${m.status === "active" ? "ok" : ""}`}>
-                      {m.status === "active" ? "활동중" : "휴식"}
-                    </span>
+                    <button
+                      className="btn danger btn-sm"
+                      disabled={busy === m.id}
+                      onClick={() => onKick(m)}
+                      title="계정 삭제 (재가입 가능)"
+                    >
+                      강퇴
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -167,9 +201,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
         </div>
       )}
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 10 }}>
-        {canManage
-          ? "STAFF 이상만 가입 승인·권한 변경이 가능합니다 (좌우 스크롤)"
-          : "가입 승인·권한 변경은 운영진(STAFF 이상) 전용입니다 (좌우 스크롤)"}
+        팀·권한·상태 변경과 강퇴(계정 삭제)는 운영진(STAFF 이상) 전용입니다. (좌우 스크롤)
       </p>
     </>
   );
