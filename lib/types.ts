@@ -68,6 +68,8 @@ export interface Member {
   status: MemberStatus;
   role: MemberRole; // 권한 등급
   initial: string; // 아바타 이니셜
+  username: string; // 로그인 아이디
+  approved: boolean; // 관리자 승인 여부 (false = 가입 승인 대기)
 }
 
 /** 로그인 세션 사용자 (쿠키에 저장 — 비밀번호 등 민감정보 미포함) */

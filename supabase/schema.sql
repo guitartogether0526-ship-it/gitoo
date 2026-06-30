@@ -54,7 +54,21 @@ create table if not exists members (
   part text not null,
   status text not null default 'active',        -- active | rest
   role text not null default 'member',          -- admin | president | treasurer | staff | member
-  initial text not null
+  initial text not null,
+  username text unique,                         -- 로그인 아이디
+  approved boolean not null default false       -- 관리자 승인 여부 (false=가입 대기)
+);
+
+-- 기존 members 테이블 업그레이드(재실행 안전) — 새 컬럼 추가
+alter table members add column if not exists role text not null default 'member';
+alter table members add column if not exists username text unique;
+alter table members add column if not exists approved boolean not null default false;
+
+-- 자격증명(비밀번호 해시) — 공개 members 와 분리, anon 접근 차단(아래 RLS).
+-- service_role 키(서버 전용)로만 접근 → 비밀번호는 절대 클라이언트로 노출되지 않음.
+create table if not exists member_auth (
+  member_id text primary key references members(id) on delete cascade,
+  password text not null                        -- scrypt 해시 ("salt:hash")
 );
 
 create table if not exists dues (
@@ -85,10 +99,14 @@ alter table members       enable row level security;
 alter table dues          enable row level security;
 alter table expenses      enable row level security;
 
+-- member_auth: RLS 활성화 + 공개 정책 없음 → anon 접근 전면 차단.
+-- (service_role 키는 RLS 를 우회하므로 서버 인증 로직만 접근 가능)
+alter table member_auth   enable row level security;
+
 do $$
 declare t text;
 begin
-  foreach t in array array['boards','posts','reservations','teams','songs','members','dues','expenses']
+  foreach t in array array['boards','posts','reservations','teams','songs','dues','expenses']
   loop
     execute format('drop policy if exists "public_all" on %I;', t);
     execute format('create policy "public_all" on %I for all using (true) with check (true);', t);

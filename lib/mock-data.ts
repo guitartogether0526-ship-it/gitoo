@@ -4,7 +4,6 @@ import type {
   Reservation,
   Team,
   Song,
-  Member,
   DuesPayment,
   Expense,
 } from "./types";
@@ -133,9 +132,6 @@ export const SONGS: Song[] = [
     status: "candidate",
   },
 ];
-
-// 시드 계정 없음 — 로그인은 관리자(admin) 계정으로 진행 (lib/admin.ts)
-export const MEMBERS: Member[] = [];
 
 export const DUES: DuesPayment[] = [
   { member_name: "김지윤", cohort: 12, paid: true, month: "2026-06" },

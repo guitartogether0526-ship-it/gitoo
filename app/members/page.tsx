@@ -5,13 +5,18 @@ export const dynamic = "force-dynamic";
 
 export default async function MembersPage() {
   const members = await getMembers();
-  const staff = members.filter((m) => m.role !== "member").length;
+  const approved = members.filter((m) => m.approved);
+  const pending = members.length - approved.length;
+  const staff = approved.filter((m) => m.role !== "member").length;
 
   return (
     <>
       <div className="page-head">
         <h1>회원 / 관리자</h1>
-        <p>전체 {members.length}명 · 운영진 {staff}명 · 권한 등급으로 관리</p>
+        <p>
+          회원 {approved.length}명 · 운영진 {staff}명
+          {pending > 0 ? ` · 승인 대기 ${pending}명` : ""}
+        </p>
       </div>
       <MemberList initial={members} />
     </>

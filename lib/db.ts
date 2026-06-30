@@ -1,13 +1,4 @@
-import {
-  BOARDS,
-  POSTS,
-  RESERVATIONS,
-  TEAMS,
-  SONGS,
-  MEMBERS,
-  DUES,
-  EXPENSES,
-} from "./mock-data";
+import { BOARDS, POSTS, RESERVATIONS, TEAMS, SONGS, DUES, EXPENSES } from "./mock-data";
 import type {
   Board,
   Post,
@@ -19,6 +10,7 @@ import type {
   Expense,
 } from "./types";
 import { getSupabase } from "./supabase";
+import { getAllMembers } from "./member-store";
 
 /**
  * 데이터 접근 계층 (Data Access Layer).
@@ -82,7 +74,7 @@ export async function getSongs(): Promise<Song[]> {
 }
 
 export async function getMembers(): Promise<Member[]> {
-  const rows = await read<Member>("members", MEMBERS);
+  const rows = await getAllMembers();
   return rows.slice().sort((a, b) => byKo(a.name, b.name));
 }
 

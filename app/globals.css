@@ -987,3 +987,29 @@ body {
   height: 38px;
   font-size: 14px;
 }
+.form-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin: 0;
+}
+.login-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.login-links button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.login-links span {
+  color: var(--text-dim);
+  font-size: 11px;
+}
