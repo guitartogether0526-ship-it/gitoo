@@ -116,7 +116,6 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
                 <tr key={m.id}>
                   <td>
                     <span className="m-name">{m.name}</span>
-                    <span className="m-cohort">{m.email}</span>
                   </td>
                   <td>{m.part}</td>
                   <td className="role-cell">
