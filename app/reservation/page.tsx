@@ -1,6 +1,8 @@
 import { getReservations } from "@/lib/db";
 import ReservationCalendar from "@/components/ReservationCalendar";
 
+export const dynamic = "force-dynamic";
+
 export default async function ReservationPage() {
   const reservations = await getReservations();
   return (

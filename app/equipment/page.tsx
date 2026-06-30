@@ -1,6 +1,8 @@
 import { getEquipment } from "@/lib/db";
 import EquipmentList from "@/components/EquipmentList";
 
+export const dynamic = "force-dynamic";
+
 export default async function EquipmentPage() {
   const items = await getEquipment();
   return (

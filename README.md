@@ -29,27 +29,32 @@ npm run build    # 프로덕션 빌드 (Vercel 호환)
 
 모바일 화면으로 보려면 브라우저 개발자도구의 디바이스 툴바를 사용하세요.
 
-## Supabase 연동 (추후)
+## Supabase 연동
 
-`lib/db.ts` 의 각 함수는 현재 목업 배열을 반환합니다. 실제 연동 시:
+이미 코드에 연결되어 있습니다. `lib/db.ts` 는 환경변수가 설정되면 Supabase 에서 읽고,
+없으면 목업 데이터로 폴백합니다(앱이 항상 동작). 쓰기(예약/투표/대여/권한)는 `lib/supabase.ts` 의
+브라우저 클라이언트로 실제 저장됩니다.
 
-```ts
-import { createClient } from "@supabase/supabase-js";
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+**설정 3단계:**
 
-export async function getEquipment() {
-  const { data } = await supabase.from("equipment").select("*").order("name");
-  return data ?? [];
-}
-```
+1. **테이블 생성**: Supabase 대시보드 → SQL Editor → [`supabase/schema.sql`](./supabase/schema.sql) 전체를 붙여넣고 Run
+   (테이블 + RLS 정책 + 시드 데이터까지 한 번에 생성)
+2. **환경변수**: `.env.example` 을 참고해 `.env.local` 에 키 입력 (로컬용, git 제외)
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+   SUPABASE_SERVICE_ROLE_KEY=<service-role-key>   # 서버 전용
+   ```
+3. **재시작**: `npm run dev` → 이제 DB 의 데이터를 읽고 씁니다.
 
-테이블 스키마는 `lib/types.ts` 의 인터페이스를 참고하세요.
+> ⚠️ 현재는 로그인(Auth)이 없어 RLS 정책이 anon 에게 읽기/쓰기를 모두 허용합니다.
+> 공개 운영 전에는 Supabase Auth 를 붙이고 정책을 사용자 기준으로 조이세요.
+> `service_role` 키는 모든 보안을 우회하므로 **브라우저/깃에 절대 노출 금지**입니다.
 
 ## Vercel 배포
 
-이 저장소를 GitHub에 푸시한 뒤 [Vercel](https://vercel.com/new)에서 import 하면 별도 설정 없이 자동 배포됩니다. (Next.js 자동 감지)
-
-```bash
-git init && git add . && git commit -m "init: GUITAR TOGETHER PWA"
-# GitHub 푸시 후 Vercel import → Deploy
-```
+1. 이 저장소를 GitHub 에 푸시
+2. [Vercel](https://vercel.com/new) 에서 해당 repo import (Next.js 자동 감지 — 별도 빌드 설정 불필요)
+3. **Environment Variables** 에 위 3개 키 추가 후 Deploy
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+4. 이후 `git push` 할 때마다 자동 재배포됩니다.

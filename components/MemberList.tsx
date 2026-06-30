@@ -2,13 +2,23 @@
 
 import { useState } from "react";
 import type { Member } from "@/lib/types";
+import { getSupabase } from "@/lib/supabase";
 
 export default function MemberList({ initial }: { initial: Member[] }) {
   const [members, setMembers] = useState<Member[]>(initial);
 
-  // 추후: supabase.from("members").update({ [key]: value }).eq("id", id)
-  const toggle = (id: string, key: "is_staff" | "is_treasurer") =>
-    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, [key]: !m[key] } : m)));
+  const toggle = (id: string, key: "is_staff" | "is_treasurer") => {
+    let next = false;
+    setMembers((prev) =>
+      prev.map((m) => {
+        if (m.id !== id) return m;
+        next = !m[key];
+        return { ...m, [key]: next };
+      }),
+    );
+    const sb = getSupabase();
+    if (sb) void sb.from("members").update({ [key]: next }).eq("id", id);
+  };
 
   return (
     <>

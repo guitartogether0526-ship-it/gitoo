@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getNotices, getReservations, getExpenses, getDues } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 function formatDate(iso: string) {
   const d = new Date(iso);
   return `${d.getMonth() + 1}월 ${d.getDate()}일`;

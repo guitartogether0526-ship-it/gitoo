@@ -1,5 +1,7 @@
 import { getExpenses, getDues } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 function formatDate(d: string) {
   const [, m, day] = d.split("-");
   return `${Number(m)}.${day}`;

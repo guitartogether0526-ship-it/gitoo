@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Equipment, EquipmentStatus } from "@/lib/types";
+import { getSupabase } from "@/lib/supabase";
 
 const STATUS_BADGE: Record<EquipmentStatus, { label: string; cls: string }> = {
   available: { label: "대여 가능", cls: "ok" },
@@ -20,9 +21,11 @@ export default function EquipmentList({ initial }: { initial: Equipment[] }) {
 
   const visible = items.filter((e) => cat === "전체" || e.category === cat);
 
-  // 추후: supabase.from("equipment").update({ status, rented_by }).eq("id", id)
-  const setStatus = (id: string, status: EquipmentStatus, rentedBy: string | null) =>
+  const setStatus = (id: string, status: EquipmentStatus, rentedBy: string | null) => {
     setItems((prev) => prev.map((e) => (e.id === id ? { ...e, status, rented_by: rentedBy } : e)));
+    const sb = getSupabase();
+    if (sb) void sb.from("equipment").update({ status, rented_by: rentedBy }).eq("id", id);
+  };
 
   return (
     <>

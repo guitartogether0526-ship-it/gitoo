@@ -1,6 +1,8 @@
 import { getSongs, getTeams } from "@/lib/db";
 import SetlistView from "@/components/SetlistView";
 
+export const dynamic = "force-dynamic";
+
 export default async function SetlistPage() {
   const [teams, songs] = await Promise.all([getTeams(), getSongs()]);
   return (

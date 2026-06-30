@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Song, Team } from "@/lib/types";
+import { getSupabase } from "@/lib/supabase";
 
 const HeartIcon = ({ filled }: { filled: boolean }) => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -33,45 +34,58 @@ export default function SetlistView({
     [songs, activeTeam],
   );
 
-  // 추후: supabase.rpc("toggle_vote", { song_id })
-  const toggleLike = (id: string) =>
+  const toggleLike = (id: string) => {
+    let nextVoted = false;
+    let nextLikes = 0;
     setSongs((prev) =>
-      prev.map((s) =>
-        s.id === id ? { ...s, voted: !s.voted, likes: s.likes + (s.voted ? -1 : 1) } : s,
-      ),
+      prev.map((s) => {
+        if (s.id !== id) return s;
+        nextVoted = !s.voted;
+        nextLikes = s.likes + (s.voted ? -1 : 1);
+        return { ...s, voted: nextVoted, likes: nextLikes };
+      }),
     );
+    const sb = getSupabase();
+    if (sb) void sb.from("songs").update({ voted: nextVoted, likes: nextLikes }).eq("id", id);
+  };
 
   // 곡 선정 ↔ 후보 전환
-  const toggleStatus = (id: string) =>
+  const toggleStatus = (id: string) => {
+    let next: "candidate" | "confirmed" = "candidate";
     setSongs((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? { ...s, status: s.status === "confirmed" ? "candidate" : "confirmed" }
-          : s,
-      ),
+      prev.map((s) => {
+        if (s.id !== id) return s;
+        next = s.status === "confirmed" ? "candidate" : "confirmed";
+        return { ...s, status: next };
+      }),
     );
+    const sb = getSupabase();
+    if (sb) void sb.from("songs").update({ status: next }).eq("id", id);
+  };
 
-  // 추후: supabase.from("songs").insert({ team_id, title, artist, parts })
-  const addSong = () => {
+  const addSong = async () => {
     if (!title.trim() || !artist.trim()) return;
     const partList = parts
       .split(",")
       .map((p) => p.trim())
       .filter(Boolean);
-    setSongs((prev) => [
-      ...prev,
-      {
-        id: `song-${activeTeam}-${prev.length}`,
-        team_id: activeTeam,
-        title: title.trim(),
-        artist: artist.trim(),
-        parts: partList,
-        sheets: [],
-        likes: 0,
-        voted: false,
-        status: "candidate",
-      },
-    ]);
+    const payload = {
+      team_id: activeTeam,
+      title: title.trim(),
+      artist: artist.trim(),
+      parts: partList,
+      sheets: [],
+      likes: 0,
+      voted: false,
+      status: "candidate" as const,
+    };
+    const sb = getSupabase();
+    if (sb) {
+      const { data, error } = await sb.from("songs").insert(payload).select().single();
+      if (!error && data) setSongs((prev) => [...prev, data as Song]);
+    } else {
+      setSongs((prev) => [...prev, { id: `song-${activeTeam}-${prev.length}`, ...payload }]);
+    }
     setTitle("");
     setArtist("");
     setShowForm(false);

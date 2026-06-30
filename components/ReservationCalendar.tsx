@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Reservation } from "@/lib/types";
+import { getSupabase } from "@/lib/supabase";
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -40,26 +41,31 @@ export default function ReservationCalendar({ initial }: { initial: Reservation[
       return { y: d.getFullYear(), m: d.getMonth() };
     });
 
-  // 추후: supabase.from("reservations").insert({ date, time_label, reserved_by, purpose })
-  const addReservation = () => {
+  const addReservation = async () => {
     if (!time.trim() || !by.trim()) return;
-    setReservations((prev) => [
-      ...prev,
-      {
-        id: `rv-${selected}-${prev.length}`,
-        date: selected,
-        time_label: time.trim(),
-        reserved_by: by.trim(),
-        purpose: purpose.trim() || "합주",
-      },
-    ]);
+    const payload = {
+      date: selected,
+      time_label: time.trim(),
+      reserved_by: by.trim(),
+      purpose: purpose.trim() || "합주",
+    };
+    const sb = getSupabase();
+    if (sb) {
+      const { data, error } = await sb.from("reservations").insert(payload).select().single();
+      if (!error && data) setReservations((prev) => [...prev, data as Reservation]);
+    } else {
+      // 목업 모드: 로컬 상태에만 추가
+      setReservations((prev) => [...prev, { id: `rv-${selected}-${prev.length}`, ...payload }]);
+    }
     setTime("19:00 - 21:00");
     setPurpose("합주");
   };
 
-  // 추후: supabase.from("reservations").delete().eq("id", id)
-  const remove = (id: string) =>
+  const remove = async (id: string) => {
     setReservations((prev) => prev.filter((r) => r.id !== id));
+    const sb = getSupabase();
+    if (sb) await sb.from("reservations").delete().eq("id", id);
+  };
 
   const cells: (number | null)[] = [
     ...Array(firstDay).fill(null),
