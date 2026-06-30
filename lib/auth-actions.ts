@@ -13,6 +13,7 @@ import {
   removeMember,
   setApproved,
   setPasswordById,
+  setProfile,
   setRole,
   setTeam,
   usernameTaken,
@@ -205,6 +206,38 @@ export async function changeRole(
   if (role === "admin") return { error: "admin 권한은 부여할 수 없습니다." };
   await setRole(id, role);
   return { ok: true };
+}
+
+/** 마이페이지 — 본인 기본정보 수정. 변경된 세션 정보를 반환(쿠키 갱신용). */
+export async function updateMyProfile(input: {
+  name: string;
+  phone: string;
+  email: string;
+  part: string;
+}): Promise<{ user: SessionUser } | { error: string }> {
+  const session = await getSession();
+  if (!session) return { error: "로그인이 필요합니다." };
+  if (session.id === ADMIN_USER.id) return { error: "관리자 계정은 기본정보를 수정할 수 없습니다." };
+
+  const name = input.name.trim();
+  const phone = input.phone.trim();
+  const email = input.email.trim().toLowerCase();
+  const part = input.part.trim();
+
+  if (!name) return { error: "이름을 입력하세요." };
+  if (!phone) return { error: "휴대폰번호를 입력하세요." };
+  if (!EMAIL_RE.test(email)) return { error: "올바른 이메일 주소를 입력하세요." };
+
+  await setProfile(session.id, { name, phone, email, part });
+
+  // 세션(쿠키)에 들어가는 값만 갱신 — 이름/파트/이니셜
+  const user: SessionUser = {
+    ...session,
+    name,
+    part: part || "미정",
+    initial: name.charAt(0) || "?",
+  };
+  return { user };
 }
 
 /** 팀 배정/변경 (STAFF 이상) — teamId=null 이면 미배정 */

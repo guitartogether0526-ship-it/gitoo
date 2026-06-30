@@ -25,7 +25,12 @@ const strip = (r: MemRecord): Member => {
 export async function getAllMembers(): Promise<Member[]> {
   const sb = getSupabaseAdmin();
   if (sb) {
-    const { data } = await sb.from("members").select(MEMBER_COLS);
+    const { data, error } = await sb.from("members").select(MEMBER_COLS);
+    if (error) {
+      // 보통 스키마 미반영(예: phone/email/team_id 컬럼 없음). schema.sql 재실행 필요.
+      console.error("[member-store] members 조회 실패 — supabase/schema.sql 을 다시 실행하세요:", error.message);
+      return [];
+    }
     return (data as Member[] | null) ?? [];
   }
   return mem.rows.map(strip);
@@ -130,6 +135,28 @@ export async function setRole(id: string, role: Member["role"]): Promise<void> {
   }
   const row = mem.rows.find((r) => r.id === id);
   if (row) row.role = role;
+}
+
+/** 본인 기본정보 수정 (이름·휴대폰·이메일·파트). 아바타 이니셜은 이름에서 재계산. */
+export async function setProfile(
+  id: string,
+  input: { name: string; phone: string; email: string; part: string },
+): Promise<void> {
+  const initial = input.name.trim().charAt(0) || "?";
+  const patch = {
+    name: input.name.trim(),
+    phone: input.phone.trim(),
+    email: input.email.trim().toLowerCase(),
+    part: input.part.trim() || "미정",
+    initial,
+  };
+  const sb = getSupabaseAdmin();
+  if (sb) {
+    await sb.from("members").update(patch).eq("id", id);
+    return;
+  }
+  const row = mem.rows.find((r) => r.id === id);
+  if (row) Object.assign(row, patch);
 }
 
 export async function setTeam(id: string, teamId: string | null): Promise<void> {

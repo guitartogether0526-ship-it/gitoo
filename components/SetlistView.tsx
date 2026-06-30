@@ -3,6 +3,9 @@
 import { useMemo, useState } from "react";
 import type { Song, Team } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/roles";
+import { addTeam } from "@/lib/team-actions";
 
 const HeartIcon = ({ filled }: { filled: boolean }) => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -17,14 +20,39 @@ export default function SetlistView({
   teams: Team[];
   initial: Song[];
 }) {
+  const { user } = useAuth();
+  const canManageTeams = can.manageTeams(user?.role);
+
+  const [teamList, setTeamList] = useState<Team[]>(teams);
   const [songs, setSongs] = useState<Song[]>(initial);
   const [activeTeam, setActiveTeam] = useState<string>(teams[0]?.id ?? "");
+
+  // 팀 추가 폼
+  const [newTeam, setNewTeam] = useState("");
+  const [teamBusy, setTeamBusy] = useState(false);
+  const [teamError, setTeamError] = useState("");
 
   // 곡 올리기 폼
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [parts, setParts] = useState("기타, 베이스, 드럼, 보컬");
   const [showForm, setShowForm] = useState(false);
+
+  const onAddTeam = async () => {
+    setTeamError("");
+    const name = newTeam.trim();
+    if (!name) return;
+    setTeamBusy(true);
+    const res = await addTeam(name);
+    setTeamBusy(false);
+    if ("error" in res) {
+      setTeamError(res.error);
+      return;
+    }
+    setTeamList((prev) => [...prev, res.team]);
+    setActiveTeam(res.team.id);
+    setNewTeam("");
+  };
 
   const teamSongs = useMemo(
     () =>
@@ -95,7 +123,7 @@ export default function SetlistView({
     <>
       {/* 팀별 탭 */}
       <div className="tab-row">
-        {teams.map((t) => (
+        {teamList.map((t) => (
           <button
             key={t.id}
             className={`tab${activeTeam === t.id ? " active" : ""}`}
@@ -105,6 +133,29 @@ export default function SetlistView({
           </button>
         ))}
       </div>
+
+      {/* 팀 추가 — 운영진 전용 */}
+      {canManageTeams && (
+        <div className="card mt-12">
+          <div className="field">
+            <label>새 팀 추가</label>
+            <div className="flex items-center gap-8">
+              <input
+                className="input grow"
+                value={newTeam}
+                onChange={(e) => setNewTeam(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && onAddTeam()}
+                placeholder="예: 4팀 / 어쿠스틱 팀"
+                maxLength={30}
+              />
+              <button className="btn amber" disabled={teamBusy} onClick={onAddTeam}>
+                {teamBusy ? "추가 중…" : "＋ 팀 추가"}
+              </button>
+            </div>
+          </div>
+          {teamError && <p className="form-error" style={{ marginBottom: 0 }}>{teamError}</p>}
+        </div>
+      )}
 
       {/* 곡 올리기 */}
       <button
@@ -138,7 +189,7 @@ export default function SetlistView({
       )}
 
       <div className="section-title">
-        🎼 {teams.find((t) => t.id === activeTeam)?.name} 셋리스트 ({teamSongs.length})
+        🎼 {teamList.find((t) => t.id === activeTeam)?.name} 셋리스트 ({teamSongs.length})
       </div>
 
       {teamSongs.length === 0 ? (

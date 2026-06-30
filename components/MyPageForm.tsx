@@ -1,0 +1,115 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import type { Member, SessionUser } from "@/lib/types";
+import { useAuth } from "@/lib/auth";
+import { ROLE_LABEL } from "@/lib/roles";
+import { updateMyProfile } from "@/lib/auth-actions";
+
+const PARTS = ["기타", "베이스", "드럼", "보컬", "키보드", "기타 파트"];
+
+export default function MyPageForm({
+  session,
+  member,
+}: {
+  session: SessionUser | null;
+  member: Member | null;
+}) {
+  const { login: setSession } = useAuth();
+
+  const [name, setName] = useState(member?.name ?? "");
+  const [phone, setPhone] = useState(member?.phone ?? "");
+  const [email, setEmail] = useState(member?.email ?? "");
+  const [part, setPart] = useState(member?.part ?? "기타");
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  if (!session) {
+    return (
+      <div className="card">
+        <p className="dim" style={{ margin: 0, fontSize: 13 }}>로그인이 필요합니다.</p>
+      </div>
+    );
+  }
+
+  // 관리자 계정 또는 회원 레코드 없음 — 읽기 전용 안내
+  if (session.id === "admin" || !member) {
+    return (
+      <>
+        <div className="card">
+          <div className="title-row">
+            <span className="m-name">{session.name}</span>
+            <span className="badge amber">{ROLE_LABEL[session.role]}</span>
+          </div>
+          <p className="dim" style={{ marginTop: 10, fontSize: 13 }}>
+            {session.id === "admin"
+              ? "관리자 계정은 기본 정보를 수정할 수 없습니다."
+              : "회원 정보를 불러올 수 없습니다. 운영진에게 문의하세요."}
+          </p>
+        </div>
+        <Link href="/" className="btn ghost" style={{ width: "100%", marginTop: 12, textAlign: "center" }}>
+          ← 홈으로
+        </Link>
+      </>
+    );
+  }
+
+  const submit = async () => {
+    setError("");
+    setSaved(false);
+    setBusy(true);
+    const res = await updateMyProfile({ name, phone, email, part });
+    setBusy(false);
+    if ("error" in res) {
+      setError(res.error);
+      return;
+    }
+    setSaved(true);
+    // 세션 쿠키 갱신(헤더 이름/이니셜 즉시 반영) + 서버 컴포넌트 재렌더
+    setSession(res.user);
+  };
+
+  return (
+    <>
+      <div className="card">
+        <div className="form-grid">
+          <div className="field">
+            <label>아이디</label>
+            <input className="input" value={member.username} disabled readOnly />
+          </div>
+          <div className="field">
+            <label>이름</label>
+            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="실명" />
+          </div>
+          <div className="field">
+            <label>휴대폰번호</label>
+            <input className="input" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="예: 010-1234-5678" autoComplete="tel" />
+          </div>
+          <div className="field">
+            <label>이메일</label>
+            <input className="input" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="아이디·비밀번호 찾기에 사용됩니다" autoCapitalize="none" autoComplete="email" />
+          </div>
+          <div className="field">
+            <label>담당 파트</label>
+            <select className="select" value={part} onChange={(e) => setPart(e.target.value)}>
+              {PARTS.map((p) => (
+                <option key={p}>{p}</option>
+              ))}
+              {!PARTS.includes(part) && <option>{part}</option>}
+            </select>
+          </div>
+          {error && <p className="form-error">{error}</p>}
+          {saved && <p className="dim" style={{ color: "var(--ok, #5ac88a)", fontSize: 13, margin: 0 }}>✅ 저장되었습니다.</p>}
+          <button className="btn amber" disabled={busy} onClick={submit}>
+            {busy ? "저장 중…" : "기본 정보 저장"}
+          </button>
+        </div>
+      </div>
+      <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 10 }}>
+        권한·팀 변경은 운영진에게 문의하세요. (아이디는 변경할 수 없습니다)
+      </p>
+    </>
+  );
+}

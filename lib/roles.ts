@@ -39,4 +39,6 @@ export const can = {
   writeNotice: (r?: MemberRole | null) => isStaffOrAbove(r),
   /** 게시판 추가 — STAFF 이상 */
   manageBoards: (r?: MemberRole | null) => isStaffOrAbove(r),
+  /** 팀 추가/관리 — 운영진(회장·총무·STAFF, admin 포함) */
+  manageTeams: (r?: MemberRole | null) => isStaffOrAbove(r),
 };
