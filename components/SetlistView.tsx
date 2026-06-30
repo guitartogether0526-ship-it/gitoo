@@ -137,6 +137,7 @@ export default function SetlistView({
     .sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
   const toggleLike = (id: string) => {
+    if (!canManageActive) return; // 다른 팀은 투표 불가
     const cur = songs.find((s) => s.id === id);
     if (!cur) return;
     const nextVoted = !cur.voted;
@@ -338,14 +339,21 @@ export default function SetlistView({
                   </div>
                   <div className="item-sub">{s.artist}</div>
                 </div>
-                <button
-                  className={`like-btn${s.voted ? " liked" : ""}`}
-                  onClick={() => toggleLike(s.id)}
-                  aria-pressed={s.voted}
-                >
-                  <HeartIcon filled={s.voted} />
-                  {s.likes}
-                </button>
+                {canManageActive ? (
+                  <button
+                    className={`like-btn${s.voted ? " liked" : ""}`}
+                    onClick={() => toggleLike(s.id)}
+                    aria-pressed={s.voted}
+                  >
+                    <HeartIcon filled={s.voted} />
+                    {s.likes}
+                  </button>
+                ) : (
+                  <span className="like-btn" style={{ cursor: "default", opacity: 0.7 }} title="본인 팀만 투표할 수 있어요">
+                    <HeartIcon filled={false} />
+                    {s.likes}
+                  </span>
+                )}
               </div>
 
               {s.youtube_url && (

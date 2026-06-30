@@ -156,7 +156,9 @@ export default function ReservationCalendar({
             if (day === null) return <div key={`e${i}`} className="cal-cell empty" />;
             const dateStr = ymd(view.y, view.m, day);
             const dow = (firstDay + day - 1) % 7;
-            const has = (byDate[dateStr]?.length ?? 0) > 0;
+            const dayRes = byDate[dateStr] ?? [];
+            const has = dayRes.length > 0;
+            const hasPerf = dayRes.some((r) => r.purpose === "정기공연");
             const cls = [
               "cal-cell",
               dow === 0 ? "sun" : "",
@@ -168,7 +170,7 @@ export default function ReservationCalendar({
             return (
               <button key={dateStr} className={cls} onClick={() => setSelected(dateStr)}>
                 <span>{day}</span>
-                {has && <span className="cal-dot" />}
+                {has && <span className={`cal-dot${hasPerf ? " perf" : ""}`} />}
               </button>
             );
           })}
@@ -277,7 +279,7 @@ export default function ReservationCalendar({
       </div>
 
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 8 }}>
-        연습실 1실 · 날짜를 선택해 예약을 등록하세요 (앰버 점 = 예약 있는 날)
+        날짜를 선택해 예약을 등록하세요 (앰버 점 = 예약, 빨간 점 = 정기공연)
       </p>
     </>
   );

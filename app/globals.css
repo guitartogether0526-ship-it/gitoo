@@ -528,6 +528,10 @@ body {
   background: var(--accent);
   box-shadow: 0 0 8px var(--accent-glow);
 }
+.cal-cell .cal-dot.perf {
+  background: var(--danger, #e5484d);
+  box-shadow: 0 0 8px rgba(229, 72, 77, 0.6);
+}
 .cal-cell.sun {
   color: var(--danger);
 }
