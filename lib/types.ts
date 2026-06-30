@@ -63,13 +63,15 @@ export type MemberStatus = "active" | "rest";
 export interface Member {
   id: string;
   name: string;
-  cohort: number; // 기수
+  phone: string; // 휴대폰번호
+  email: string; // 이메일 (아이디/비밀번호 찾기 발송용)
   part: string; // 담당 파트 (기타/베이스/드럼/보컬/키보드 등)
   status: MemberStatus;
   role: MemberRole; // 권한 등급
   initial: string; // 아바타 이니셜
   username: string; // 로그인 아이디
   approved: boolean; // 관리자 승인 여부 (false = 가입 승인 대기)
+  team_id: string | null; // 소속 팀 (운영진이 배정, 미배정 = null)
 }
 
 /** 로그인 세션 사용자 (쿠키에 저장 — 비밀번호 등 민감정보 미포함) */
@@ -78,8 +80,8 @@ export interface SessionUser {
   name: string;
   role: MemberRole;
   part: string;
-  cohort: number;
   initial: string;
+  team_id: string | null; // 소속 팀 (운영진 배정)
 }
 
 export interface DuesPayment {

@@ -8,14 +8,24 @@ import { hashPassword, verifyPassword } from "./password";
 import type { MemberRole } from "./types";
 import {
   createMember,
-  findByNameCohort,
+  findByEmail,
   getCredential,
   removeMember,
   setApproved,
-  setPasswordByUsername,
+  setPasswordById,
   setRole,
+  setTeam,
   usernameTaken,
 } from "./member-store";
+import { isEmailConfigured, sendMail } from "./email";
+import { randomBytes } from "node:crypto";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** 사람이 읽기 쉬운 임시 비밀번호 (10자) */
+function genTempPassword(): string {
+  return randomBytes(8).toString("base64url").replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
+}
 
 /** 관리자 비밀번호 (서버 전용). Vercel/.env 의 ADMIN_PASSWORD 로 덮어쓰기. */
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "<admin-password>";
@@ -28,10 +38,17 @@ function toSession(m: {
   name: string;
   role: SessionUser["role"];
   part: string;
-  cohort: number;
   initial: string;
+  team_id: string | null;
 }): SessionUser {
-  return { id: m.id, name: m.name, role: m.role, part: m.part, cohort: m.cohort, initial: m.initial };
+  return {
+    id: m.id,
+    name: m.name,
+    role: m.role,
+    part: m.part,
+    initial: m.initial,
+    team_id: m.team_id ?? null,
+  };
 }
 
 /** 로그인 — 아이디 + 비밀번호 */
@@ -60,11 +77,14 @@ export async function signup(input: {
   username: string;
   password: string;
   name: string;
-  cohort: number;
+  phone: string;
+  email: string;
   part: string;
 }): Promise<{ ok: true } | { error: string }> {
   const username = input.username.trim().toLowerCase();
   const name = input.name.trim();
+  const phone = input.phone.trim();
+  const email = input.email.trim().toLowerCase();
   const part = input.part.trim();
 
   if (!username || !input.password || !name) return { error: "필수 항목을 모두 입력하세요." };
@@ -72,7 +92,8 @@ export async function signup(input: {
   if (!/^[a-z0-9_]{3,20}$/.test(username))
     return { error: "아이디는 영문 소문자·숫자·_ 3~20자로 입력하세요." };
   if (input.password.length < 4) return { error: "비밀번호는 4자 이상이어야 합니다." };
-  if (!Number.isFinite(input.cohort) || input.cohort <= 0) return { error: "기수를 입력하세요." };
+  if (!phone) return { error: "휴대폰번호를 입력하세요." };
+  if (!EMAIL_RE.test(email)) return { error: "올바른 이메일 주소를 입력하세요." };
 
   if (await usernameTaken(username)) return { error: "이미 사용 중인 아이디입니다." };
 
@@ -81,7 +102,8 @@ export async function signup(input: {
       username,
       passwordHash: hashPassword(input.password),
       name,
-      cohort: input.cohort,
+      phone,
+      email,
       part: part || "미정",
     });
   } catch {
@@ -90,33 +112,69 @@ export async function signup(input: {
   return { ok: true };
 }
 
-/** 아이디 찾기 — 이름 + 기수로 조회 */
+/**
+ * 아이디 찾기 — 가입 시 이메일로 아이디를 발송.
+ * - 이메일 설정 시: 해당 메일로 발송하고 sent:true.
+ * - 미설정 시: 화면에 아이디를 표시(sent:false, usernames) — 데모 폴백.
+ */
 export async function findUsername(
-  name: string,
-  cohort: number,
-): Promise<{ usernames: string[] } | { error: string }> {
-  if (!name.trim() || !Number.isFinite(cohort)) return { error: "이름과 기수를 입력하세요." };
-  const members = await findByNameCohort(name, cohort);
-  if (members.length === 0) return { error: "일치하는 회원이 없습니다." };
-  return { usernames: members.map((m) => m.username) };
+  emailRaw: string,
+): Promise<{ ok: true; sent: boolean; usernames?: string[] } | { error: string }> {
+  const email = emailRaw.trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) return { error: "올바른 이메일 주소를 입력하세요." };
+
+  const members = await findByEmail(email);
+  if (members.length === 0) return { error: "해당 이메일로 가입된 계정이 없습니다." };
+
+  const usernames = members.map((m) => m.username);
+
+  if (!isEmailConfigured()) {
+    // 이메일 미설정 — 화면 표시 폴백
+    return { ok: true, sent: false, usernames };
+  }
+
+  const sent = await sendMail({
+    to: email,
+    subject: "[GUITAR TOGETHER] 아이디 찾기 결과",
+    text: `회원님의 아이디는 다음과 같습니다:\n\n${usernames.join("\n")}\n\n로그인 화면에서 위 아이디로 로그인하세요.`,
+  });
+  if (!sent) return { error: "이메일 발송에 실패했습니다. 관리자에게 문의하세요." };
+  return { ok: true, sent: true };
 }
 
-/** 비밀번호 재설정 — 아이디 + 이름 + 기수로 본인 확인 후 새 비밀번호 설정 */
+/**
+ * 비밀번호 재설정 — 아이디 + 이메일로 본인 확인 후 임시 비밀번호를 이메일로 발송.
+ * - 이메일 설정 시: 임시 비밀번호를 메일로 발송(sent:true).
+ * - 미설정 시: 화면에 임시 비밀번호 표시(sent:false, tempPassword) — 데모 폴백.
+ */
 export async function resetPassword(input: {
   username: string;
-  name: string;
-  cohort: number;
-  newPassword: string;
-}): Promise<{ ok: true } | { error: string }> {
-  if (input.newPassword.length < 4) return { error: "비밀번호는 4자 이상이어야 합니다." };
-  const ok = await setPasswordByUsername(
-    input.username.trim().toLowerCase(),
-    input.name,
-    input.cohort,
-    hashPassword(input.newPassword),
-  );
-  if (!ok) return { error: "본인 확인에 실패했습니다. 아이디·이름·기수를 확인하세요." };
-  return { ok: true };
+  email: string;
+}): Promise<{ ok: true; sent: boolean; tempPassword?: string } | { error: string }> {
+  const username = input.username.trim().toLowerCase();
+  const email = input.email.trim().toLowerCase();
+  if (!username || !EMAIL_RE.test(email)) return { error: "아이디와 이메일을 입력하세요." };
+
+  const cred = await getCredential(username);
+  // 본인 확인: 아이디 + 이메일 일치 (불일치 시에도 동일 메시지로 계정 노출 방지)
+  if (!cred || cred.member.email.trim().toLowerCase() !== email) {
+    return { error: "아이디 또는 이메일이 일치하지 않습니다." };
+  }
+
+  const tempPassword = genTempPassword();
+  await setPasswordById(cred.member.id, hashPassword(tempPassword));
+
+  if (!isEmailConfigured()) {
+    return { ok: true, sent: false, tempPassword };
+  }
+
+  const sent = await sendMail({
+    to: email,
+    subject: "[GUITAR TOGETHER] 임시 비밀번호 안내",
+    text: `요청하신 임시 비밀번호는 다음과 같습니다:\n\n임시 비밀번호: ${tempPassword}\n\n로그인 후 비밀번호를 변경해 주세요.`,
+  });
+  if (!sent) return { error: "이메일 발송에 실패했습니다. 관리자에게 문의하세요." };
+  return { ok: true, sent: true };
 }
 
 /** 가입 승인 (STAFF 이상) */
@@ -144,5 +202,16 @@ export async function changeRole(
   if (!can.manageMembers(session?.role)) return { error: "권한이 없습니다." };
   if (role === "admin") return { error: "admin 권한은 부여할 수 없습니다." };
   await setRole(id, role);
+  return { ok: true };
+}
+
+/** 팀 배정/변경 (STAFF 이상) — teamId=null 이면 미배정 */
+export async function changeTeam(
+  id: string,
+  teamId: string | null,
+): Promise<{ ok: true } | { error: string }> {
+  const session = await getSession();
+  if (!can.manageMembers(session?.role)) return { error: "권한이 없습니다." };
+  await setTeam(id, teamId);
   return { ok: true };
 }

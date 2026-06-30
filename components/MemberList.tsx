@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { Member, MemberRole } from "@/lib/types";
+import type { Member, MemberRole, Team } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { can, ROLE_LABEL, ROLE_ORDER } from "@/lib/roles";
-import { approveMember, rejectMember, changeRole } from "@/lib/auth-actions";
+import { approveMember, rejectMember, changeRole, changeTeam } from "@/lib/auth-actions";
 
 const ROLE_BADGE: Record<MemberRole, string> = {
   admin: "amber",
@@ -14,11 +14,13 @@ const ROLE_BADGE: Record<MemberRole, string> = {
   member: "",
 };
 
-export default function MemberList({ initial }: { initial: Member[] }) {
+export default function MemberList({ initial, teams }: { initial: Member[]; teams: Team[] }) {
   const { user } = useAuth();
   const canManage = can.manageMembers(user?.role);
   const [members, setMembers] = useState<Member[]>(initial);
   const [busy, setBusy] = useState<string>("");
+
+  const teamName = (id: string | null) => teams.find((t) => t.id === id)?.name ?? "미배정";
 
   const pending = members.filter((m) => !m.approved);
   const approved = members.filter((m) => m.approved);
@@ -37,6 +39,17 @@ export default function MemberList({ initial }: { initial: Member[] }) {
     setBusy("");
     if ("ok" in res) setMembers((prev) => prev.filter((m) => m.id !== id));
     else alert(res.error);
+  };
+
+  const onTeam = async (id: string, teamId: string | null) => {
+    const prevTeam = members.find((m) => m.id === id)?.team_id ?? null;
+    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, team_id: teamId } : m)));
+    const res = await changeTeam(id, teamId);
+    if ("error" in res) {
+      // 롤백
+      setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, team_id: prevTeam } : m)));
+      alert(res.error);
+    }
   };
 
   const onRole = async (id: string, role: MemberRole) => {
@@ -61,8 +74,10 @@ export default function MemberList({ initial }: { initial: Member[] }) {
               <div className="title-row">
                 <div className="grow">
                   <span className="m-name">{m.name}</span>
-                  <span className="m-cohort">{m.cohort}기 · {m.part}</span>
-                  <div className="dim" style={{ fontSize: 12, marginTop: 2 }}>아이디: {m.username}</div>
+                  <span className="m-cohort">{m.part}</span>
+                  <div className="dim" style={{ fontSize: 12, marginTop: 2 }}>
+                    아이디: {m.username} · {m.phone} · {m.email}
+                  </div>
                 </div>
               </div>
               <div className="btn-row">
@@ -91,6 +106,7 @@ export default function MemberList({ initial }: { initial: Member[] }) {
               <tr>
                 <th>이름</th>
                 <th>파트</th>
+                <th className="role-cell">팀</th>
                 <th className="role-cell">권한</th>
                 <th>상태</th>
               </tr>
@@ -100,9 +116,28 @@ export default function MemberList({ initial }: { initial: Member[] }) {
                 <tr key={m.id}>
                   <td>
                     <span className="m-name">{m.name}</span>
-                    <span className="m-cohort">{m.cohort}기</span>
+                    <span className="m-cohort">{m.email}</span>
                   </td>
                   <td>{m.part}</td>
+                  <td className="role-cell">
+                    {canManage ? (
+                      <select
+                        className="select sm"
+                        value={m.team_id ?? ""}
+                        onChange={(e) => onTeam(m.id, e.target.value || null)}
+                        aria-label={`${m.name} 팀 배정`}
+                      >
+                        <option value="">미배정</option>
+                        {teams.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className={`badge ${m.team_id ? "ok" : ""}`}>{teamName(m.team_id)}</span>
+                    )}
+                  </td>
                   <td className="role-cell">
                     {canManage ? (
                       <select

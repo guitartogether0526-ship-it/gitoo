@@ -11,7 +11,8 @@ import { getSupabaseAdmin } from "./supabase-admin";
  * - 미설정 시: 프로세스 메모리 폴백(재시작 시 초기화) — DB 없이도 데모 동작.
  */
 
-const MEMBER_COLS = "id,name,cohort,part,status,role,initial,username,approved";
+const MEMBER_COLS =
+  "id,name,phone,email,part,status,role,initial,username,approved,team_id";
 
 // ---- 메모리 폴백 ----
 type MemRecord = Member & { password: string };
@@ -44,20 +45,23 @@ export async function createMember(input: {
   username: string;
   passwordHash: string;
   name: string;
-  cohort: number;
+  phone: string;
+  email: string;
   part: string;
 }): Promise<Member> {
   const id = randomUUID();
   const member: Member = {
     id,
     name: input.name,
-    cohort: input.cohort,
+    phone: input.phone,
+    email: input.email,
     part: input.part,
     status: "active",
     role: "member",
     initial: input.name.trim().charAt(0) || "?",
     username: input.username.toLowerCase(),
     approved: false, // 관리자 승인 대기
+    team_id: null, // 팀 미배정 (운영진이 배정)
   };
 
   const sb = getSupabaseAdmin();
@@ -98,18 +102,14 @@ export async function getCredential(
   return row ? { member: strip(row), passwordHash: row.password } : null;
 }
 
-export async function findByNameCohort(name: string, cohort?: number): Promise<Member[]> {
-  const n = name.trim();
+export async function findByEmail(email: string): Promise<Member[]> {
+  const e = email.trim().toLowerCase();
   const sb = getSupabaseAdmin();
   if (sb) {
-    let q = sb.from("members").select(MEMBER_COLS).eq("name", n);
-    if (typeof cohort === "number") q = q.eq("cohort", cohort);
-    const { data } = await q;
+    const { data } = await sb.from("members").select(MEMBER_COLS).ilike("email", e);
     return (data as Member[] | null) ?? [];
   }
-  return mem.rows
-    .filter((r) => r.name === n && (cohort === undefined || r.cohort === cohort))
-    .map(strip);
+  return mem.rows.filter((r) => r.email.trim().toLowerCase() === e).map(strip);
 }
 
 export async function setApproved(id: string, approved: boolean): Promise<void> {
@@ -132,6 +132,16 @@ export async function setRole(id: string, role: Member["role"]): Promise<void> {
   if (row) row.role = role;
 }
 
+export async function setTeam(id: string, teamId: string | null): Promise<void> {
+  const sb = getSupabaseAdmin();
+  if (sb) {
+    await sb.from("members").update({ team_id: teamId }).eq("id", id);
+    return;
+  }
+  const row = mem.rows.find((r) => r.id === id);
+  if (row) row.team_id = teamId;
+}
+
 export async function removeMember(id: string): Promise<void> {
   const sb = getSupabaseAdmin();
   if (sb) {
@@ -142,23 +152,13 @@ export async function removeMember(id: string): Promise<void> {
   mem.rows = mem.rows.filter((r) => r.id !== id);
 }
 
-export async function setPasswordByUsername(
-  username: string,
-  name: string,
-  cohort: number,
-  passwordHash: string,
-): Promise<boolean> {
-  const cred = await getCredential(username);
-  if (!cred) return false;
-  // 본인 확인: 이름 + 기수 일치
-  if (cred.member.name !== name.trim() || cred.member.cohort !== cohort) return false;
-
+/** member_auth 비밀번호 해시 갱신 (id 기준). 본인 확인은 호출부 책임. */
+export async function setPasswordById(id: string, passwordHash: string): Promise<void> {
   const sb = getSupabaseAdmin();
   if (sb) {
-    await sb.from("member_auth").update({ password: passwordHash }).eq("member_id", cred.member.id);
-    return true;
+    await sb.from("member_auth").update({ password: passwordHash }).eq("member_id", id);
+    return;
   }
-  const row = mem.rows.find((r) => r.id === cred.member.id);
+  const row = mem.rows.find((r) => r.id === id);
   if (row) row.password = passwordHash;
-  return true;
 }

@@ -9,6 +9,6 @@ export const ADMIN_USER: SessionUser = {
   name: "admin",
   role: "admin",
   part: "운영",
-  cohort: 0,
   initial: "A",
+  team_id: null,
 };

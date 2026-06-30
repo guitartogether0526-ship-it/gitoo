@@ -50,19 +50,35 @@ create table if not exists songs (
 create table if not exists members (
   id text primary key default gen_random_uuid()::text,
   name text not null,
-  cohort integer not null,
+  phone text,                                   -- 휴대폰번호
+  email text,                                   -- 이메일(아이디/비밀번호 찾기 발송용)
   part text not null,
   status text not null default 'active',        -- active | rest
   role text not null default 'member',          -- admin | president | treasurer | staff | member
   initial text not null,
   username text unique,                         -- 로그인 아이디
-  approved boolean not null default false       -- 관리자 승인 여부 (false=가입 대기)
+  approved boolean not null default false,      -- 관리자 승인 여부 (false=가입 대기)
+  team_id text references teams(id) on delete set null  -- 소속 팀(운영진 배정, null=미배정)
 );
 
 -- 기존 members 테이블 업그레이드(재실행 안전) — 새 컬럼 추가
 alter table members add column if not exists role text not null default 'member';
 alter table members add column if not exists username text unique;
 alter table members add column if not exists approved boolean not null default false;
+alter table members add column if not exists team_id text references teams(id) on delete set null;
+alter table members add column if not exists phone text;
+alter table members add column if not exists email text;
+-- 기수(cohort) 미사용 전환 — 기존 컬럼이 있으면 not null 제약 해제(회원가입 시 미입력)
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_name = 'members' and column_name = 'cohort'
+  ) then
+    alter table members alter column cohort drop not null;
+  end if;
+end $$;
+create index if not exists members_email_idx on members (lower(email));
 
 -- 자격증명(비밀번호 해시) — 공개 members 와 분리, anon 접근 차단(아래 RLS).
 -- service_role 키(서버 전용)로만 접근 → 비밀번호는 절대 클라이언트로 노출되지 않음.
@@ -134,8 +150,8 @@ insert into reservations (id, date, time_label, reserved_by, purpose) values
 on conflict (id) do nothing;
 
 insert into teams (id, name) values
-  ('t1','록 밴드 A'),('t2','어쿠스틱 팀'),('t3','재즈 합주반')
-on conflict (id) do nothing;
+  ('t1','1팀'),('t2','2팀'),('t3','3팀')
+on conflict (id) do update set name = excluded.name;
 
 insert into songs (id, team_id, title, artist, parts, sheets, likes, voted, status) values
   ('s1','t1','Bohemian Rhapsody','Queen',

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getBoards, getPosts, getReservations, getExpenses, getDues } from "@/lib/db";
+import { getBoards, getPosts, getMembers, getSongs, getTeams } from "@/lib/db";
 import { getSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -9,58 +9,32 @@ function formatDate(iso: string) {
   return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
-function shortDate(d: string) {
-  const [, m, day] = d.split("-");
-  return `${Number(m)}/${day}`;
-}
-
 export default async function DashboardPage() {
-  const [session, boards, posts, reservations, expenses, dues] = await Promise.all([
+  const [session, boards, posts, members, songs, teams] = await Promise.all([
     getSession(),
     getBoards(),
     getPosts(),
-    getReservations(),
-    getExpenses(),
-    getDues(),
+    getMembers(),
+    getSongs(),
+    getTeams(),
   ]);
 
   // 공지사항 게시판의 상단 고정글만 홈에 노출
   const noticeBoardIds = new Set(boards.filter((b) => b.is_notice).map((b) => b.id));
   const pinnedNotices = posts.filter((p) => noticeBoardIds.has(p.board_id) && p.pinned);
 
-  const myName = session?.name ?? "나";
-  const myNext = reservations.find((r) => r.reserved_by === myName);
-  const balance = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const paidCount = dues.filter((d) => d.paid).length;
+  // 본인 팀 — 회원 테이블의 최신 배정값 우선(미배정 시 세션값)
+  const me = members.find((m) => m.id === session?.id);
+  const myTeamId = me?.team_id ?? session?.team_id ?? null;
+  const myTeam = teams.find((t) => t.id === myTeamId);
+  // 본인 팀에서 선정(확정)한 곡만 — 후보는 제외
+  const myTeamSongs = songs.filter((s) => s.team_id === myTeamId && s.status === "confirmed");
 
   return (
     <>
       <div className="page-head">
         <h1>안녕하세요, {session?.name ?? "기타리스트"}님 🎸</h1>
         <p>오늘의 동호회 소식을 확인하세요.</p>
-      </div>
-
-      <div className="stat-grid">
-        <div className="stat">
-          <div className="s-label">다음 내 예약</div>
-          <div className="s-value">
-            {myNext ? (
-              <span className="amber-text">{shortDate(myNext.date)}</span>
-            ) : (
-              <span className="dim">없음</span>
-            )}
-          </div>
-          <div className="dim" style={{ fontSize: 11, marginTop: 2 }}>
-            {myNext ? `${myNext.time_label} · ${myNext.purpose}` : "예약 화면에서 추가"}
-          </div>
-        </div>
-        <div className="stat">
-          <div className="s-label">총무 장부 잔액</div>
-          <div className="s-value amber-text">{balance.toLocaleString()}원</div>
-          <div className="dim" style={{ fontSize: 11, marginTop: 2 }}>
-            6월 회비 {paidCount}/{dues.length}명 납부
-          </div>
-        </div>
       </div>
 
       <div className="title-row" style={{ marginTop: 4 }}>
@@ -104,6 +78,42 @@ export default async function DashboardPage() {
           <div className="s-label" style={{ marginTop: 6 }}>셋리스트 투표</div>
         </Link>
       </div>
+
+      <div className="title-row" style={{ marginTop: 4 }}>
+        <div className="section-title" style={{ margin: 0 }}>
+          🎵 {myTeam ? `${myTeam.name} 선정곡` : "우리 팀 선정곡"}
+        </div>
+        <Link href="/setlist" className="dim" style={{ fontSize: 12, textDecoration: "none" }}>
+          전체보기 ›
+        </Link>
+      </div>
+
+      {!myTeamId ? (
+        <div className="card">
+          <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+            아직 팀이 배정되지 않았습니다. 운영진에게 팀 배정을 요청하세요.
+          </p>
+        </div>
+      ) : myTeamSongs.length === 0 ? (
+        <div className="card">
+          <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+            아직 선정된 곡이 없습니다. 셋리스트에서 곡을 선정해 보세요.
+          </p>
+        </div>
+      ) : (
+        myTeamSongs.map((s) => (
+          <div className="card" key={s.id}>
+            <div className="title-row">
+              <div className="grow">
+                <span className="item-name">{s.title}</span>
+                <div className="item-sub">{s.artist}</div>
+              </div>
+              <span className="badge amber">★ 선정곡</span>
+            </div>
+            <div className="meta-line">담당 파트: {s.parts.join(" · ") || "미정"}</div>
+          </div>
+        ))
+      )}
     </>
   );
 }

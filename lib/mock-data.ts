@@ -60,9 +60,9 @@ export const RESERVATIONS: Reservation[] = [
 
 // 합주 팀(밴드) — 셋리스트 탭으로 사용
 export const TEAMS: Team[] = [
-  { id: "t1", name: "록 밴드 A" },
-  { id: "t2", name: "어쿠스틱 팀" },
-  { id: "t3", name: "재즈 합주반" },
+  { id: "t1", name: "1팀" },
+  { id: "t2", name: "2팀" },
+  { id: "t3", name: "3팀" },
 ];
 
 export const SONGS: Song[] = [
