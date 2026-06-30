@@ -21,7 +21,7 @@ import {
   usernameTaken,
 } from "./member-store";
 import type { MemberStatus } from "./types";
-import { isEmailConfigured, sendMail } from "./email";
+import { isEmailConfigured, sendMail, emailHtml } from "./email";
 import { randomBytes } from "node:crypto";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -123,6 +123,18 @@ export async function signup(input: {
       to: notifyTo,
       subject: "[기타투게더] 새 회원가입 신청",
       text: `새 회원가입 신청이 접수되었습니다. 관리자 승인이 필요합니다.\n\n이름: ${name}\n아이디: ${username}\n휴대폰: ${phone}\n이메일: ${email}\n파트: ${part || "미정"}`,
+      html: emailHtml({
+        heading: "새 회원가입 신청",
+        intro: "새 가입 신청이 접수되었습니다. 관리자 승인이 필요합니다.",
+        rows: [
+          { label: "이름", value: name },
+          { label: "아이디", value: username },
+          { label: "휴대폰", value: phone },
+          { label: "이메일", value: email },
+          { label: "파트", value: part || "미정" },
+        ],
+        note: "회원 관리 화면에서 승인/거절할 수 있습니다.",
+      }),
     });
   } catch {
     /* 알림 메일 실패는 무시 */
@@ -154,8 +166,14 @@ export async function findUsername(
 
   const sent = await sendMail({
     to: email,
-    subject: "[GUITAR TOGETHER] 아이디 찾기 결과",
+    subject: "[기타투게더] 아이디 찾기 결과",
     text: `회원님의 아이디는 다음과 같습니다:\n\n${usernames.join("\n")}\n\n로그인 화면에서 위 아이디로 로그인하세요.`,
+    html: emailHtml({
+      heading: "아이디 찾기 결과",
+      intro: "요청하신 이메일로 가입된 아이디입니다.",
+      highlight: { label: "아이디", value: usernames.join(", ") },
+      note: "로그인 화면에서 위 아이디로 로그인하세요.",
+    }),
   });
   if (!sent) return { error: "이메일 발송에 실패했습니다. 관리자에게 문의하세요." };
   return { ok: true, sent: true };
@@ -189,8 +207,14 @@ export async function resetPassword(input: {
 
   const sent = await sendMail({
     to: email,
-    subject: "[GUITAR TOGETHER] 임시 비밀번호 안내",
+    subject: "[기타투게더] 임시 비밀번호 안내",
     text: `요청하신 임시 비밀번호는 다음과 같습니다:\n\n임시 비밀번호: ${tempPassword}\n\n로그인 후 비밀번호를 변경해 주세요.`,
+    html: emailHtml({
+      heading: "임시 비밀번호 안내",
+      intro: "아래 임시 비밀번호로 로그인한 뒤, 마이페이지에서 비밀번호를 변경해 주세요.",
+      highlight: { label: "임시 비밀번호", value: tempPassword },
+      note: "본인이 요청하지 않았다면 이 메일을 무시하세요.",
+    }),
   });
   if (!sent) return { error: "이메일 발송에 실패했습니다. 관리자에게 문의하세요." };
   return { ok: true, sent: true };
