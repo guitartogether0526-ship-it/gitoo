@@ -114,6 +114,19 @@ export async function signup(input: {
   } catch {
     return { error: "가입 처리 중 오류가 발생했습니다. 관리자에게 문의하세요." };
   }
+
+  // 관리자에게 가입 신청 알림 메일 (실패해도 가입은 정상 처리)
+  const notifyTo = process.env.SIGNUP_NOTIFY_EMAIL ?? "junyoung70621@gmail.com";
+  try {
+    await sendMail({
+      to: notifyTo,
+      subject: "[기타투게더] 새 회원가입 신청",
+      text: `새 회원가입 신청이 접수되었습니다. 관리자 승인이 필요합니다.\n\n이름: ${name}\n아이디: ${username}\n휴대폰: ${phone}\n이메일: ${email}\n파트: ${part || "미정"}`,
+    });
+  } catch {
+    /* 알림 메일 실패는 무시 */
+  }
+
   return { ok: true };
 }
 
