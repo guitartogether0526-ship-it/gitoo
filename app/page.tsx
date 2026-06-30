@@ -1,22 +1,33 @@
 import Link from "next/link";
-import { getBoards, getPosts, getMembers, getSongs, getTeams } from "@/lib/db";
+import { getBoards, getPosts, getMembers, getSongs, getTeams, getReservations } from "@/lib/db";
 import { getSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
+
+const DOW = ["일", "월", "화", "수", "목", "금", "토"];
+const pad = (n: number) => String(n).padStart(2, "0");
 
 function formatDate(iso: string) {
   const d = new Date(iso);
   return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
+// 예약 날짜("YYYY-MM-DD") → "7월 2일 (목)"
+function formatResDate(date: string) {
+  const [y, m, d] = date.split("-").map(Number);
+  const dow = DOW[new Date(y, m - 1, d).getDay()];
+  return `${m}월 ${d}일 (${dow})`;
+}
+
 export default async function DashboardPage() {
-  const [session, boards, posts, members, songs, teams] = await Promise.all([
+  const [session, boards, posts, members, songs, teams, reservations] = await Promise.all([
     getSession(),
     getBoards(),
     getPosts(),
     getMembers(),
     getSongs(),
     getTeams(),
+    getReservations(),
   ]);
 
   // 공지사항 게시판의 상단 고정글만 홈에 노출
@@ -27,6 +38,14 @@ export default async function DashboardPage() {
   const me = members.find((m) => m.id === session?.id);
   const myTeamId = me?.team_id ?? session?.team_id ?? null;
   const myTeam = teams.find((t) => t.id === myTeamId);
+
+  // 내 합주일정 — 본인 팀 이름으로 예약된 다가오는 일정
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const mySchedule = myTeam
+    ? reservations.filter((r) => r.reserved_by === myTeam.name && r.date >= todayStr)
+    : [];
+
   // 본인 팀에서 선정(확정)한 곡만 — 후보는 제외
   const myTeamSongs = songs.filter((s) => s.team_id === myTeamId && s.status === "confirmed");
 
@@ -67,18 +86,43 @@ export default async function DashboardPage() {
         ))
       )}
 
-      <div className="section-title">바로가기</div>
-      <div className="stat-grid">
-        <Link href="/reservation" className="stat" style={{ textDecoration: "none", color: "inherit" }}>
-          <div className="s-value" style={{ fontSize: 22 }}>📅</div>
-          <div className="s-label" style={{ marginTop: 6 }}>연습실 예약</div>
-        </Link>
-        <Link href="/setlist" className="stat" style={{ textDecoration: "none", color: "inherit" }}>
-          <div className="s-value" style={{ fontSize: 22 }}>🎼</div>
-          <div className="s-label" style={{ marginTop: 6 }}>셋리스트 투표</div>
+      {/* 내 합주일정 (본인 팀) */}
+      <div className="title-row" style={{ marginTop: 4 }}>
+        <div className="section-title" style={{ margin: 0 }}>
+          🥁 {myTeam ? `${myTeam.name} 합주일정` : "내 합주일정"}
+        </div>
+        <Link href="/reservation" className="dim" style={{ fontSize: 12, textDecoration: "none" }}>
+          전체보기 ›
         </Link>
       </div>
 
+      {!myTeamId ? (
+        <div className="card">
+          <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+            합주일정이 없습니다.
+          </p>
+        </div>
+      ) : mySchedule.length === 0 ? (
+        <div className="card">
+          <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+            예정된 합주일정이 없습니다.
+          </p>
+        </div>
+      ) : (
+        mySchedule.map((r) => (
+          <div className="card" key={r.id}>
+            <div className="title-row">
+              <div className="grow">
+                <span className="item-name">{formatResDate(r.date)}</span>
+                <div className="item-sub">{r.time_label} · {r.purpose}</div>
+              </div>
+              <span className="badge amber">🥁 합주</span>
+            </div>
+          </div>
+        ))
+      )}
+
+      {/* 우리 팀 선정곡 */}
       <div className="title-row" style={{ marginTop: 4 }}>
         <div className="section-title" style={{ margin: 0 }}>
           🎵 {myTeam ? `${myTeam.name} 선정곡` : "우리 팀 선정곡"}
@@ -114,6 +158,19 @@ export default async function DashboardPage() {
           </div>
         ))
       )}
+
+      {/* 바로가기 — 제일 아래 */}
+      <div className="section-title">바로가기</div>
+      <div className="stat-grid">
+        <Link href="/reservation" className="stat" style={{ textDecoration: "none", color: "inherit" }}>
+          <div className="s-value" style={{ fontSize: 22 }}>📅</div>
+          <div className="s-label" style={{ marginTop: 6 }}>연습실 예약</div>
+        </Link>
+        <Link href="/setlist" className="stat" style={{ textDecoration: "none", color: "inherit" }}>
+          <div className="s-value" style={{ fontSize: 22 }}>🎼</div>
+          <div className="s-label" style={{ marginTop: 6 }}>셋리스트 투표</div>
+        </Link>
+      </div>
     </>
   );
 }
