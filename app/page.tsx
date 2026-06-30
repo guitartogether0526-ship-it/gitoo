@@ -43,7 +43,9 @@ export default async function DashboardPage() {
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   const mySchedule = myTeam
-    ? reservations.filter((r) => r.reserved_by === myTeam.name && r.date >= todayStr)
+    ? reservations.filter(
+        (r) => r.reserved_by === myTeam.name && r.date >= todayStr && r.purpose !== "개인연습",
+      )
     : [];
 
   // 본인 팀에서 선정(확정)한 곡만 — 후보는 제외
