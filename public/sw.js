@@ -1,7 +1,7 @@
 /* GUITAR TOGETHER — 서비스 워커
    - 페이지(navigation): network-first (항상 최신, 오프라인 시 캐시)
    - 정적 자원: cache-first */
-const CACHE = "gt-shell-v3";
+const CACHE = "gt-shell-v4";
 const SHELL = ["/", "/reservation", "/board", "/setlist", "/members", "/finance"];
 
 self.addEventListener("install", (event) => {
@@ -49,6 +49,41 @@ self.addEventListener("fetch", (event) => {
           return res;
         })
         .catch(() => cached);
+    })
+  );
+});
+
+/* ---------- 웹푸시 ---------- */
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { title: "기타투게더", body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "기타투게더";
+  const options = {
+    body: data.body || "",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    data: { url: data.url || "/" },
+    vibrate: [80, 40, 80],
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) {
+        if ("focus" in w) {
+          if ("navigate" in w) w.navigate(url).catch(() => {});
+          return w.focus();
+        }
+      }
+      return self.clients.openWindow(url);
     })
   );
 });

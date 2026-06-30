@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/session";
 import { getMembers } from "@/lib/db";
 import MyPageForm from "@/components/MyPageForm";
+import PushToggle from "@/components/PushToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,8 @@ export default async function MyPage() {
         <p>내 기본 정보를 확인하고 수정하세요.</p>
       </div>
       <MyPageForm session={session} member={me} />
+      <div className="section-title">알림 설정</div>
+      <PushToggle />
     </>
   );
 }

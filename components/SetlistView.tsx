@@ -136,16 +136,11 @@ export default function SetlistView({
     .sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
   const toggleLike = (id: string) => {
-    let nextVoted = false;
-    let nextLikes = 0;
-    setSongs((prev) =>
-      prev.map((s) => {
-        if (s.id !== id) return s;
-        nextVoted = !s.voted;
-        nextLikes = s.likes + (s.voted ? -1 : 1);
-        return { ...s, voted: nextVoted, likes: nextLikes };
-      }),
-    );
+    const cur = songs.find((s) => s.id === id);
+    if (!cur) return;
+    const nextVoted = !cur.voted;
+    const nextLikes = cur.likes + (cur.voted ? -1 : 1);
+    setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, voted: nextVoted, likes: nextLikes } : s)));
     const sb = getSupabase();
     if (sb) void sb.from("songs").update({ voted: nextVoted, likes: nextLikes }).eq("id", id);
   };
@@ -153,14 +148,10 @@ export default function SetlistView({
   // 곡 선정 ↔ 후보 전환 (본인팀/운영진)
   const toggleStatus = (id: string) => {
     if (!canManageActive) return;
-    let next: "candidate" | "confirmed" = "candidate";
-    setSongs((prev) =>
-      prev.map((s) => {
-        if (s.id !== id) return s;
-        next = s.status === "confirmed" ? "candidate" : "confirmed";
-        return { ...s, status: next };
-      }),
-    );
+    const cur = songs.find((s) => s.id === id);
+    if (!cur) return;
+    const next: "candidate" | "confirmed" = cur.status === "confirmed" ? "candidate" : "confirmed";
+    setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, status: next } : s)));
     const sb = getSupabase();
     if (sb) void sb.from("songs").update({ status: next }).eq("id", id);
   };

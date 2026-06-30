@@ -5,6 +5,7 @@ import type { Board, Post } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
+import { sendNoticePush } from "@/lib/push-actions";
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -133,6 +134,8 @@ export default function BoardView({
         { id: `post-${prev.length}`, created_at: new Date().toISOString(), ...payload },
       ]);
     }
+    // 공지사항 게시판에 글이 올라오면 구독자에게 푸시 발송
+    if (current?.is_notice) void sendNoticePush(payload.title, payload.body);
     setTitle("");
     setBody("");
     setPinned(false);

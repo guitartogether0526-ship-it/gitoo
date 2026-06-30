@@ -115,6 +115,14 @@ create table if not exists expenses (
   has_receipt boolean not null default false
 );
 
+-- 웹푸시 구독 — 공지 작성 시 알림 발송 대상. service_role(서버)로만 접근.
+create table if not exists push_subscriptions (
+  endpoint text primary key,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz not null default now()
+);
+
 -- ---------- RLS (Row Level Security) ----------
 -- ⚠️ 현재는 인증(로그인)이 없으므로 anon 에게 읽기/쓰기를 모두 허용합니다.
 --    운영 전환 시 Supabase Auth 를 붙이고 정책을 사용자 기준으로 조이세요.
@@ -130,6 +138,9 @@ alter table expenses      enable row level security;
 -- member_auth: RLS 활성화 + 공개 정책 없음 → anon 접근 전면 차단.
 -- (service_role 키는 RLS 를 우회하므로 서버 인증 로직만 접근 가능)
 alter table member_auth   enable row level security;
+
+-- push_subscriptions: RLS 활성화 + 공개 정책 없음 → 서버(service_role)만 접근
+alter table push_subscriptions enable row level security;
 
 do $$
 declare t text;
