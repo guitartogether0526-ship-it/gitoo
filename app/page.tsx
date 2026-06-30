@@ -58,16 +58,16 @@ export default async function DashboardPage() {
         <p>오늘의 동호회 소식을 확인하세요.</p>
       </div>
 
-      <div className="title-row" style={{ marginTop: 4 }}>
-        <div className="section-title" style={{ margin: 0 }}>📢 공지사항</div>
-        <Link href="/board" className="dim" style={{ fontSize: 12, textDecoration: "none" }}>
+      <div className="section-head">
+        <div className="section-title">📢 공지사항</div>
+        <Link href="/board" className="section-link">
           전체보기 ›
         </Link>
       </div>
 
       {pinnedNotices.length === 0 ? (
         <div className="card">
-          <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+          <p className="empty-msg">
             상단 고정된 공지가 없습니다.
           </p>
         </div>
@@ -89,24 +89,24 @@ export default async function DashboardPage() {
       )}
 
       {/* 내 합주일정 (본인 팀) */}
-      <div className="title-row" style={{ marginTop: 4 }}>
-        <div className="section-title" style={{ margin: 0 }}>
+      <div className="section-head">
+        <div className="section-title">
           🥁 {myTeam ? `${myTeam.name} 합주일정` : "내 합주일정"}
         </div>
-        <Link href="/reservation" className="dim" style={{ fontSize: 12, textDecoration: "none" }}>
+        <Link href="/reservation" className="section-link">
           전체보기 ›
         </Link>
       </div>
 
       {!myTeamId ? (
         <div className="card">
-          <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+          <p className="empty-msg">
             합주일정이 없습니다.
           </p>
         </div>
       ) : mySchedule.length === 0 ? (
         <div className="card">
-          <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+          <p className="empty-msg">
             예정된 합주일정이 없습니다.
           </p>
         </div>
@@ -125,24 +125,24 @@ export default async function DashboardPage() {
       )}
 
       {/* 우리 팀 선정곡 */}
-      <div className="title-row" style={{ marginTop: 4 }}>
-        <div className="section-title" style={{ margin: 0 }}>
+      <div className="section-head">
+        <div className="section-title">
           🎵 {myTeam ? `${myTeam.name} 선정곡` : "우리 팀 선정곡"}
         </div>
-        <Link href="/setlist" className="dim" style={{ fontSize: 12, textDecoration: "none" }}>
+        <Link href="/setlist" className="section-link">
           전체보기 ›
         </Link>
       </div>
 
       {!myTeamId ? (
         <div className="card">
-          <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+          <p className="empty-msg">
             아직 팀이 배정되지 않았습니다. 운영진에게 팀 배정을 요청하세요.
           </p>
         </div>
       ) : myTeamSongs.length === 0 ? (
         <div className="card">
-          <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+          <p className="empty-msg">
             아직 선정된 곡이 없습니다. 합주곡에서 곡을 선정해 보세요.
           </p>
         </div>
@@ -170,13 +170,13 @@ export default async function DashboardPage() {
       {/* 바로가기 — 제일 아래 */}
       <div className="section-title">바로가기</div>
       <div className="stat-grid">
-        <Link href="/reservation" className="stat" style={{ textDecoration: "none", color: "inherit" }}>
-          <div className="s-value" style={{ fontSize: 22 }}>📅</div>
-          <div className="s-label" style={{ marginTop: 6 }}>연습실 예약</div>
+        <Link href="/reservation" className="stat">
+          <div className="s-value" style={{ fontSize: 26 }}>📅</div>
+          <div className="s-label">연습실 예약</div>
         </Link>
-        <Link href="/setlist" className="stat" style={{ textDecoration: "none", color: "inherit" }}>
-          <div className="s-value" style={{ fontSize: 22 }}>🎼</div>
-          <div className="s-label" style={{ marginTop: 6 }}>합주곡 투표</div>
+        <Link href="/setlist" className="stat">
+          <div className="s-value" style={{ fontSize: 26 }}>🎼</div>
+          <div className="s-label">합주곡 투표</div>
         </Link>
       </div>
     </>

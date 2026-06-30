@@ -32,9 +32,24 @@
   --ok-soft: rgba(107, 191, 115, 0.15);
   --warn: #f5b942;
 
+  /* 앰버 그라데이션 — 버튼/칩/탭/스위치 공통 */
+  --accent-grad: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  --on-accent: #2a1d05;
+
   --radius: 16px;
   --radius-sm: 10px;
-  --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+  /* 그림자: 더 옅고 얕게 (어두운 배경에서 탁해 보이지 않도록) */
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+
+  /* 간격 스케일 (8px 기준) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
   --maxw: 480px;
 }
 
@@ -54,8 +69,8 @@ body {
     radial-gradient(1200px 600px at 50% -10%, rgba(245, 185, 66, 0.08), transparent 60%),
     var(--bg);
   color: var(--text);
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo",
-    "Malgun Gothic", "Noto Sans KR", sans-serif;
+  font-family: var(--font-inter), var(--font-noto-kr), system-ui, -apple-system,
+    "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   -webkit-font-smoothing: antialiased;
   min-height: 100dvh;
 }
@@ -142,15 +157,17 @@ body {
 
 /* ---------- Page heading ---------- */
 .page-head {
-  margin: 6px 2px 14px;
+  margin: var(--space-2) 2px var(--space-5);
 }
 .page-head h1 {
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  line-height: 1.25;
   margin: 0;
 }
 .page-head p {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   font-size: 13px;
   color: var(--text-muted);
 }
@@ -219,9 +236,9 @@ body {
   transform: scale(0.97);
 }
 .btn.amber {
-  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  background: var(--accent-grad);
   border-color: var(--accent-strong);
-  color: #2a1d05;
+  color: var(--on-accent);
 }
 .btn.ghost {
   background: transparent;
@@ -271,8 +288,8 @@ body {
   white-space: nowrap;
 }
 .chip.active {
-  color: #2a1d05;
-  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  color: var(--on-accent);
+  background: var(--accent-grad);
   border-color: var(--accent-strong);
 }
 
@@ -361,12 +378,12 @@ body {
   transition: transform 0.18s ease, background 0.18s ease;
 }
 .switch.on {
-  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  background: var(--accent-grad);
   border-color: var(--accent-strong);
 }
 .switch.on::after {
   transform: translateX(calc(var(--w) - var(--h)));
-  background: #2a1d05;
+  background: var(--on-accent);
 }
 
 /* ---------- Stage map (reservation) ---------- */
@@ -660,8 +677,8 @@ body {
   cursor: pointer;
 }
 .tab.active {
-  color: #2a1d05;
-  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  color: var(--on-accent);
+  background: var(--accent-grad);
 }
 
 /* ---------- Member table ---------- */
@@ -892,12 +909,41 @@ body {
   margin-top: 12px;
 }
 .section-title {
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  color: var(--text-dim);
   text-transform: uppercase;
-  margin: 22px 2px 10px;
+  margin: var(--space-5) 2px var(--space-3);
+}
+
+/* 빈 상태 안내 문구 */
+.empty-msg {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+/* 섹션 헤더(제목 + '전체보기' 링크) */
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-5) 2px var(--space-3);
+}
+.section-head .section-title {
+  margin: 0;
+}
+.section-link {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.section-link:active {
+  color: var(--accent);
 }
 .stat-grid {
   display: grid;
@@ -905,14 +951,26 @@ body {
   gap: 12px;
 }
 .stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 14px;
+  border-radius: var(--radius);
+  padding: var(--space-5) var(--space-4);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.06s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.stat:active {
+  transform: scale(0.98);
 }
 .stat .s-label {
-  font-size: 11px;
-  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 .stat .s-value {
   font-size: 18px;
@@ -927,8 +985,9 @@ body {
 }
 .item-name {
   font-size: 15px;
-  font-weight: 800;
-  line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  line-height: 1.35;
 }
 .item-sub {
   font-size: 12.5px;
