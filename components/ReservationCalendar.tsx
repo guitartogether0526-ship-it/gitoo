@@ -265,6 +265,7 @@ export default function ReservationCalendar({
               <option>합주</option>
               <option>개인연습</option>
               {canManage && <option>레슨</option>}
+              {canManage && <option>정기공연</option>}
             </select>
           </div>
           <button className="btn amber" onClick={addReservation}>

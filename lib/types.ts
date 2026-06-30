@@ -51,8 +51,9 @@ export interface Song {
   team_id: string; // 소속 팀
   title: string;
   artist: string;
-  parts: string[]; // 담당 파트 목록
-  sheets: SheetMusic[];
+  youtube_url: string | null; // 유튜브 링크
+  parts: string[]; // 담당 파트 목록 (레거시)
+  sheets: SheetMusic[]; // 악보 (레거시)
   likes: number;
   voted: boolean;
   status: "candidate" | "confirmed"; // 후보 / 선정(확정)

@@ -48,12 +48,16 @@ create table if not exists songs (
   team_id text not null references teams(id) on delete cascade,
   title text not null,
   artist text not null,
-  parts text[] not null default '{}',
-  sheets jsonb not null default '[]',
+  youtube_url text,                             -- 유튜브 링크
+  parts text[] not null default '{}',           -- (레거시)
+  sheets jsonb not null default '[]',           -- (레거시)
   likes integer not null default 0,
   voted boolean not null default false,
   status text not null default 'candidate'     -- candidate | confirmed
 );
+
+-- 기존 songs 테이블 업그레이드(재실행 안전) — 유튜브 링크 컬럼
+alter table songs add column if not exists youtube_url text;
 
 create table if not exists members (
   id text primary key default gen_random_uuid()::text,

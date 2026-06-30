@@ -74,6 +74,7 @@ export const SONGS: Song[] = [
     team_id: "t1",
     title: "Bohemian Rhapsody",
     artist: "Queen",
+    youtube_url: "https://www.youtube.com/watch?v=fJ9rUzIMcZQ",
     parts: ["보컬", "기타1", "기타2", "베이스", "드럼", "키보드"],
     sheets: [
       { part: "기타1", file_label: "Guitar 1 TAB", file_url: "#guitar1-bohemian" },
@@ -89,6 +90,7 @@ export const SONGS: Song[] = [
     team_id: "t1",
     title: "Don't Look Back in Anger",
     artist: "Oasis",
+    youtube_url: "https://www.youtube.com/watch?v=r8OipmKFDeM",
     parts: ["보컬", "기타1", "기타2", "베이스", "드럼"],
     sheets: [
       { part: "기타1", file_label: "Guitar 1 TAB", file_url: "#guitar1-oasis" },
@@ -103,6 +105,7 @@ export const SONGS: Song[] = [
     team_id: "t2",
     title: "밤편지",
     artist: "아이유",
+    youtube_url: "https://www.youtube.com/watch?v=BzYnNdJhZQw",
     parts: ["보컬", "기타", "베이스", "드럼"],
     sheets: [
       { part: "기타", file_label: "Guitar Chord", file_url: "#guitar-iu" },
@@ -117,6 +120,7 @@ export const SONGS: Song[] = [
     team_id: "t2",
     title: "사랑했지만",
     artist: "김광석",
+    youtube_url: "https://www.youtube.com/watch?v=Sx4Y6Bd5Ut0",
     parts: ["보컬", "기타", "하모니카"],
     sheets: [{ part: "기타", file_label: "Guitar Chord", file_url: "#guitar-kgs" }],
     likes: 12,
@@ -128,6 +132,7 @@ export const SONGS: Song[] = [
     team_id: "t3",
     title: "Fly Me to the Moon",
     artist: "Frank Sinatra",
+    youtube_url: "https://www.youtube.com/watch?v=ZEcqHA7dbwM",
     parts: ["보컬", "기타", "베이스", "드럼", "키보드"],
     sheets: [{ part: "키보드", file_label: "Lead Sheet", file_url: "#piano-fly" }],
     likes: 9,
