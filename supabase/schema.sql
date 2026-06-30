@@ -36,8 +36,12 @@ create table if not exists reservations (
 
 create table if not exists teams (
   id text primary key default gen_random_uuid()::text,
-  name text not null
+  name text not null,
+  sort_order integer not null default 0          -- 탭 표시 순서(운영진 드래그로 변경)
 );
+
+-- 기존 teams 테이블 업그레이드(재실행 안전) — 정렬 순서 컬럼 추가
+alter table teams add column if not exists sort_order integer not null default 0;
 
 create table if not exists songs (
   id text primary key default gen_random_uuid()::text,

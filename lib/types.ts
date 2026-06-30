@@ -43,6 +43,7 @@ export interface SheetMusic {
 export interface Team {
   id: string;
   name: string;
+  sort_order?: number; // 탭 표시 순서(운영진 드래그로 변경). 미설정 시 이름순.
 }
 
 export interface Song {

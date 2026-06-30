@@ -84,7 +84,11 @@ export async function getReservations(): Promise<Reservation[]> {
 }
 
 export async function getTeams(): Promise<Team[]> {
-  return read<Team>("teams", TEAMS);
+  const rows = await read<Team>("teams", TEAMS);
+  // 정렬 순서(sort_order) 우선, 미설정 시 이름순
+  return rows
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || byKo(a.name, b.name));
 }
 
 export async function getSongs(): Promise<Song[]> {

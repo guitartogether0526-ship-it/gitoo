@@ -5,7 +5,7 @@ import type { Song, Team } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
-import { addTeam } from "@/lib/team-actions";
+import { addTeam, reorderTeams } from "@/lib/team-actions";
 
 const HeartIcon = ({ filled }: { filled: boolean }) => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -52,6 +52,26 @@ export default function SetlistView({
     setTeamList((prev) => [...prev, res.team]);
     setActiveTeam(res.team.id);
     setNewTeam("");
+  };
+
+  // 팀 순서 드래그 (운영진 전용)
+  const [dragId, setDragId] = useState<string>("");
+
+  const onDropTeam = async (targetId: string) => {
+    if (!dragId || dragId === targetId) {
+      setDragId("");
+      return;
+    }
+    const next = [...teamList];
+    const from = next.findIndex((t) => t.id === dragId);
+    const to = next.findIndex((t) => t.id === targetId);
+    if (from < 0 || to < 0) return;
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setTeamList(next);
+    setDragId("");
+    const res = await reorderTeams(next.map((t) => t.id));
+    if ("error" in res) setTeamError(res.error);
   };
 
   const teamSongs = useMemo(
@@ -121,18 +141,31 @@ export default function SetlistView({
 
   return (
     <>
-      {/* 팀별 탭 */}
+      {/* 팀별 탭 (운영진은 드래그로 순서 변경) */}
       <div className="tab-row">
         {teamList.map((t) => (
           <button
             key={t.id}
-            className={`tab${activeTeam === t.id ? " active" : ""}`}
+            className={`tab${activeTeam === t.id ? " active" : ""}${dragId === t.id ? " dragging" : ""}`}
             onClick={() => setActiveTeam(t.id)}
+            draggable={canManageTeams}
+            onDragStart={canManageTeams ? () => setDragId(t.id) : undefined}
+            onDragOver={canManageTeams ? (e) => e.preventDefault() : undefined}
+            onDrop={canManageTeams ? () => onDropTeam(t.id) : undefined}
+            onDragEnd={canManageTeams ? () => setDragId("") : undefined}
+            style={canManageTeams ? { cursor: "grab", opacity: dragId === t.id ? 0.4 : 1 } : undefined}
+            title={canManageTeams ? "드래그해서 순서 변경" : undefined}
           >
+            {canManageTeams && <span style={{ opacity: 0.5, marginRight: 4 }}>⠿</span>}
             {t.name}
           </button>
         ))}
       </div>
+      {canManageTeams && (
+        <p className="dim" style={{ fontSize: 11, margin: "2px 0 0" }}>
+          ⠿ 탭을 드래그하면 팀 순서를 바꿀 수 있어요 (운영진 전용).
+        </p>
+      )}
 
       {/* 팀 추가 — 운영진 전용 */}
       {canManageTeams && (
