@@ -27,8 +27,8 @@ function genTempPassword(): string {
   return randomBytes(8).toString("base64url").replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
 }
 
-/** 관리자 비밀번호 (서버 전용). Vercel/.env 의 ADMIN_PASSWORD 로 덮어쓰기. */
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "<admin-password>";
+/** 관리자 비밀번호 (서버 전용) — 환경변수 ADMIN_PASSWORD 로만 설정. 미설정 시 관리자 로그인 불가. */
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const ADMIN_USERNAME = "admin";
 
 type LoginResult = { user: SessionUser } | { error: string };
@@ -58,6 +58,8 @@ export async function login(usernameRaw: string, password: string): Promise<Logi
 
   // 관리자 계정
   if (username === ADMIN_USERNAME) {
+    if (!ADMIN_PASSWORD)
+      return { error: "관리자 로그인이 설정되지 않았습니다. 환경변수 ADMIN_PASSWORD 를 설정하세요." };
     if (password === ADMIN_PASSWORD) return { user: ADMIN_USER };
     return { error: "비밀번호가 올바르지 않습니다." };
   }
