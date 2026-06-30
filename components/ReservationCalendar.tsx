@@ -10,6 +10,28 @@ const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const pad = (n: number) => String(n).padStart(2, "0");
 const ymd = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
 
+// 선택 가능한 예약 시간대 (2시간 단위)
+const TIME_SLOTS = [
+  "09:00 - 11:00",
+  "11:00 - 13:00",
+  "13:00 - 15:00",
+  "15:00 - 17:00",
+  "17:00 - 19:00",
+  "19:00 - 21:00",
+  "21:00 - 23:00",
+];
+
+// "HH:MM - HH:MM" → [시작분, 끝분]
+const parseRange = (label: string): [number, number] | null => {
+  const m = label.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  return [Number(m[1]) * 60 + Number(m[2]), Number(m[3]) * 60 + Number(m[4])];
+};
+
+// 두 시간대가 겹치는지
+const overlaps = (a: [number, number] | null, b: [number, number] | null) =>
+  !!a && !!b && a[0] < b[1] && b[0] < a[1];
+
 export default function ReservationCalendar({ initial }: { initial: Reservation[] }) {
   const { user } = useAuth();
   const canManage = can.manageReservations(user?.role);
@@ -23,7 +45,7 @@ export default function ReservationCalendar({ initial }: { initial: Reservation[
   const [reservations, setReservations] = useState<Reservation[]>(initial);
 
   // 예약 등록 폼
-  const [time, setTime] = useState("19:00 - 21:00");
+  const [time, setTime] = useState("");
   const [by, setBy] = useState(myName);
   const [purpose, setPurpose] = useState("합주");
 
@@ -41,6 +63,18 @@ export default function ReservationCalendar({ initial }: { initial: Reservation[
     .slice()
     .sort((a, b) => a.time_label.localeCompare(b.time_label));
 
+  // 선택한 날짜에 이미 예약된 시간과 겹치지 않는 시간대만 노출
+  const availableSlots = useMemo(() => {
+    const taken = (byDate[selected] ?? []).map((r) => parseRange(r.time_label));
+    return TIME_SLOTS.filter((slot) => {
+      const range = parseRange(slot);
+      return !taken.some((t) => overlaps(range, t));
+    });
+  }, [byDate, selected]);
+
+  // 현재 선택값이 더 이상 선택 불가하면 첫 번째 가능 시간으로 대체
+  const effectiveTime = availableSlots.includes(time) ? time : availableSlots[0] ?? "";
+
   const move = (delta: number) =>
     setView((v) => {
       const d = new Date(v.y, v.m + delta, 1);
@@ -48,10 +82,17 @@ export default function ReservationCalendar({ initial }: { initial: Reservation[
     });
 
   const addReservation = async () => {
-    if (!time.trim() || !by.trim()) return;
+    if (!effectiveTime || !by.trim()) return;
+    // 동시 예약 방지: 등록 직전 한 번 더 겹침 검사
+    const range = parseRange(effectiveTime);
+    const conflict = (byDate[selected] ?? []).some((r) => overlaps(range, parseRange(r.time_label)));
+    if (conflict) {
+      alert("방금 다른 예약과 겹쳤습니다. 다른 시간을 선택해 주세요.");
+      return;
+    }
     const payload = {
       date: selected,
-      time_label: time.trim(),
+      time_label: effectiveTime,
       reserved_by: by.trim(),
       purpose: purpose.trim() || "합주",
     };
@@ -63,7 +104,7 @@ export default function ReservationCalendar({ initial }: { initial: Reservation[
       // 목업 모드: 로컬 상태에만 추가
       setReservations((prev) => [...prev, { id: `rv-${selected}-${prev.length}`, ...payload }]);
     }
-    setTime("19:00 - 21:00");
+    setTime("");
     setBy(myName);
     setPurpose("합주");
   };
@@ -162,12 +203,23 @@ export default function ReservationCalendar({ initial }: { initial: Reservation[
         <div className="form-grid">
           <div className="field">
             <label>시간</label>
-            <input
-              className="input"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              placeholder="예: 19:00 - 21:00"
-            />
+            {availableSlots.length === 0 ? (
+              <p className="dim" style={{ fontSize: 13, margin: "4px 0" }}>
+                이 날짜는 모든 시간대가 예약되어 있어요.
+              </p>
+            ) : (
+              <select
+                className="select"
+                value={effectiveTime}
+                onChange={(e) => setTime(e.target.value)}
+              >
+                {availableSlots.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <div className="field">
             <label>예약자 / 팀</label>
@@ -187,7 +239,11 @@ export default function ReservationCalendar({ initial }: { initial: Reservation[
               <option>레슨</option>
             </select>
           </div>
-          <button className="btn amber" onClick={addReservation}>
+          <button
+            className="btn amber"
+            onClick={addReservation}
+            disabled={availableSlots.length === 0}
+          >
             {selectedLabel}에 예약 추가
           </button>
         </div>
