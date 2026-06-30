@@ -24,13 +24,32 @@ import { getAllMembers } from "./member-store";
 // 가나다순 정렬 헬퍼 (한글 로캘)
 const byKo = (a: string, b: string) => a.localeCompare(b, "ko");
 
-/** Supabase select 헬퍼: 실패하면 fallback 반환 */
+let warnedNoSupabase = false;
+
+/**
+ * Supabase select 헬퍼.
+ * - 미연결(env 없음): 목업(fallback) 반환 + 1회 경고. (env 추가 후 dev 서버 재시작 필요)
+ * - 연결됨: 실제 DB 결과를 그대로 반환(빈 테이블이면 빈 배열). 오류 시에만 목업 폴백.
+ *   ⚠️ 빈 테이블을 목업으로 되돌리지 않음 — 안 그러면 시드 목업이 계속 되살아나 삭제가 안 되는 것처럼 보임.
+ */
 async function read<T>(table: string, fallback: T[]): Promise<T[]> {
   const sb = getSupabase();
-  if (!sb) return fallback;
+  if (!sb) {
+    if (!warnedNoSupabase) {
+      warnedNoSupabase = true;
+      console.warn(
+        "[db] Supabase 미연결 — 목업 데이터로 동작 중입니다. 추가/삭제가 저장되지 않습니다. " +
+          ".env.local 설정 후 dev 서버를 재시작(또는 배포 환경변수 설정)하세요.",
+      );
+    }
+    return fallback;
+  }
   const { data, error } = await sb.from(table).select("*");
-  if (error || !data || data.length === 0) return fallback;
-  return data as T[];
+  if (error) {
+    console.error(`[db] '${table}' 조회 실패 — 목업으로 폴백:`, error.message);
+    return fallback;
+  }
+  return (data as T[] | null) ?? [];
 }
 
 export async function getBoards(): Promise<Board[]> {
