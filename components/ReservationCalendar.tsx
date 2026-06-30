@@ -32,10 +32,18 @@ const parseRange = (label: string): [number, number] | null => {
 const overlaps = (a: [number, number] | null, b: [number, number] | null) =>
   !!a && !!b && a[0] < b[1] && b[0] < a[1];
 
-export default function ReservationCalendar({ initial }: { initial: Reservation[] }) {
+export default function ReservationCalendar({
+  initial,
+  myTeamName,
+}: {
+  initial: Reservation[];
+  myTeamName: string | null;
+}) {
   const { user } = useAuth();
   const canManage = can.manageReservations(user?.role);
   const myName = user?.name ?? "나";
+  // 예약자 선택지: 본인 이름(기본) + 팀이 있으면 팀명. 팀 없으면 개인 이름만.
+  const reserverOptions = myTeamName ? [myName, myTeamName] : [myName];
 
   const today = useMemo(() => new Date(), []);
   const todayStr = ymd(today.getFullYear(), today.getMonth(), today.getDate());
@@ -222,13 +230,15 @@ export default function ReservationCalendar({ initial }: { initial: Reservation[
             )}
           </div>
           <div className="field">
-            <label>예약자 / 팀</label>
-            <input
-              className="input"
-              value={by}
-              onChange={(e) => setBy(e.target.value)}
-              placeholder="이름 또는 팀명"
-            />
+            <label>예약자</label>
+            {reserverOptions.length > 1 ? (
+              <select className="select" value={by} onChange={(e) => setBy(e.target.value)}>
+                <option value={myName}>{myName} (개인)</option>
+                <option value={myTeamName as string}>{myTeamName} (팀)</option>
+              </select>
+            ) : (
+              <input className="input" value={myName} disabled readOnly />
+            )}
           </div>
           <div className="field">
             <label>용도</label>
