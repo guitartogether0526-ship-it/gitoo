@@ -43,6 +43,12 @@ const I = {
       <path d="M3 10h18M16 14.5h2" />
     </svg>
   ),
+  profile: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" />
+    </svg>
+  ),
 };
 
 const ITEMS: Item[] = [
@@ -52,6 +58,7 @@ const ITEMS: Item[] = [
   { href: "/setlist", label: "셋리스트", icon: I.music },
   { href: "/members", label: "회원", icon: I.users },
   { href: "/finance", label: "회비", icon: I.wallet },
+  { href: "/mypage", label: "마이페이지", icon: I.profile },
 ];
 
 export default function BottomNav() {

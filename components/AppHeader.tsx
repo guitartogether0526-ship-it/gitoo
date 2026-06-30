@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "./Logo";
 import UserMenu from "./UserMenu";
@@ -20,7 +21,9 @@ export default function AppHeader() {
 
   return (
     <header className="app-header">
-      <Logo />
+      <Link href="/" aria-label="홈으로" style={{ textDecoration: "none" }}>
+        <Logo />
+      </Link>
       <div className="header-title">
         <span className="ht-page">{t.page}</span>
         <span className="ht-sub">{t.sub}</span>

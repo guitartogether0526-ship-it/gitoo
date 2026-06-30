@@ -128,10 +128,16 @@ body {
 .header-title .ht-page {
   font-size: 15px;
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .header-title .ht-sub {
   font-size: 11px;
   color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ---------- Page heading ---------- */
@@ -705,7 +711,7 @@ body {
   max-width: var(--maxw);
   z-index: 40;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   background: rgba(28, 23, 20, 0.92);
   backdrop-filter: blur(14px);
   border-top: 1px solid var(--border);
@@ -719,8 +725,9 @@ body {
   padding: 4px 0;
   color: var(--text-dim);
   text-decoration: none;
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 700;
+  white-space: nowrap;
 }
 .nav-item svg {
   width: 22px;
