@@ -5,7 +5,9 @@ import type { Song, Team } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
-import { addTeam, reorderTeams } from "@/lib/team-actions";
+import { addTeam, renameTeam, reorderTeams } from "@/lib/team-actions";
+
+type MemberLite = { id: string; name: string; part: string; team_id: string | null };
 
 const HeartIcon = ({ filled }: { filled: boolean }) => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -24,27 +26,22 @@ export default function SetlistView({
   teams,
   initial,
   myTeamId,
+  members,
 }: {
   teams: Team[];
   initial: Song[];
   myTeamId: string | null;
+  members: MemberLite[];
 }) {
   const { user } = useAuth();
   const canManageTeams = can.manageTeams(user?.role);
-  // 운영진은 모든 팀을 본인팀처럼 취급
-  const isOperator = canManageTeams;
 
   const [teamList, setTeamList] = useState<Team[]>(teams);
   const [songs, setSongs] = useState<Song[]>(initial);
   const [activeTeam, setActiveTeam] = useState<string>(teams[0]?.id ?? "");
 
   // 현재 보고 있는 팀을 관리할 수 있는가 (본인팀 또는 운영진)
-  const canManageActive = isOperator || (myTeamId != null && myTeamId === activeTeam);
-
-  // 팀 추가 폼
-  const [newTeam, setNewTeam] = useState("");
-  const [teamBusy, setTeamBusy] = useState(false);
-  const [teamError, setTeamError] = useState("");
+  const canManageActive = canManageTeams || (myTeamId != null && myTeamId === activeTeam);
 
   // 곡 올리기 폼
   const [title, setTitle] = useState("");
@@ -58,7 +55,36 @@ export default function SetlistView({
   const [eArtist, setEArtist] = useState("");
   const [eYoutube, setEYoutube] = useState("");
 
-  const onAddTeam = async () => {
+  // 팀 수정 팝업 (운영진)
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [draft, setDraft] = useState<Team[]>([]);
+  const [newTeam, setNewTeam] = useState("");
+  const [teamBusy, setTeamBusy] = useState(false);
+  const [teamError, setTeamError] = useState("");
+
+  // 팀원 보기 팝업 (전체)
+  const [showMembers, setShowMembers] = useState(false);
+
+  const openTeamModal = () => {
+    setDraft(teamList.map((t) => ({ ...t })));
+    setNewTeam("");
+    setTeamError("");
+    setShowTeamModal(true);
+  };
+
+  const moveTeam = (i: number, dir: -1 | 1) => {
+    setDraft((prev) => {
+      const j = i + dir;
+      if (j < 0 || j >= prev.length) return prev;
+      const next = [...prev];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  };
+  const setDraftName = (i: number, name: string) =>
+    setDraft((prev) => prev.map((t, idx) => (idx === i ? { ...t, name } : t)));
+
+  const addTeamInModal = async () => {
     setTeamError("");
     const name = newTeam.trim();
     if (!name) return;
@@ -69,29 +95,29 @@ export default function SetlistView({
       setTeamError(res.error);
       return;
     }
+    setDraft((prev) => [...prev, res.team]);
     setTeamList((prev) => [...prev, res.team]);
-    setActiveTeam(res.team.id);
     setNewTeam("");
   };
 
-  // 팀 순서 드래그 (운영진 전용)
-  const [dragId, setDragId] = useState<string>("");
-
-  const onDropTeam = async (targetId: string) => {
-    if (!dragId || dragId === targetId) {
-      setDragId("");
+  const saveTeams = async () => {
+    setTeamError("");
+    // 빈 이름 검사
+    if (draft.some((t) => !t.name.trim())) {
+      setTeamError("팀 이름은 비울 수 없습니다.");
       return;
     }
-    const next = [...teamList];
-    const from = next.findIndex((t) => t.id === dragId);
-    const to = next.findIndex((t) => t.id === targetId);
-    if (from < 0 || to < 0) return;
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
-    setTeamList(next);
-    setDragId("");
-    const res = await reorderTeams(next.map((t) => t.id));
-    if ("error" in res) setTeamError(res.error);
+    setTeamBusy(true);
+    // 이름 변경분 저장
+    for (const t of draft) {
+      const orig = teamList.find((x) => x.id === t.id);
+      if (orig && orig.name !== t.name.trim()) await renameTeam(t.id, t.name.trim());
+    }
+    // 순서 저장
+    await reorderTeams(draft.map((t) => t.id));
+    setTeamBusy(false);
+    setTeamList(draft.map((t, i) => ({ ...t, name: t.name.trim(), sort_order: i })));
+    setShowTeamModal(false);
   };
 
   // 표시할 곡: 본인팀/운영진은 전체, 다른 팀은 선정곡만
@@ -103,6 +129,11 @@ export default function SetlistView({
         .sort((a, b) => a.title.localeCompare(b.title, "ko")),
     [songs, activeTeam, canManageActive],
   );
+
+  const activeTeamName = teamList.find((t) => t.id === activeTeam)?.name ?? "";
+  const activeMembers = members
+    .filter((m) => m.team_id === activeTeam)
+    .sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
   const toggleLike = (id: string) => {
     let nextVoted = false;
@@ -151,7 +182,6 @@ export default function SetlistView({
     if (sb) {
       let res = await sb.from("songs").insert(payload).select().single();
       if (res.error) {
-        // youtube_url 컬럼이 아직 없을 수 있어 제외하고 재시도
         const { youtube_url: _yt, ...rest } = payload;
         res = await sb.from("songs").insert(rest).select().single();
       }
@@ -200,59 +230,35 @@ export default function SetlistView({
 
   return (
     <>
-      {/* 팀별 탭 (운영진은 드래그로 순서 변경) */}
+      {/* 팀별 탭 */}
       <div className="tab-row">
         {teamList.map((t) => (
           <button
             key={t.id}
-            className={`tab${activeTeam === t.id ? " active" : ""}${dragId === t.id ? " dragging" : ""}`}
+            className={`tab${activeTeam === t.id ? " active" : ""}`}
             onClick={() => setActiveTeam(t.id)}
-            draggable={canManageTeams}
-            onDragStart={canManageTeams ? () => setDragId(t.id) : undefined}
-            onDragOver={canManageTeams ? (e) => e.preventDefault() : undefined}
-            onDrop={canManageTeams ? () => onDropTeam(t.id) : undefined}
-            onDragEnd={canManageTeams ? () => setDragId("") : undefined}
-            style={canManageTeams ? { cursor: "grab", opacity: dragId === t.id ? 0.4 : 1 } : undefined}
-            title={canManageTeams ? "드래그해서 순서 변경" : undefined}
           >
-            {canManageTeams && <span style={{ opacity: 0.5, marginRight: 4 }}>⠿</span>}
             {t.name}
           </button>
         ))}
       </div>
-      {canManageTeams && (
-        <p className="dim" style={{ fontSize: 11, margin: "2px 0 0" }}>
-          ⠿ 탭을 드래그하면 팀 순서를 바꿀 수 있어요 (운영진 전용).
-        </p>
-      )}
 
-      {/* 팀 추가 — 운영진 전용 */}
-      {canManageTeams && (
-        <div className="card mt-12">
-          <div className="field">
-            <label>새 팀 추가</label>
-            <div className="flex items-center gap-8">
-              <input
-                className="input grow"
-                value={newTeam}
-                onChange={(e) => setNewTeam(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && onAddTeam()}
-                placeholder="예: 4팀 / 어쿠스틱 팀"
-                maxLength={30}
-              />
-              <button className="btn amber" disabled={teamBusy} onClick={onAddTeam}>
-                {teamBusy ? "추가 중…" : "＋ 팀 추가"}
-              </button>
-            </div>
-          </div>
-          {teamError && <p className="form-error" style={{ marginBottom: 0 }}>{teamError}</p>}
-        </div>
-      )}
+      {/* 팀 도구 버튼 */}
+      <div className="flex items-center gap-8" style={{ marginTop: 8 }}>
+        <button className="btn ghost btn-sm" onClick={() => setShowMembers(true)}>
+          👥 팀원 보기
+        </button>
+        {canManageTeams && (
+          <button className="btn ghost btn-sm" onClick={openTeamModal}>
+            ⚙ 팀 수정
+          </button>
+        )}
+      </div>
 
       {/* 곡 올리기 — 본인팀/운영진만 */}
       {canManageActive && (
         <>
-          <button className="btn amber" style={{ width: "100%" }} onClick={() => setShowForm((v) => !v)}>
+          <button className="btn amber" style={{ width: "100%", marginTop: 8 }} onClick={() => setShowForm((v) => !v)}>
             {showForm ? "닫기" : "＋ 곡 올리기"}
           </button>
 
@@ -289,7 +295,7 @@ export default function SetlistView({
       )}
 
       <div className="section-title">
-        🎼 {teamList.find((t) => t.id === activeTeam)?.name} 셋리스트 ({teamSongs.length})
+        🎼 {activeTeamName} 셋리스트 ({teamSongs.length})
         {!canManageActive && <span className="dim" style={{ fontSize: 12, fontWeight: 400 }}> · 선정곡만 표시</span>}
       </div>
 
@@ -375,6 +381,77 @@ export default function SetlistView({
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 8 }}>
         본인 팀 곡은 올리기·수정·삭제·선정이 가능하고, 다른 팀은 선정곡만 볼 수 있어요. (운영진은 전체 관리)
       </p>
+
+      {/* 팀원 보기 팝업 */}
+      {showMembers && (
+        <div className="modal-overlay" onClick={() => setShowMembers(false)}>
+          <div className="card" style={{ margin: 0, width: "100%", maxWidth: 420, maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div className="title-row">
+              <div className="section-title" style={{ margin: 0 }}>👥 {activeTeamName} 팀원 ({activeMembers.length})</div>
+              <button className="btn ghost btn-sm" onClick={() => setShowMembers(false)}>닫기</button>
+            </div>
+            {activeMembers.length === 0 ? (
+              <p className="dim" style={{ fontSize: 13, marginBottom: 0 }}>이 팀에 배정된 회원이 없습니다.</p>
+            ) : (
+              <div style={{ marginTop: 8 }}>
+                {activeMembers.map((m) => (
+                  <div key={m.id} className="res-item">
+                    <span className="m-name">{m.name}</span>
+                    <span className="dim" style={{ fontSize: 13 }}>{m.part}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 팀 수정 팝업 (운영진) */}
+      {showTeamModal && (
+        <div className="modal-overlay" onClick={() => !teamBusy && setShowTeamModal(false)}>
+          <div className="card" style={{ margin: 0, width: "100%", maxWidth: 440, maxHeight: "85vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <div className="title-row">
+              <div className="section-title" style={{ margin: 0 }}>⚙ 팀 수정</div>
+              <button className="btn ghost btn-sm" onClick={() => setShowTeamModal(false)}>닫기</button>
+            </div>
+            <p className="dim" style={{ fontSize: 12, marginTop: 4 }}>이름을 수정하고 ▲▼로 순서를 바꾼 뒤 저장하세요.</p>
+
+            <div style={{ marginTop: 8 }}>
+              {draft.map((t, i) => (
+                <div key={t.id} className="flex items-center gap-8" style={{ marginBottom: 8 }}>
+                  <input className="input grow" value={t.name} onChange={(e) => setDraftName(i, e.target.value)} maxLength={30} />
+                  <button className="btn ghost btn-sm" onClick={() => moveTeam(i, -1)} disabled={i === 0} aria-label="위로">▲</button>
+                  <button className="btn ghost btn-sm" onClick={() => moveTeam(i, 1)} disabled={i === draft.length - 1} aria-label="아래로">▼</button>
+                </div>
+              ))}
+            </div>
+
+            <div className="field" style={{ marginTop: 4 }}>
+              <label>새 팀 추가</label>
+              <div className="flex items-center gap-8">
+                <input
+                  className="input grow"
+                  value={newTeam}
+                  onChange={(e) => setNewTeam(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addTeamInModal()}
+                  placeholder="예: 어쿠스틱 팀"
+                  maxLength={30}
+                />
+                <button className="btn ghost btn-sm" disabled={teamBusy} onClick={addTeamInModal}>＋ 추가</button>
+              </div>
+            </div>
+
+            {teamError && <p className="form-error">{teamError}</p>}
+
+            <div className="btn-row" style={{ marginTop: 12 }}>
+              <button className="btn amber" style={{ flex: 1 }} disabled={teamBusy} onClick={saveTeams}>
+                {teamBusy ? "저장 중…" : "저장"}
+              </button>
+              <button className="btn ghost" disabled={teamBusy} onClick={() => setShowTeamModal(false)}>취소</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

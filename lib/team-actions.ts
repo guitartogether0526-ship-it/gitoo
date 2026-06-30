@@ -33,6 +33,25 @@ export async function addTeam(nameRaw: string): Promise<{ team: Team } | { error
   return { team: { id, name } };
 }
 
+/** 팀 이름 변경 — 운영진 전용 */
+export async function renameTeam(
+  id: string,
+  nameRaw: string,
+): Promise<{ ok: true } | { error: string }> {
+  const session = await getSession();
+  if (!can.manageTeams(session?.role)) return { error: "권한이 없습니다. (운영진 전용)" };
+  const name = nameRaw.trim();
+  if (!name) return { error: "팀 이름을 입력하세요." };
+  if (name.length > 30) return { error: "팀 이름은 30자 이하로 입력하세요." };
+
+  const sb = getSupabaseAdmin();
+  if (sb) {
+    const { error } = await sb.from("teams").update({ name }).eq("id", id);
+    if (error) return { error: "팀 이름 변경 실패: " + error.message };
+  }
+  return { ok: true };
+}
+
 /** 팀 순서 변경 — 운영진 전용. orderedIds 순서대로 sort_order(0,1,2…) 저장 */
 export async function reorderTeams(
   orderedIds: string[],

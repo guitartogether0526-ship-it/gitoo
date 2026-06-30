@@ -16,13 +16,21 @@ export default async function SetlistPage() {
   const me = members.find((m) => m.id === session?.id);
   const myTeamId = me?.team_id ?? session?.team_id ?? null;
 
+  // 팀원 보기용 — 이름·파트만 전달(연락처 등 민감정보 제외)
+  const memberList = members.map((m) => ({
+    id: m.id,
+    name: m.name,
+    part: m.part,
+    team_id: m.team_id,
+  }));
+
   return (
     <>
       <div className="page-head">
         <h1>합주곡 · 셋리스트</h1>
         <p>팀별 셋리스트 · 곡 선정 · 유튜브 · 투표</p>
       </div>
-      <SetlistView teams={teams} initial={songs} myTeamId={myTeamId} />
+      <SetlistView teams={teams} initial={songs} myTeamId={myTeamId} members={memberList} />
     </>
   );
 }
