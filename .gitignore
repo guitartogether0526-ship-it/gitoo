@@ -29,3 +29,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 로컬 가이드/스크린샷 (회원 실명·아이디 포함 → 커밋 금지)
+docs/
