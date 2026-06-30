@@ -18,7 +18,8 @@ export interface Post {
   board_id: string;
   title: string;
   body: string;
-  author: string;
+  author: string; // 작성자 표시명
+  author_id: string | null; // 작성자 회원 id (수정 권한 판별용, 시드/익명글은 null)
   pinned: boolean; // 상단 고정
   created_at: string; // ISO date
 }

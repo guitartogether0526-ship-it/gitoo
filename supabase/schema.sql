@@ -17,10 +17,14 @@ create table if not exists posts (
   board_id text not null references boards(id) on delete cascade,
   title text not null,
   body text not null,
-  author text not null,
+  author text not null,                         -- 작성자 표시명
+  author_id text,                               -- 작성자 회원 id(수정 권한 판별, null=시드/익명)
   pinned boolean not null default false,        -- 상단 고정
   created_at timestamptz not null default now()
 );
+
+-- 기존 posts 테이블 업그레이드(재실행 안전) — 작성자 id 컬럼 추가
+alter table posts add column if not exists author_id text;
 
 create table if not exists reservations (
   id text primary key default gen_random_uuid()::text,

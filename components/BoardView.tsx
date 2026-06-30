@@ -116,6 +116,7 @@ export default function BoardView({
       title: title.trim(),
       body: body.trim(),
       author: user?.name ?? "나",
+      author_id: user?.id ?? null,
       pinned,
     };
     const sb = getSupabase();
@@ -214,8 +215,8 @@ export default function BoardView({
         </div>
       ) : (
         boardPosts.map((p) => {
-          // 수정: 작성자 본인 또는 운영진 / 삭제: 운영진만
-          const canEditThis = isOperator || (!!user && user.name === p.author);
+          // 수정: 작성자 본인(id 일치) 또는 운영진 / 삭제: 운영진만
+          const canEditThis = isOperator || (!!user && !!p.author_id && user.id === p.author_id);
           const isEditing = editingId === p.id;
 
           if (isEditing) {
