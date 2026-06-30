@@ -9,6 +9,7 @@ import type { MemberRole } from "./types";
 import {
   createMember,
   findByEmail,
+  getAllMembers,
   getCredential,
   removeMember,
   setApproved,
@@ -193,6 +194,14 @@ export async function resetPassword(input: {
   });
   if (!sent) return { error: "이메일 발송에 실패했습니다. 관리자에게 문의하세요." };
   return { ok: true, sent: true };
+}
+
+/** 승인 대기 중인 가입 신청 수 (운영진만, 그 외 0) — 회원 탭 배지용 */
+export async function getPendingCount(): Promise<number> {
+  const session = await getSession();
+  if (!can.manageMembers(session?.role)) return 0;
+  const members = await getAllMembers();
+  return members.filter((m) => !m.approved).length;
 }
 
 /** 가입 승인 (STAFF 이상) */

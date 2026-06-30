@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
+import { getPendingCount } from "@/lib/auth-actions";
 
 type Item = { href: string; label: string; icon: React.ReactNode; opOnly?: boolean };
 
@@ -70,13 +72,27 @@ export default function BottomNav() {
   // 회원 탭은 운영진(관리자·회장·총무·STAFF)에게만 노출
   const items = ITEMS.filter((it) => !it.opOnly || isOperator);
 
+  // 승인 대기 가입 신청 수 (운영진만) — 회원 탭 빨간 배지
+  const [pending, setPending] = useState(0);
+  useEffect(() => {
+    if (!isOperator) {
+      setPending(0);
+      return;
+    }
+    getPendingCount()
+      .then(setPending)
+      .catch(() => {});
+  }, [isOperator, pathname]);
+
   return (
     <nav className="bottom-nav" style={{ gridTemplateColumns: `repeat(${items.length}, 1fr)` }}>
       {items.map((it) => {
         const active = pathname === it.href;
+        const badge = it.href === "/members" && pending > 0;
         return (
           <Link key={it.href} href={it.href} className={`nav-item${active ? " active" : ""}`}>
             {it.icon}
+            {badge && <span className="nav-badge">{pending > 99 ? "99+" : pending}</span>}
             <span>{it.label}</span>
           </Link>
         );
