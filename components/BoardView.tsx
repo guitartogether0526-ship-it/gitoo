@@ -58,7 +58,9 @@ export default function BoardView({
   };
 
   const deletePost = async (p: Post) => {
-    if (!isOperator) return;
+    const authorMatch = !!user && !!p.author_id && user.id === p.author_id;
+    // 일반 게시판: 운영진만 / 건의사항: 운영진 또는 작성자
+    if (!(isOperator || (isAnon && authorMatch))) return;
     if (!window.confirm("이 게시글을 삭제할까요? 되돌릴 수 없습니다.")) return;
     const sb = getSupabase();
     if (sb) await sb.from("posts").delete().eq("id", p.id);
@@ -81,6 +83,8 @@ export default function BoardView({
   );
 
   const current = boards.find((b) => b.id === activeBoard);
+  // 건의사항 = 익명 게시판 (작성자 익명, 작성자만 수정, 삭제는 작성자+운영진)
+  const isAnon = current?.name === "건의사항";
   // 공지사항 게시판은 STAFF 이상만, 그 외 게시판은 로그인한 회원이면 작성 가능
   const canWriteHere = current?.is_notice ? canWriteNotice : !!user;
 
@@ -115,7 +119,7 @@ export default function BoardView({
       board_id: activeBoard,
       title: title.trim(),
       body: body.trim(),
-      author: user?.name ?? "나",
+      author: isAnon ? "익명" : user?.name ?? "나",
       author_id: user?.id ?? null,
       pinned,
     };
@@ -163,7 +167,7 @@ export default function BoardView({
           style={{ width: "100%" }}
           onClick={() => setShowForm((v) => !v)}
         >
-          {showForm ? "닫기" : current?.is_notice ? "＋ 공지 작성" : "＋ 글쓰기"}
+          {showForm ? "닫기" : current?.is_notice ? "＋ 공지 작성" : isAnon ? "＋ 건의하기" : "＋ 글쓰기"}
         </button>
       ) : (
         current?.is_notice && (
@@ -215,8 +219,12 @@ export default function BoardView({
         </div>
       ) : (
         boardPosts.map((p) => {
-          // 수정: 작성자 본인(id 일치) 또는 운영진 / 삭제: 운영진만
-          const canEditThis = isOperator || (!!user && !!p.author_id && user.id === p.author_id);
+          const authorMatch = !!user && !!p.author_id && user.id === p.author_id;
+          // 건의사항(익명): 수정=작성자만, 삭제=작성자+운영진
+          // 일반 게시판: 수정=작성자+운영진, 삭제=운영진만
+          const canEditThis = isAnon ? authorMatch : isOperator || authorMatch;
+          const canDeleteThis = isAnon ? isOperator || authorMatch : isOperator;
+          const displayAuthor = isAnon ? "익명" : p.author;
           const isEditing = editingId === p.id;
 
           if (isEditing) {
@@ -260,14 +268,14 @@ export default function BoardView({
                 {p.body}
               </p>
               <div className="meta-line">
-                {p.author} · {formatDate(p.created_at)}
+                {displayAuthor} · {formatDate(p.created_at)}
               </div>
-              {(canEditThis || isOperator) && (
+              {(canEditThis || canDeleteThis) && (
                 <div className="btn-row" style={{ marginTop: 8 }}>
                   {canEditThis && (
                     <button className="btn ghost btn-sm" onClick={() => startEdit(p)}>수정</button>
                   )}
-                  {isOperator && (
+                  {canDeleteThis && (
                     <button className="btn danger btn-sm" onClick={() => deletePost(p)}>삭제</button>
                   )}
                 </div>
@@ -278,7 +286,9 @@ export default function BoardView({
       )}
 
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 8 }}>
-        수정은 작성자 본인 또는 운영진, 삭제는 운영진(STAFF 이상)만 가능합니다. 공지사항 고정글은 홈에 표시됩니다.
+        {isAnon
+          ? "건의사항은 익명으로 작성되며, 수정은 작성자 본인만·삭제는 작성자 또는 운영진이 할 수 있습니다."
+          : "수정은 작성자 본인 또는 운영진, 삭제는 운영진(STAFF 이상)만 가능합니다. 공지사항 고정글은 홈에 표시됩니다."}
       </p>
     </>
   );

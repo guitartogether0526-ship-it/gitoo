@@ -17,6 +17,7 @@ import type {
 export const BOARDS: Board[] = [
   { id: "b1", name: "공지사항", is_notice: true, created_at: "2026-01-01T00:00:00Z" },
   { id: "b2", name: "자유게시판", is_notice: false, created_at: "2026-02-01T00:00:00Z" },
+  { id: "b3", name: "건의사항", is_notice: false, created_at: "2026-03-01T00:00:00Z" },
 ];
 
 export const POSTS: Post[] = [

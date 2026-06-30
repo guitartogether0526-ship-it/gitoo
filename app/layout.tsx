@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
-import InstallBanner from "@/components/InstallBanner";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { AuthProvider } from "@/lib/auth";
 import AuthGate from "@/components/AuthGate";
@@ -41,7 +40,6 @@ export default async function RootLayout({
             <div className="app-shell">
               <AppHeader />
               <main className="app-main">{children}</main>
-              <InstallBanner />
               <BottomNav />
             </div>
           </AuthGate>

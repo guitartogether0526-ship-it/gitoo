@@ -35,8 +35,10 @@ export default function ReservationCalendar({
   const { user } = useAuth();
   const canManage = can.manageReservations(user?.role);
   const myName = user?.name ?? "나";
-  // 예약자 선택지: 본인 이름(기본) + 팀이 있으면 팀명. 팀 없으면 개인 이름만.
+  // 예약자 선택지: 팀이 있으면 팀명(기본) + 본인 이름. 팀 없으면 개인 이름만.
   const reserverOptions = myTeamName ? [myName, myTeamName] : [myName];
+  // 팀 배정 시 기본 예약자 = 팀 (개인연습 체크 시에만 개인 이름)
+  const defaultReserver = myTeamName ?? myName;
 
   const today = useMemo(() => new Date(), []);
   const todayStr = ymd(today.getFullYear(), today.getMonth(), today.getDate());
@@ -50,7 +52,7 @@ export default function ReservationCalendar({
   const [sm, setSm] = useState(0);
   const [eh, setEh] = useState(21);
   const [em, setEm] = useState(0);
-  const [by, setBy] = useState(myName);
+  const [by, setBy] = useState(defaultReserver);
   const [purpose, setPurpose] = useState("합주");
   const [timeError, setTimeError] = useState("");
 
@@ -111,7 +113,7 @@ export default function ReservationCalendar({
       // 목업 모드: 로컬 상태에만 추가
       setReservations((prev) => [...prev, { id: `rv-${selected}-${prev.length}`, ...payload }]);
     }
-    setBy(myName);
+    setBy(defaultReserver);
     setPurpose("합주");
   };
 

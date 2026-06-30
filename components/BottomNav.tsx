@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth";
+import { can } from "@/lib/roles";
 
-type Item = { href: string; label: string; icon: React.ReactNode };
+type Item = { href: string; label: string; icon: React.ReactNode; opOnly?: boolean };
 
 const I = {
   home: (
@@ -56,16 +58,21 @@ const ITEMS: Item[] = [
   { href: "/reservation", label: "예약", icon: I.calendar },
   { href: "/board", label: "게시판", icon: I.board },
   { href: "/setlist", label: "셋리스트", icon: I.music },
-  { href: "/members", label: "회원", icon: I.users },
+  { href: "/members", label: "회원", icon: I.users, opOnly: true },
   { href: "/finance", label: "회비", icon: I.wallet },
   { href: "/mypage", label: "마이페이지", icon: I.profile },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const isOperator = can.manageMembers(user?.role);
+  // 회원 탭은 운영진(관리자·회장·총무·STAFF)에게만 노출
+  const items = ITEMS.filter((it) => !it.opOnly || isOperator);
+
   return (
-    <nav className="bottom-nav">
-      {ITEMS.map((it) => {
+    <nav className="bottom-nav" style={{ gridTemplateColumns: `repeat(${items.length}, 1fr)` }}>
+      {items.map((it) => {
         const active = pathname === it.href;
         return (
           <Link key={it.href} href={it.href} className={`nav-item${active ? " active" : ""}`}>
