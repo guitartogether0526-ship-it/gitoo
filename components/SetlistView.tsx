@@ -6,6 +6,7 @@ import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { addTeam, renameTeam, reorderTeams } from "@/lib/team-actions";
+import { setSongStatus } from "@/lib/song-actions";
 
 type MemberLite = { id: string; name: string; part: string; team_id: string | null };
 
@@ -145,15 +146,21 @@ export default function SetlistView({
     if (sb) void sb.from("songs").update({ voted: nextVoted, likes: nextLikes }).eq("id", id);
   };
 
-  // 곡 선정 ↔ 후보 전환 (본인팀/운영진)
-  const toggleStatus = (id: string) => {
+  // 곡 선정/후보 저장 (서버 액션) + 완료 팝업
+  const [statusBusy, setStatusBusy] = useState("");
+  const [statusMsg, setStatusMsg] = useState("");
+
+  const changeStatus = async (id: string, next: "confirmed" | "candidate") => {
     if (!canManageActive) return;
-    const cur = songs.find((s) => s.id === id);
-    if (!cur) return;
-    const next: "candidate" | "confirmed" = cur.status === "confirmed" ? "candidate" : "confirmed";
+    setStatusBusy(id);
+    const res = await setSongStatus(id, next);
+    setStatusBusy("");
+    if ("error" in res) {
+      setStatusMsg("❌ " + res.error);
+      return;
+    }
     setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, status: next } : s)));
-    const sb = getSupabase();
-    if (sb) void sb.from("songs").update({ status: next }).eq("id", id);
+    setStatusMsg(next === "confirmed" ? "✅ 선정곡으로 저장했습니다." : "후보로 되돌렸습니다.");
   };
 
   const addSong = async () => {
@@ -325,18 +332,9 @@ export default function SetlistView({
                 <div className="grow">
                   <div className="flex items-center gap-8" style={{ flexWrap: "wrap" }}>
                     <span className="item-name">{s.title}</span>
-                    {canManageActive ? (
-                      <button
-                        className={`badge ${s.status === "confirmed" ? "amber" : ""}`}
-                        onClick={() => toggleStatus(s.id)}
-                        style={{ cursor: "pointer" }}
-                        title="선정/후보 전환"
-                      >
-                        {s.status === "confirmed" ? "★ 선정곡" : "후보"}
-                      </button>
-                    ) : (
-                      <span className="badge amber">★ 선정곡</span>
-                    )}
+                    <span className={`badge ${s.status === "confirmed" ? "amber" : ""}`}>
+                      {s.status === "confirmed" ? "★ 선정곡" : "후보"}
+                    </span>
                   </div>
                   <div className="item-sub">{s.artist}</div>
                 </div>
@@ -360,6 +358,15 @@ export default function SetlistView({
 
               {canManageActive && (
                 <div className="btn-row" style={{ marginTop: 8 }}>
+                  {s.status === "confirmed" ? (
+                    <button className="btn ghost btn-sm" disabled={statusBusy === s.id} onClick={() => changeStatus(s.id, "candidate")}>
+                      {statusBusy === s.id ? "저장 중…" : "후보로 되돌리기"}
+                    </button>
+                  ) : (
+                    <button className="btn amber btn-sm" disabled={statusBusy === s.id} onClick={() => changeStatus(s.id, "confirmed")}>
+                      {statusBusy === s.id ? "저장 중…" : "★ 선정곡으로 하기"}
+                    </button>
+                  )}
                   <button className="btn ghost btn-sm" onClick={() => startEdit(s)}>수정</button>
                   <button className="btn danger btn-sm" onClick={() => deleteSong(s.id)}>삭제</button>
                 </div>
@@ -372,6 +379,16 @@ export default function SetlistView({
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 8 }}>
         본인 팀 곡은 올리기·수정·삭제·선정이 가능하고, 다른 팀은 선정곡만 볼 수 있어요. (운영진은 전체 관리)
       </p>
+
+      {/* 선정/후보 저장 결과 팝업 */}
+      {statusMsg && (
+        <div className="modal-overlay" onClick={() => setStatusMsg("")}>
+          <div className="card" style={{ margin: 0, width: "100%", maxWidth: 360, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+            <p style={{ fontWeight: 700, margin: "4px 0 12px", fontSize: 15 }}>{statusMsg}</p>
+            <button className="btn amber" style={{ width: "100%" }} onClick={() => setStatusMsg("")}>확인</button>
+          </div>
+        </div>
+      )}
 
       {/* 팀원 보기 팝업 */}
       {showMembers && (
