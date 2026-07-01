@@ -37,7 +37,8 @@ export default function FinanceManager({
   const [item, setItem] = useState("");
   const [amount, setAmount] = useState("");
   const [kind, setKind] = useState<"out" | "in">("out");
-  const [hasReceipt, setHasReceipt] = useState(false);
+  // 수정 중인 내역 id (인라인 편집 폼 노출)
+  const [editId, setEditId] = useState<string | null>(null);
 
   const income = expenses.filter((e) => e.amount > 0).reduce((s, e) => s + e.amount, 0);
   const outcome = expenses.filter((e) => e.amount < 0).reduce((s, e) => s + e.amount, 0);
@@ -77,7 +78,6 @@ export default function FinanceManager({
       date: today,
       item: item.trim(),
       amount: kind === "out" ? -abs : abs,
-      has_receipt: hasReceipt,
     };
     const sb = getSupabase();
     if (sb) {
@@ -91,8 +91,18 @@ export default function FinanceManager({
     }
     setItem("");
     setAmount("");
-    setHasReceipt(false);
     setShowForm(false);
+  };
+
+  const updateExpense = async (id: string, payload: { item: string; amount: number }) => {
+    if (!canEdit) return;
+    setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, ...payload } : e)));
+    setEditId(null);
+    const sb = getSupabase();
+    if (sb) {
+      await sb.from("expenses").update(payload).eq("id", id);
+      router.refresh();
+    }
   };
 
   return (
@@ -190,10 +200,6 @@ export default function FinanceManager({
                     <option value="in">수입</option>
                   </select>
                 </div>
-                <label className="flex items-center gap-8" style={{ fontSize: 13 }}>
-                  <input type="checkbox" checked={hasReceipt} onChange={(e) => setHasReceipt(e.target.checked)} />
-                  영수증 첨부됨
-                </label>
                 <button className="btn amber" onClick={addExpense}>
                   장부에 등록
                 </button>
@@ -210,26 +216,102 @@ export default function FinanceManager({
               <th>날짜</th>
               <th>항목</th>
               <th style={{ textAlign: "right" }}>금액</th>
-              <th style={{ textAlign: "center" }}>영수증</th>
+              {canEdit && <th style={{ textAlign: "center" }}>수정</th>}
             </tr>
           </thead>
           <tbody>
-            {sortedExpenses.map((e) => (
-              <tr key={e.id}>
-                <td className="dim">{formatDate(e.date)}</td>
-                <td>{e.item}</td>
-                <td className={`amount${e.amount < 0 ? " out" : ""}`}>
-                  {e.amount > 0 ? "+" : ""}
-                  {e.amount.toLocaleString()}
-                </td>
-                <td style={{ textAlign: "center" }}>
-                  {e.has_receipt ? <span className="receipt" title="영수증 첨부됨">✓</span> : <span className="dim">—</span>}
-                </td>
-              </tr>
-            ))}
+            {sortedExpenses.map((e) =>
+              editId === e.id ? (
+                <tr key={e.id}>
+                  <td colSpan={canEdit ? 4 : 3} style={{ padding: 0 }}>
+                    <ExpenseEditor
+                      expense={e}
+                      onSave={(payload) => updateExpense(e.id, payload)}
+                      onCancel={() => setEditId(null)}
+                    />
+                  </td>
+                </tr>
+              ) : (
+                <tr key={e.id}>
+                  <td className="dim">{formatDate(e.date)}</td>
+                  <td>{e.item}</td>
+                  <td className={`amount${e.amount < 0 ? " out" : ""}`}>
+                    {e.amount > 0 ? "+" : ""}
+                    {e.amount.toLocaleString()}
+                  </td>
+                  {canEdit && (
+                    <td style={{ textAlign: "center" }}>
+                      <button
+                        className="btn ghost btn-sm"
+                        onClick={() => setEditId(e.id)}
+                        aria-label="내역 수정"
+                      >
+                        수정
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ),
+            )}
           </tbody>
         </table>
       </div>
     </>
+  );
+}
+
+// 기존 지출/수입 내역의 항목·금액·구분을 인라인 편집하는 폼
+function ExpenseEditor({
+  expense,
+  onSave,
+  onCancel,
+}: {
+  expense: Expense;
+  onSave: (payload: { item: string; amount: number }) => void;
+  onCancel: () => void;
+}) {
+  const [item, setItem] = useState(expense.item);
+  const [amount, setAmount] = useState(String(Math.abs(expense.amount)));
+  const [kind, setKind] = useState<"out" | "in">(expense.amount < 0 ? "out" : "in");
+
+  const save = () => {
+    const abs = Math.abs(Number(amount.replace(/[^0-9.-]/g, "")));
+    if (!item.trim() || !abs) return;
+    onSave({ item: item.trim(), amount: kind === "out" ? -abs : abs });
+  };
+
+  return (
+    <div className="card" style={{ margin: 8 }}>
+      <div className="form-grid">
+        <div className="field">
+          <label>항목</label>
+          <input className="input" value={item} onChange={(e) => setItem(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>금액 (원)</label>
+          <input
+            className="input"
+            inputMode="numeric"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </div>
+        <div className="field">
+          <label>구분</label>
+          <select className="select" value={kind} onChange={(e) => setKind(e.target.value as "out" | "in")}>
+            <option value="out">지출</option>
+            <option value="in">수입</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-8">
+          <button className="btn amber grow" onClick={save}>
+            수정 저장
+          </button>
+          <button className="btn ghost" onClick={onCancel}>
+            취소
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

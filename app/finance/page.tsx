@@ -16,7 +16,7 @@ export default async function FinancePage() {
       <FinanceManager expenses={expenses} dues={dues} />
 
       <p className="dim" style={{ fontSize: 11, textAlign: "center", marginTop: 12 }}>
-        총 잔액은 앰버 색상으로 강조됩니다 · 영수증 이미지 첨부 지원
+        총 잔액은 앰버 색상으로 강조됩니다
       </p>
     </>
   );

@@ -99,5 +99,5 @@ export interface Expense {
   date: string;
   item: string;
   amount: number; // 음수 = 지출, 양수 = 수입(회비)
-  has_receipt: boolean;
+  has_receipt?: boolean; // (레거시) 영수증 첨부 여부 — UI에서는 미사용
 }
