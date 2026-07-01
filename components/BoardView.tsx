@@ -46,6 +46,16 @@ export default function BoardView({
   const [editBody, setEditBody] = useState("");
   const [editPinned, setEditPinned] = useState(false);
 
+  // 공지사항 게시판: 접힘/펼침 상태 (열린 글 id 모음)
+  const [openPosts, setOpenPosts] = useState<Set<string>>(new Set());
+  const toggleOpen = (id: string) =>
+    setOpenPosts((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   const startEdit = (p: Post) => {
     setEditingId(p.id);
     setEditTitle(p.title);
@@ -270,27 +280,63 @@ export default function BoardView({
             );
           }
 
+          // 공지사항 게시판은 접힘 상태 → 제목 줄을 눌러 펼친다. 그 외 게시판은 항상 펼침.
+          const isNoticeBoard = current?.is_notice ?? false;
+          const open = !isNoticeBoard || openPosts.has(p.id);
+
           return (
             <div className="card" key={p.id}>
-              <div className="title-row">
-                <div className="item-name">{p.title}</div>
-                {p.pinned && <span className="badge amber">고정</span>}
-              </div>
-              <p className="item-sub" style={{ marginTop: 8, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-                {p.body}
-              </p>
-              <div className="meta-line">
-                {displayAuthor} · {formatDate(p.created_at)}
-              </div>
-              {(canEditThis || canDeleteThis) && (
-                <div className="btn-row" style={{ marginTop: 8 }}>
-                  {canEditThis && (
-                    <button className="btn ghost btn-sm" onClick={() => startEdit(p)}>수정</button>
-                  )}
-                  {canDeleteThis && (
-                    <button className="btn danger btn-sm" onClick={() => deletePost(p)}>삭제</button>
-                  )}
+              {isNoticeBoard ? (
+                <button
+                  type="button"
+                  className="notice-head"
+                  aria-expanded={open}
+                  onClick={() => toggleOpen(p.id)}
+                >
+                  <span className="notice-head-main">
+                    <span className="item-name">{p.title}</span>
+                    {p.pinned && <span className="badge amber">고정</span>}
+                  </span>
+                  <svg
+                    className="notice-chevron"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 6l6 6-6 6" />
+                  </svg>
+                </button>
+              ) : (
+                <div className="title-row">
+                  <div className="item-name">{p.title}</div>
+                  {p.pinned && <span className="badge amber">고정</span>}
                 </div>
+              )}
+              {open && (
+                <>
+                  <p className="item-sub" style={{ marginTop: 8, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+                    {p.body}
+                  </p>
+                  <div className="meta-line">
+                    {displayAuthor} · {formatDate(p.created_at)}
+                  </div>
+                  {(canEditThis || canDeleteThis) && (
+                    <div className="btn-row" style={{ marginTop: 8 }}>
+                      {canEditThis && (
+                        <button className="btn ghost btn-sm" onClick={() => startEdit(p)}>수정</button>
+                      )}
+                      {canDeleteThis && (
+                        <button className="btn danger btn-sm" onClick={() => deletePost(p)}>삭제</button>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           );

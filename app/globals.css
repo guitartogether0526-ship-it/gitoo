@@ -1036,6 +1036,40 @@ body {
   color: var(--text-dim);
   margin-top: 6px;
 }
+/* 접히는 공지 카드 — 제목 줄을 누르면 본문이 펼쳐진다 */
+.notice-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.notice-head:active {
+  opacity: 0.75;
+}
+.notice-head-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.notice-chevron {
+  flex-shrink: 0;
+  color: var(--text-dim);
+  transition: transform 0.18s ease;
+}
+.notice-head[aria-expanded="true"] .notice-chevron {
+  transform: rotate(90deg);
+}
 .sheet-links {
   display: flex;
   flex-wrap: wrap;

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getBoards, getPosts, getMembers, getSongs, getTeams, getReservations } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { kstYmd } from "@/lib/date";
+import NoticeCard from "@/components/NoticeCard";
 
 export const dynamic = "force-dynamic";
 
@@ -72,18 +73,13 @@ export default async function DashboardPage() {
         </div>
       ) : (
         pinnedNotices.map((n) => (
-          <div className="card" key={n.id}>
-            <div className="title-row">
-              <div className="item-name">{n.title}</div>
-              <span className="badge amber">고정</span>
-            </div>
-            <p className="item-sub" style={{ marginTop: 8, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-              {n.body}
-            </p>
-            <div className="meta-line">
-              {n.author} · {formatDate(n.created_at)}
-            </div>
-          </div>
+          <NoticeCard
+            key={n.id}
+            title={n.title}
+            body={n.body}
+            meta={`${n.author} · ${formatDate(n.created_at)}`}
+            pinned
+          />
         ))
       )}
 
