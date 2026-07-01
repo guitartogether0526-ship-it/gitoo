@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Song, Team } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
@@ -35,11 +36,15 @@ export default function SetlistView({
   members: MemberLite[];
 }) {
   const { user } = useAuth();
+  const router = useRouter();
   const canManageTeams = can.manageTeams(user?.role);
 
   const [teamList, setTeamList] = useState<Team[]>(teams);
   const [songs, setSongs] = useState<Song[]>(initial);
   const [activeTeam, setActiveTeam] = useState<string>(teams[0]?.id ?? "");
+  // 다른 사람이 올린 곡/투표 등 서버 최신 데이터를 화면에 반영 (LiveRefresh/새로고침 시)
+  useEffect(() => setTeamList(teams), [teams]);
+  useEffect(() => setSongs(initial), [initial]);
 
   // 현재 보고 있는 팀을 관리할 수 있는가 (본인팀 또는 운영진)
   const canManageActive = canManageTeams || (myTeamId != null && myTeamId === activeTeam);
@@ -162,6 +167,7 @@ export default function SetlistView({
     }
     setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, status: next } : s)));
     setStatusMsg(next === "confirmed" ? "선정곡으로 저장했습니다." : "후보로 되돌렸습니다.");
+    router.refresh();
   };
 
   const addSong = async () => {
@@ -184,7 +190,10 @@ export default function SetlistView({
         const { youtube_url: _yt, ...rest } = payload;
         res = await sb.from("songs").insert(rest).select().single();
       }
-      if (!res.error && res.data) setSongs((prev) => [...prev, res.data as Song]);
+      if (!res.error && res.data) {
+        setSongs((prev) => [...prev, res.data as Song]);
+        router.refresh();
+      }
     } else {
       setSongs((prev) => [...prev, { id: `song-${activeTeam}-${prev.length}`, ...payload }]);
     }
@@ -215,6 +224,7 @@ export default function SetlistView({
     if (sb) {
       const { error } = await sb.from("songs").update(patch).eq("id", id);
       if (error) await sb.from("songs").update({ title: patch.title, artist: patch.artist }).eq("id", id);
+      router.refresh();
     }
   };
 
@@ -224,7 +234,10 @@ export default function SetlistView({
     setSongs((prev) => prev.filter((s) => s.id !== id));
     if (editId === id) setEditId("");
     const sb = getSupabase();
-    if (sb) await sb.from("songs").delete().eq("id", id);
+    if (sb) {
+      await sb.from("songs").delete().eq("id", id);
+      router.refresh();
+    }
   };
 
   return (

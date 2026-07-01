@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { DuesPayment, Expense } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
+import { kstMonthLabel, kstYmd } from "@/lib/date";
 
 function formatDate(d: string) {
   const [, m, day] = d.split("-");
@@ -19,12 +21,16 @@ export default function FinanceManager({
   dues: DuesPayment[];
 }) {
   const { user } = useAuth();
+  const router = useRouter();
   const canEdit = can.editFinance(user?.role);
   // 회비 납부 현황은 운영진(관리자·회장·총무·STAFF)만 열람
   const canViewDues = can.manageMembers(user?.role);
 
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [dues, setDues] = useState<DuesPayment[]>(initialDues);
+  // 서버가 다시 읽어온 최신 데이터를 화면에 반영 (LiveRefresh/새로고침 시)
+  useEffect(() => setExpenses(initialExpenses), [initialExpenses]);
+  useEffect(() => setDues(initialDues), [initialDues]);
 
   // 지출/수입 추가 폼
   const [showForm, setShowForm] = useState(false);
@@ -43,7 +49,7 @@ export default function FinanceManager({
     [expenses],
   );
 
-  const togglePaid = (d: DuesPayment) => {
+  const togglePaid = async (d: DuesPayment) => {
     if (!canEdit) return;
     const next = !d.paid;
     setDues((prev) =>
@@ -52,19 +58,21 @@ export default function FinanceManager({
       ),
     );
     const sb = getSupabase();
-    if (sb)
-      void sb
+    if (sb) {
+      await sb
         .from("dues")
         .update({ paid: next })
         .eq("member_name", d.member_name)
         .eq("month", d.month);
+      router.refresh();
+    }
   };
 
   const addExpense = async () => {
     if (!canEdit || !item.trim() || !amount.trim()) return;
     const abs = Math.abs(Number(amount.replace(/[^0-9.-]/g, "")));
     if (!abs) return;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = kstYmd(); // 오늘 날짜 (한국시간 기준)
     const payload = {
       date: today,
       item: item.trim(),
@@ -74,7 +82,10 @@ export default function FinanceManager({
     const sb = getSupabase();
     if (sb) {
       const { data, error } = await sb.from("expenses").insert(payload).select().single();
-      if (!error && data) setExpenses((prev) => [...prev, data as Expense]);
+      if (!error && data) {
+        setExpenses((prev) => [...prev, data as Expense]);
+        router.refresh();
+      }
     } else {
       setExpenses((prev) => [...prev, { id: `x-${prev.length}`, ...payload }]);
     }
@@ -115,7 +126,7 @@ export default function FinanceManager({
       {/* 회비 납부 현황 — 운영진(STAFF 이상)만 열람 */}
       {canViewDues && (
         <>
-          <div className="section-title">6월 회비 납부 현황 ({paid}/{dues.length})</div>
+          <div className="section-title">{kstMonthLabel()} 회비 납부 현황 ({paid}/{dues.length})</div>
           <div className="card">
             {dues.map((d, i) => (
               <div

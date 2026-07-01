@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Member, MemberRole, MemberStatus, Team } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { can, ROLE_LABEL, ROLE_ORDER } from "@/lib/roles";
@@ -15,9 +16,12 @@ import {
 
 export default function MemberList({ initial, teams }: { initial: Member[]; teams: Team[] }) {
   const { user } = useAuth();
+  const router = useRouter();
   const canManage = can.manageMembers(user?.role);
   const [members, setMembers] = useState<Member[]>(initial);
   const [busy, setBusy] = useState<string>("");
+  // 새 가입 신청 등 서버 최신 데이터를 화면에 반영 (LiveRefresh/새로고침 시)
+  useEffect(() => setMembers(initial), [initial]);
 
   const pending = members.filter((m) => !m.approved);
   const approved = members.filter((m) => m.approved);
@@ -26,16 +30,20 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
     setBusy(id);
     const res = await approveMember(id);
     setBusy("");
-    if ("ok" in res) setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, approved: true } : m)));
-    else alert(res.error);
+    if ("ok" in res) {
+      setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, approved: true } : m)));
+      router.refresh();
+    } else alert(res.error);
   };
 
   const onReject = async (id: string) => {
     setBusy(id);
     const res = await rejectMember(id);
     setBusy("");
-    if ("ok" in res) setMembers((prev) => prev.filter((m) => m.id !== id));
-    else alert(res.error);
+    if ("ok" in res) {
+      setMembers((prev) => prev.filter((m) => m.id !== id));
+      router.refresh();
+    } else alert(res.error);
   };
 
   const onTeam = async (id: string, teamId: string | null) => {
@@ -73,8 +81,10 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
     setBusy(m.id);
     const res = await kickMember(m.id);
     setBusy("");
-    if ("ok" in res) setMembers((prev) => prev.filter((x) => x.id !== m.id));
-    else alert(res.error);
+    if ("ok" in res) {
+      setMembers((prev) => prev.filter((x) => x.id !== m.id));
+      router.refresh();
+    } else alert(res.error);
   };
 
   // 회원 목록은 운영진(관리자·회장·총무·STAFF)만 열람

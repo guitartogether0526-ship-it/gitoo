@@ -3,6 +3,7 @@
 import { getSession } from "./session";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { getAllMembers } from "./member-store";
+import { kstYmd } from "./date";
 
 /** 내 '안되는 날' 추가/해제 */
 export async function setUnavailable(
@@ -60,10 +61,8 @@ export async function getTeamUnavailable(): Promise<
   const nameById = new Map(teamMembers.map((m) => [m.id, m.name]));
   if (ids.length === 0) return { days: [] };
 
-  // 오늘 이후만
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  // 오늘 이후만 (한국시간 기준)
+  const todayStr = kstYmd();
 
   const { data } = await sb
     .from("unavailable_dates")

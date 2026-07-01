@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Reservation } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
+import { kstParts } from "@/lib/date";
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -33,6 +35,7 @@ export default function ReservationCalendar({
   myTeamName: string | null;
 }) {
   const { user } = useAuth();
+  const router = useRouter();
   const canManage = can.manageReservations(user?.role);
   const myName = user?.name ?? "나";
   // 예약자 선택지: 팀이 있으면 팀명(기본) + 본인 이름. 팀 없으면 개인 이름만.
@@ -40,12 +43,15 @@ export default function ReservationCalendar({
   // 팀 배정 시 기본 예약자 = 팀 (개인연습 체크 시에만 개인 이름)
   const defaultReserver = myTeamName ?? myName;
 
-  const today = useMemo(() => new Date(), []);
-  const todayStr = ymd(today.getFullYear(), today.getMonth(), today.getDate());
+  // 오늘 = 한국시간 기준 (m: 1~12 → 내부는 0~11로 변환)
+  const { y: ty, m: tm, d: td } = useMemo(() => kstParts(), []);
+  const todayStr = ymd(ty, tm - 1, td);
 
-  const [view, setView] = useState({ y: today.getFullYear(), m: today.getMonth() });
+  const [view, setView] = useState({ y: ty, m: tm - 1 });
   const [selected, setSelected] = useState<string>(todayStr);
   const [reservations, setReservations] = useState<Reservation[]>(initial);
+  // 다른 사람이 등록한 예약 등 서버 최신 데이터를 화면에 반영 (LiveRefresh/새로고침 시)
+  useEffect(() => setReservations(initial), [initial]);
 
   // 예약 등록 폼 — 시작/종료 시간(시·분)
   const [sh, setSh] = useState(19);
@@ -108,7 +114,10 @@ export default function ReservationCalendar({
     const sb = getSupabase();
     if (sb) {
       const { data, error } = await sb.from("reservations").insert(payload).select().single();
-      if (!error && data) setReservations((prev) => [...prev, data as Reservation]);
+      if (!error && data) {
+        setReservations((prev) => [...prev, data as Reservation]);
+        router.refresh();
+      }
     } else {
       // 목업 모드: 로컬 상태에만 추가
       setReservations((prev) => [...prev, { id: `rv-${selected}-${prev.length}`, ...payload }]);
@@ -120,7 +129,10 @@ export default function ReservationCalendar({
   const remove = async (id: string) => {
     setReservations((prev) => prev.filter((r) => r.id !== id));
     const sb = getSupabase();
-    if (sb) await sb.from("reservations").delete().eq("id", id);
+    if (sb) {
+      await sb.from("reservations").delete().eq("id", id);
+      router.refresh();
+    }
   };
 
   const cells: (number | null)[] = [

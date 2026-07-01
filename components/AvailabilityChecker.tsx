@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { setUnavailable, getMyUnavailable, getTeamUnavailable } from "@/lib/availability-actions";
+import { kstParts } from "@/lib/date";
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -17,9 +18,10 @@ export default function AvailabilityChecker({
 }) {
   const { user } = useAuth();
 
+  // 오늘 = 한국시간 기준
   const today = useMemo(() => {
-    const n = new Date();
-    return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+    const { y, m, d } = kstParts();
+    return new Date(y, m - 1, d);
   }, []);
   const todayYmd = toYmd(today);
 

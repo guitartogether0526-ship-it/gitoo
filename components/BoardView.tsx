@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Board, Post } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
@@ -20,6 +21,7 @@ export default function BoardView({
   posts: Post[];
 }) {
   const { user } = useAuth();
+  const router = useRouter();
   const canManageBoards = can.manageBoards(user?.role);
   const canWriteNotice = can.writeNotice(user?.role);
   // 운영진(회장·총무·STAFF, admin) — 게시글 삭제 권한
@@ -28,6 +30,9 @@ export default function BoardView({
   const [boards, setBoards] = useState<Board[]>(initialBoards);
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [activeBoard, setActiveBoard] = useState<string>(initialBoards[0]?.id ?? "");
+  // 서버가 다시 읽어온 최신 데이터를 화면에 반영 (LiveRefresh/새로고침 시)
+  useEffect(() => setBoards(initialBoards), [initialBoards]);
+  useEffect(() => setPosts(initialPosts), [initialPosts]);
 
   // 글쓰기 폼
   const [showForm, setShowForm] = useState(false);
@@ -56,6 +61,7 @@ export default function BoardView({
     if (sb) await sb.from("posts").update(patch).eq("id", p.id);
     setPosts((prev) => prev.map((x) => (x.id === p.id ? { ...x, ...patch } : x)));
     setEditingId("");
+    router.refresh();
   };
 
   const deletePost = async (p: Post) => {
@@ -67,6 +73,7 @@ export default function BoardView({
     if (sb) await sb.from("posts").delete().eq("id", p.id);
     setPosts((prev) => prev.filter((x) => x.id !== p.id));
     if (editingId === p.id) setEditingId("");
+    router.refresh();
   };
 
   const boardPosts = useMemo(
@@ -101,6 +108,7 @@ export default function BoardView({
         const board = data as Board;
         setBoards((prev) => [...prev, board]);
         setActiveBoard(board.id);
+        router.refresh();
       }
     } else {
       const board: Board = {
@@ -127,7 +135,10 @@ export default function BoardView({
     const sb = getSupabase();
     if (sb) {
       const { data, error } = await sb.from("posts").insert(payload).select().single();
-      if (!error && data) setPosts((prev) => [...prev, data as Post]);
+      if (!error && data) {
+        setPosts((prev) => [...prev, data as Post]);
+        router.refresh();
+      }
     } else {
       setPosts((prev) => [
         ...prev,

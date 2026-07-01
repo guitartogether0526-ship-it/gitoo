@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { getBoards, getPosts, getMembers, getSongs, getTeams, getReservations } from "@/lib/db";
 import { getSession } from "@/lib/session";
+import { kstYmd } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
-const pad = (n: number) => String(n).padStart(2, "0");
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -39,9 +39,8 @@ export default async function DashboardPage() {
   const myTeamId = me?.team_id ?? session?.team_id ?? null;
   const myTeam = teams.find((t) => t.id === myTeamId);
 
-  // 내 합주일정 — 본인 팀 이름으로 예약된 다가오는 일정
-  const now = new Date();
-  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  // 내 합주일정 — 본인 팀 이름으로 예약된 다가오는 일정 (오늘=한국시간 기준)
+  const todayStr = kstYmd();
   const mySchedule = myTeam
     ? reservations.filter(
         (r) => r.reserved_by === myTeam.name && r.date >= todayStr && r.purpose !== "개인연습",
