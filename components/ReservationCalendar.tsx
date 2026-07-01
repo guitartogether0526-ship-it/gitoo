@@ -50,6 +50,8 @@ export default function ReservationCalendar({
   const [view, setView] = useState({ y: ty, m: tm - 1 });
   const [selected, setSelected] = useState<string>(todayStr);
   const [reservations, setReservations] = useState<Reservation[]>(initial);
+  // 수정 중인 예약 id (인라인 편집 폼 노출)
+  const [editId, setEditId] = useState<string | null>(null);
   // 다른 사람이 등록한 예약 등 서버 최신 데이터를 화면에 반영 (LiveRefresh/새로고침 시)
   useEffect(() => setReservations(initial), [initial]);
 
@@ -128,9 +130,23 @@ export default function ReservationCalendar({
 
   const remove = async (id: string) => {
     setReservations((prev) => prev.filter((r) => r.id !== id));
+    if (editId === id) setEditId(null);
     const sb = getSupabase();
     if (sb) {
       await sb.from("reservations").delete().eq("id", id);
+      router.refresh();
+    }
+  };
+
+  const update = async (
+    id: string,
+    payload: { time_label: string; reserved_by: string; purpose: string },
+  ) => {
+    setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, ...payload } : r)));
+    setEditId(null);
+    const sb = getSupabase();
+    if (sb) {
+      await sb.from("reservations").update(payload).eq("id", id);
       router.refresh();
     }
   };
@@ -198,21 +214,44 @@ export default function ReservationCalendar({
         ) : (
           selectedList.map((r) => {
             const canCancel = canManage || r.reserved_by === myName;
+            const editing = editId === r.id;
             return (
-              <div key={r.id} className="res-item">
-                <span className="res-time">{r.time_label}</span>
-                <div className="grow">
-                  <div className="res-by">{r.reserved_by}</div>
-                  <div className="res-purpose">{r.purpose}</div>
+              <div key={r.id}>
+                <div className="res-item">
+                  <span className="res-time">{r.time_label}</span>
+                  <div className="grow">
+                    <div className="res-by">{r.reserved_by}</div>
+                    <div className="res-purpose">{r.purpose}</div>
+                  </div>
+                  {canCancel && (
+                    <>
+                      <button
+                        className="btn ghost btn-sm"
+                        onClick={() => setEditId(editing ? null : r.id)}
+                        aria-label="예약 수정"
+                      >
+                        {editing ? "닫기" : "수정"}
+                      </button>
+                      <button
+                        className="btn ghost btn-sm"
+                        onClick={() => remove(r.id)}
+                        aria-label="예약 취소"
+                      >
+                        취소
+                      </button>
+                    </>
+                  )}
                 </div>
-                {canCancel && (
-                  <button
-                    className="btn ghost btn-sm"
-                    onClick={() => remove(r.id)}
-                    aria-label="예약 취소"
-                  >
-                    취소
-                  </button>
+                {editing && (
+                  <ReservationEditor
+                    res={r}
+                    others={(byDate[selected] ?? []).filter((x) => x.id !== r.id)}
+                    canManage={canManage}
+                    myName={myName}
+                    myTeamName={myTeamName}
+                    onSave={(payload) => update(r.id, payload)}
+                    onCancel={() => setEditId(null)}
+                  />
                 )}
               </div>
             );
@@ -294,5 +333,130 @@ export default function ReservationCalendar({
         날짜를 선택해 예약을 등록하세요 (앰버 점 = 예약, 빨간 점 = 정기공연)
       </p>
     </>
+  );
+}
+
+// 기존 예약의 시간·예약자·용도를 인라인 편집하는 폼
+function ReservationEditor({
+  res,
+  others,
+  canManage,
+  myName,
+  myTeamName,
+  onSave,
+  onCancel,
+}: {
+  res: Reservation;
+  others: Reservation[]; // 같은 날 다른 예약(겹침 검사용)
+  canManage: boolean;
+  myName: string;
+  myTeamName: string | null;
+  onSave: (payload: { time_label: string; reserved_by: string; purpose: string }) => void;
+  onCancel: () => void;
+}) {
+  const init = parseRange(res.time_label) ?? [19 * 60, 21 * 60];
+  const [sh, setSh] = useState(Math.floor(init[0] / 60));
+  const [sm, setSm] = useState(init[0] % 60);
+  const [eh, setEh] = useState(Math.floor(init[1] / 60));
+  const [em, setEm] = useState(init[1] % 60);
+  const [by, setBy] = useState(res.reserved_by);
+  const [purpose, setPurpose] = useState(res.purpose);
+  const [err, setErr] = useState("");
+
+  // 예약자 선택지: 현재 값 + 본인 이름 + (있으면) 팀명
+  const reserverOpts = Array.from(
+    new Set([res.reserved_by, myName, ...(myTeamName ? [myTeamName] : [])]),
+  );
+  // 용도 선택지: 현재 값 + 기본. 레슨/정기공연은 운영진만
+  const purposeOpts = Array.from(
+    new Set([res.purpose, "합주", "개인연습", ...(canManage ? ["레슨", "정기공연"] : [])]),
+  );
+
+  const save = () => {
+    setErr("");
+    const startMin = sh * 60 + sm;
+    const endMin = eh * 60 + em;
+    if (endMin <= startMin) {
+      setErr("종료 시간이 시작 시간보다 늦어야 합니다.");
+      return;
+    }
+    const range: [number, number] = [startMin, endMin];
+    if (others.some((r) => overlaps(range, parseRange(r.time_label)))) {
+      setErr("이미 예약된 시간과 겹칩니다. 다른 시간을 선택해 주세요.");
+      return;
+    }
+    const reservedBy = by.trim();
+    if (!reservedBy) return;
+    onSave({
+      time_label: `${pad(sh)}:${pad(sm)} - ${pad(eh)}:${pad(em)}`,
+      reserved_by: reservedBy,
+      purpose,
+    });
+  };
+
+  return (
+    <div className="card mt-12">
+      <div className="form-grid">
+        <div className="field">
+          <label>시작 시간</label>
+          <div className="flex items-center gap-8">
+            <select className="select" value={sh} onChange={(e) => setSh(Number(e.target.value))}>
+              {HOURS.map((h) => (
+                <option key={h} value={h}>{pad(h)}시</option>
+              ))}
+            </select>
+            <select className="select" value={sm} onChange={(e) => setSm(Number(e.target.value))}>
+              {MINUTES.map((m) => (
+                <option key={m} value={m}>{pad(m)}분</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="field">
+          <label>종료 시간</label>
+          <div className="flex items-center gap-8">
+            <select className="select" value={eh} onChange={(e) => setEh(Number(e.target.value))}>
+              {HOURS.map((h) => (
+                <option key={h} value={h}>{pad(h)}시</option>
+              ))}
+            </select>
+            <select className="select" value={em} onChange={(e) => setEm(Number(e.target.value))}>
+              {MINUTES.map((m) => (
+                <option key={m} value={m}>{pad(m)}분</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        {err && <p className="form-error">{err}</p>}
+        <div className="field">
+          <label>예약자</label>
+          {reserverOpts.length > 1 ? (
+            <select className="select" value={by} onChange={(e) => setBy(e.target.value)}>
+              {reserverOpts.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </select>
+          ) : (
+            <input className="input" value={by} disabled readOnly />
+          )}
+        </div>
+        <div className="field">
+          <label>용도</label>
+          <select className="select" value={purpose} onChange={(e) => setPurpose(e.target.value)}>
+            {purposeOpts.map((o) => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-8">
+          <button className="btn amber grow" onClick={save}>
+            수정 저장
+          </button>
+          <button className="btn ghost" onClick={onCancel}>
+            취소
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
