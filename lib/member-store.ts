@@ -11,8 +11,9 @@ import { getSupabaseAdmin } from "./supabase-admin";
  * - 미설정 시: 프로세스 메모리 폴백(재시작 시 초기화) — DB 없이도 데모 동작.
  */
 
-const MEMBER_COLS =
-  "id,name,phone,email,part,status,role,initial,username,approved,team_id,team_id_2";
+// ⚠️ members 는 select("*") 로 읽는다. 컬럼을 하나하나 나열하면, 스키마에 새 컬럼
+//    (예: team_id_2)이 아직 없을 때(schema.sql 재실행 전) 쿼리 전체가 실패해
+//    회원 목록·로그인이 통째로 비어버린다. "*" 는 존재하는 컬럼만 돌려줘 스키마 드리프트에 견고.
 
 // ---- 메모리 폴백 ----
 type MemRecord = Member & { password: string };
@@ -25,7 +26,7 @@ const strip = (r: MemRecord): Member => {
 export async function getAllMembers(): Promise<Member[]> {
   const sb = getSupabaseAdmin();
   if (sb) {
-    const { data, error } = await sb.from("members").select(MEMBER_COLS);
+    const { data, error } = await sb.from("members").select("*");
     if (error) {
       // 보통 스키마 미반영(예: phone/email/team_id 컬럼 없음). schema.sql 재실행 필요.
       console.error("[member-store] members 조회 실패 — supabase/schema.sql 을 다시 실행하세요:", error.message);
@@ -94,7 +95,7 @@ export async function getCredential(
   const u = username.toLowerCase();
   const sb = getSupabaseAdmin();
   if (sb) {
-    const { data: m } = await sb.from("members").select(MEMBER_COLS).eq("username", u).maybeSingle();
+    const { data: m } = await sb.from("members").select("*").eq("username", u).maybeSingle();
     if (!m) return null;
     const { data: a } = await sb
       .from("member_auth")
@@ -112,7 +113,7 @@ export async function findByEmail(email: string): Promise<Member[]> {
   const e = email.trim().toLowerCase();
   const sb = getSupabaseAdmin();
   if (sb) {
-    const { data } = await sb.from("members").select(MEMBER_COLS).ilike("email", e);
+    const { data } = await sb.from("members").select("*").ilike("email", e);
     return (data as Member[] | null) ?? [];
   }
   return mem.rows.filter((r) => r.email.trim().toLowerCase() === e).map(strip);
