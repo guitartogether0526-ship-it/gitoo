@@ -92,9 +92,10 @@ export interface SessionUser {
 
 export interface DuesPayment {
   member_name: string;
-  cohort: number;
+  part?: string; // 담당 파트 — 회원 목록에서 채운 표시용(선택)
+  cohort: number; // (레거시·미사용) 기수
   paid: boolean;
-  month: string;
+  month: string; // "YYYY-MM"
 }
 
 export interface Expense {

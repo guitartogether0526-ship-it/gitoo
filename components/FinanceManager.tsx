@@ -60,11 +60,24 @@ export default function FinanceManager({
     );
     const sb = getSupabase();
     if (sb) {
-      await sb
+      // 명단은 회원 목록에서 생성되므로 dues 행이 아직 없을 수 있다 → 있으면 update, 없으면 insert
+      const { data: existing } = await sb
         .from("dues")
-        .update({ paid: next })
+        .select("id")
         .eq("member_name", d.member_name)
-        .eq("month", d.month);
+        .eq("month", d.month)
+        .limit(1);
+      if (existing && existing.length > 0) {
+        await sb
+          .from("dues")
+          .update({ paid: next })
+          .eq("member_name", d.member_name)
+          .eq("month", d.month);
+      } else {
+        await sb
+          .from("dues")
+          .insert({ member_name: d.member_name, cohort: 0, paid: next, month: d.month });
+      }
       router.refresh();
     }
   };
@@ -138,6 +151,11 @@ export default function FinanceManager({
         <>
           <div className="section-title">{kstMonthLabel()} 회비 납부 현황 ({paid}/{dues.length})</div>
           <div className="card">
+            {dues.length === 0 && (
+              <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+                승인된 활동 회원이 없습니다. 회원 승인 후 이곳에 표시됩니다.
+              </p>
+            )}
             {dues.map((d, i) => (
               <div
                 key={d.member_name}
@@ -148,7 +166,10 @@ export default function FinanceManager({
                 }}
               >
                 <span>
-                  {d.member_name} <span className="dim" style={{ fontSize: 12 }}>{d.cohort}기</span>
+                  {d.member_name}
+                  {d.part && (
+                    <span className="dim" style={{ fontSize: 12 }}> · {d.part}</span>
+                  )}
                 </span>
                 {canEdit ? (
                   <button
