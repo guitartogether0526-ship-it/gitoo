@@ -25,7 +25,8 @@ export async function setSongStatus(
     const { data: song } = await sb.from("songs").select("team_id").eq("id", songId).single();
     const members = await getAllMembers();
     const me = members.find((m) => m.id === session.id);
-    if (!song || !me || me.team_id !== (song as { team_id: string }).team_id) {
+    const myTeams = me ? [me.team_id, me.team_id_2].filter(Boolean) : [];
+    if (!song || !me || !myTeams.includes((song as { team_id: string }).team_id)) {
       return { error: "본인 팀 곡만 변경할 수 있습니다." };
     }
   }

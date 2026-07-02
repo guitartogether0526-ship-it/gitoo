@@ -12,7 +12,7 @@ import { getSupabaseAdmin } from "./supabase-admin";
  */
 
 const MEMBER_COLS =
-  "id,name,phone,email,part,status,role,initial,username,approved,team_id";
+  "id,name,phone,email,part,status,role,initial,username,approved,team_id,team_id_2";
 
 // ---- 메모리 폴백 ----
 type MemRecord = Member & { password: string };
@@ -66,7 +66,8 @@ export async function createMember(input: {
     initial: input.name.trim().charAt(0) || "?",
     username: input.username.toLowerCase(),
     approved: false, // 관리자 승인 대기
-    team_id: null, // 팀 미배정 (운영진이 배정)
+    team_id: null, // 팀1 미배정 (운영진이 배정)
+    team_id_2: null, // 팀2 없음
   };
 
   const sb = getSupabaseAdmin();
@@ -169,14 +170,23 @@ export async function setStatus(id: string, status: Member["status"]): Promise<v
   if (row) row.status = status;
 }
 
-export async function setTeam(id: string, teamId: string | null): Promise<void> {
+/** 팀 배정 — slot 1=team_id(팀1), slot 2=team_id_2(팀2). null=해제 */
+export async function setTeam(
+  id: string,
+  teamId: string | null,
+  slot: 1 | 2 = 1,
+): Promise<void> {
+  const col = slot === 2 ? "team_id_2" : "team_id";
   const sb = getSupabaseAdmin();
   if (sb) {
-    await sb.from("members").update({ team_id: teamId }).eq("id", id);
+    await sb.from("members").update({ [col]: teamId }).eq("id", id);
     return;
   }
   const row = mem.rows.find((r) => r.id === id);
-  if (row) row.team_id = teamId;
+  if (row) {
+    if (slot === 2) row.team_id_2 = teamId;
+    else row.team_id = teamId;
+  }
 }
 
 export async function removeMember(id: string): Promise<void> {

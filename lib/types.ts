@@ -27,10 +27,11 @@ export interface Post {
 /** 연습실은 1개 — 날짜+시간 단위 예약(캘린더 등록) */
 export interface Reservation {
   id: string;
-  date: string; // YYYY-MM-DD
-  time_label: string; // 예: "19:00 - 21:00"
+  date: string; // YYYY-MM-DD (MT 등 여러 날 예약이면 시작 날짜)
+  end_date?: string | null; // YYYY-MM-DD — MT(1박2일 등) 종료 날짜. 없으면 당일 예약
+  time_label: string; // 예: "19:00 - 21:00" (MT는 "1박2일" 등 기간 라벨)
   reserved_by: string;
-  purpose: string; // 합주/개인연습 등
+  purpose: string; // 합주/개인연습/레슨/정기공연/MT/운영진회의
 }
 
 export interface SheetMusic {
@@ -74,7 +75,8 @@ export interface Member {
   initial: string; // 아바타 이니셜
   username: string; // 로그인 아이디
   approved: boolean; // 관리자 승인 여부 (false = 가입 승인 대기)
-  team_id: string | null; // 소속 팀 (운영진이 배정, 미배정 = null)
+  team_id: string | null; // 소속 팀1 (운영진이 배정, 미배정 = null)
+  team_id_2: string | null; // 소속 팀2 (한 사람이 2개 팀 참여, 없으면 null)
 }
 
 /** 로그인 세션 사용자 (쿠키에 저장 — 비밀번호 등 민감정보 미포함) */
@@ -84,7 +86,8 @@ export interface SessionUser {
   role: MemberRole;
   part: string;
   initial: string;
-  team_id: string | null; // 소속 팀 (운영진 배정)
+  team_id: string | null; // 소속 팀1 (운영진 배정)
+  team_id_2: string | null; // 소속 팀2 (한 사람이 2개 팀 참여, 없으면 null)
 }
 
 export interface DuesPayment {

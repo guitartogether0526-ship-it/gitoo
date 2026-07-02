@@ -9,7 +9,13 @@ import { can } from "@/lib/roles";
 import { addTeam, renameTeam, reorderTeams } from "@/lib/team-actions";
 import { setSongStatus } from "@/lib/song-actions";
 
-type MemberLite = { id: string; name: string; part: string; team_id: string | null };
+type MemberLite = {
+  id: string;
+  name: string;
+  part: string;
+  team_id: string | null;
+  team_id_2: string | null;
+};
 
 const HeartIcon = ({ filled }: { filled: boolean }) => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -27,12 +33,12 @@ const normalizeUrl = (u: string) => {
 export default function SetlistView({
   teams,
   initial,
-  myTeamId,
+  myTeamIds,
   members,
 }: {
   teams: Team[];
   initial: Song[];
-  myTeamId: string | null;
+  myTeamIds: string[]; // 본인 소속 팀(최대 2개)
   members: MemberLite[];
 }) {
   const { user } = useAuth();
@@ -46,8 +52,8 @@ export default function SetlistView({
   useEffect(() => setTeamList(teams), [teams]);
   useEffect(() => setSongs(initial), [initial]);
 
-  // 현재 보고 있는 팀을 관리할 수 있는가 (본인팀 또는 운영진)
-  const canManageActive = canManageTeams || (myTeamId != null && myTeamId === activeTeam);
+  // 현재 보고 있는 팀을 관리할 수 있는가 (본인 소속 팀 또는 운영진)
+  const canManageActive = canManageTeams || myTeamIds.includes(activeTeam);
 
   // 곡 올리기 폼
   const [title, setTitle] = useState("");
@@ -138,7 +144,7 @@ export default function SetlistView({
 
   const activeTeamName = teamList.find((t) => t.id === activeTeam)?.name ?? "";
   const activeMembers = members
-    .filter((m) => m.team_id === activeTeam)
+    .filter((m) => m.team_id === activeTeam || m.team_id_2 === activeTeam)
     .sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
   const toggleLike = (id: string) => {

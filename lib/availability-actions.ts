@@ -50,13 +50,20 @@ export async function getTeamUnavailable(): Promise<
 
   const members = await getAllMembers();
   const me = members.find((m) => m.id === session.id);
-  const myTeam = me?.team_id ?? session.team_id ?? null;
-  if (!myTeam) return { error: "팀이 배정되어야 일정을 볼 수 있습니다. 운영진에게 문의하세요." };
+  // 본인 소속 팀(최대 2개) — 두 팀에 속하면 두 팀 팀원 모두 조회
+  const myTeams = [
+    me?.team_id ?? session.team_id ?? null,
+    me?.team_id_2 ?? session.team_id_2 ?? null,
+  ].filter((v): v is string => !!v);
+  if (myTeams.length === 0)
+    return { error: "팀이 배정되어야 일정을 볼 수 있습니다. 운영진에게 문의하세요." };
 
   const sb = getSupabaseAdmin();
   if (!sb) return { error: "DB가 설정되지 않았습니다. (Supabase 환경변수 확인)" };
 
-  const teamMembers = members.filter((m) => m.team_id === myTeam);
+  const teamMembers = members.filter(
+    (m) => (m.team_id && myTeams.includes(m.team_id)) || (m.team_id_2 && myTeams.includes(m.team_id_2)),
+  );
   const ids = teamMembers.map((m) => m.id);
   const nameById = new Map(teamMembers.map((m) => [m.id, m.name]));
   if (ids.length === 0) return { days: [] };

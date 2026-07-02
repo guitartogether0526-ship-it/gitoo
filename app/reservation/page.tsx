@@ -13,10 +13,15 @@ export default async function ReservationPage() {
     getTeams(),
   ]);
 
-  // 로그인한 회원의 팀명 (미배정/관리자면 null) — 예약자 선택지에 사용
+  // 로그인한 회원의 팀명(최대 2개, 미배정/관리자면 빈 배열) — 예약자 선택지에 사용
   const me = members.find((m) => m.id === session?.id);
-  const myTeamId = me?.team_id ?? session?.team_id ?? null;
-  const myTeamName = teams.find((t) => t.id === myTeamId)?.name ?? null;
+  const myTeamIds = [
+    me?.team_id ?? session?.team_id ?? null,
+    me?.team_id_2 ?? session?.team_id_2 ?? null,
+  ].filter((v): v is string => !!v);
+  const myTeamNames = myTeamIds
+    .map((id) => teams.find((t) => t.id === id)?.name)
+    .filter((v): v is string => !!v);
 
   return (
     <>
@@ -24,8 +29,8 @@ export default async function ReservationPage() {
         <h1>연습실 예약</h1>
         <p>캘린더에서 날짜를 골라 예약하세요.</p>
       </div>
-      <AvailabilityChecker myTeamName={myTeamName} />
-      <ReservationCalendar initial={reservations} myTeamName={myTeamName} />
+      <AvailabilityChecker myTeamNames={myTeamNames} />
+      <ReservationCalendar initial={reservations} myTeamNames={myTeamNames} />
     </>
   );
 }

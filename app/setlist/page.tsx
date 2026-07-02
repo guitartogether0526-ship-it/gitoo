@@ -12,9 +12,12 @@ export default async function SetlistPage() {
     getSession(),
   ]);
 
-  // 로그인한 회원의 팀 (본인팀 곡만 수정·삭제 가능; 운영진은 전체)
+  // 로그인한 회원의 팀 (본인팀 곡만 수정·삭제 가능; 운영진은 전체) — 최대 2개 팀
   const me = members.find((m) => m.id === session?.id);
-  const myTeamId = me?.team_id ?? session?.team_id ?? null;
+  const myTeamIds = [
+    me?.team_id ?? session?.team_id ?? null,
+    me?.team_id_2 ?? session?.team_id_2 ?? null,
+  ].filter((v): v is string => !!v);
 
   // 팀원 보기용 — 이름·파트만 전달(연락처 등 민감정보 제외)
   const memberList = members.map((m) => ({
@@ -22,6 +25,7 @@ export default async function SetlistPage() {
     name: m.name,
     part: m.part,
     team_id: m.team_id,
+    team_id_2: m.team_id_2,
   }));
 
   return (
@@ -30,7 +34,7 @@ export default async function SetlistPage() {
         <h1>합주곡</h1>
         <p>팀별 합주곡 · 곡 선정 · 유튜브 · 투표</p>
       </div>
-      <SetlistView teams={teams} initial={songs} myTeamId={myTeamId} members={memberList} />
+      <SetlistView teams={teams} initial={songs} myTeamIds={myTeamIds} members={memberList} />
     </>
   );
 }

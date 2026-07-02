@@ -35,21 +35,31 @@ export default async function DashboardPage() {
   const noticeBoardIds = new Set(boards.filter((b) => b.is_notice).map((b) => b.id));
   const pinnedNotices = posts.filter((p) => noticeBoardIds.has(p.board_id) && p.pinned);
 
-  // 본인 팀 — 회원 테이블의 최신 배정값 우선(미배정 시 세션값)
+  // 본인 팀 — 회원 테이블의 최신 배정값 우선(미배정 시 세션값). 최대 2개 팀.
   const me = members.find((m) => m.id === session?.id);
-  const myTeamId = me?.team_id ?? session?.team_id ?? null;
-  const myTeam = teams.find((t) => t.id === myTeamId);
+  const myTeamIds = [
+    me?.team_id ?? session?.team_id ?? null,
+    me?.team_id_2 ?? session?.team_id_2 ?? null,
+  ].filter((v): v is string => !!v);
+  const myTeams = teams.filter((t) => myTeamIds.includes(t.id));
+  const myTeamNames = myTeams.map((t) => t.name);
+  const hasTeam = myTeams.length > 0;
+  const multiTeam = myTeams.length > 1; // 2팀 소속이면 항목마다 팀명 표시(구분용)
+  const teamNameById = new Map(teams.map((t) => [t.id, t.name]));
+  const scheduleTitle = myTeams.length === 1 ? `${myTeams[0].name} 합주일정` : "내 합주일정";
+  const songTitle = myTeams.length === 1 ? `${myTeams[0].name} 선정곡` : "우리 팀 선정곡";
 
   // 내 합주일정 — 본인 팀 이름으로 예약된 다가오는 일정 (오늘=한국시간 기준)
   const todayStr = kstYmd();
-  const mySchedule = myTeam
+  const mySchedule = hasTeam
     ? reservations.filter(
-        (r) => r.reserved_by === myTeam.name && r.date >= todayStr && r.purpose !== "개인연습",
+        (r) =>
+          myTeamNames.includes(r.reserved_by) && r.date >= todayStr && r.purpose !== "개인연습",
       )
     : [];
 
   // 본인 팀에서 선정(확정)한 곡만 — 후보는 제외
-  const myTeamSongs = songs.filter((s) => s.team_id === myTeamId && s.status === "confirmed");
+  const myTeamSongs = songs.filter((s) => myTeamIds.includes(s.team_id) && s.status === "confirmed");
 
   return (
     <>
@@ -85,15 +95,13 @@ export default async function DashboardPage() {
 
       {/* 내 합주일정 (본인 팀) */}
       <div className="section-head">
-        <div className="section-title">
-          {myTeam ? `${myTeam.name} 합주일정` : "내 합주일정"}
-        </div>
+        <div className="section-title">{scheduleTitle}</div>
         <Link href="/reservation" className="section-link">
           전체보기 ›
         </Link>
       </div>
 
-      {!myTeamId ? (
+      {!hasTeam ? (
         <div className="card">
           <p className="empty-msg">
             합주일정이 없습니다.
@@ -111,9 +119,11 @@ export default async function DashboardPage() {
             <div className="title-row">
               <div className="grow">
                 <span className="item-name">{formatResDate(r.date)}</span>
-                <div className="item-sub">{r.time_label} · {r.purpose}</div>
+                <div className="item-sub">
+                  {multiTeam && `${r.reserved_by} · `}{r.time_label} · {r.purpose}
+                </div>
               </div>
-              <span className="badge amber">합주</span>
+              <span className="badge amber">{r.purpose}</span>
             </div>
           </div>
         ))
@@ -121,15 +131,13 @@ export default async function DashboardPage() {
 
       {/* 우리 팀 선정곡 */}
       <div className="section-head">
-        <div className="section-title">
-          {myTeam ? `${myTeam.name} 선정곡` : "우리 팀 선정곡"}
-        </div>
+        <div className="section-title">{songTitle}</div>
         <Link href="/setlist" className="section-link">
           전체보기 ›
         </Link>
       </div>
 
-      {!myTeamId ? (
+      {!hasTeam ? (
         <div className="card">
           <p className="empty-msg">
             아직 팀이 배정되지 않았습니다. 운영진에게 팀 배정을 요청하세요.
@@ -147,7 +155,9 @@ export default async function DashboardPage() {
             <div className="title-row">
               <div className="grow">
                 <span className="item-name">{s.title}</span>
-                <div className="item-sub">{s.artist}</div>
+                <div className="item-sub">
+                  {multiTeam && `${teamNameById.get(s.team_id) ?? ""} · `}{s.artist}
+                </div>
               </div>
               <span className="badge amber">★ 선정곡</span>
             </div>

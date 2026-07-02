@@ -29,10 +29,14 @@ alter table posts add column if not exists author_id text;
 create table if not exists reservations (
   id text primary key default gen_random_uuid()::text,
   date date not null,
+  end_date date,                                -- MT(1박2일 등) 종료 날짜. null=당일 예약
   time_label text not null,
   reserved_by text not null,
   purpose text not null default '합주'
 );
+
+-- 기존 reservations 테이블 업그레이드(재실행 안전) — MT 여러 날 예약용 종료 날짜
+alter table reservations add column if not exists end_date date;
 
 create table if not exists teams (
   id text primary key default gen_random_uuid()::text,
@@ -70,7 +74,8 @@ create table if not exists members (
   initial text not null,
   username text unique,                         -- 로그인 아이디
   approved boolean not null default false,      -- 관리자 승인 여부 (false=가입 대기)
-  team_id text references teams(id) on delete set null  -- 소속 팀(운영진 배정, null=미배정)
+  team_id text references teams(id) on delete set null,  -- 소속 팀1(운영진 배정, null=미배정)
+  team_id_2 text references teams(id) on delete set null  -- 소속 팀2(한 사람이 2개 팀 참여, null=없음)
 );
 
 -- 기존 members 테이블 업그레이드(재실행 안전) — 새 컬럼 추가
@@ -78,6 +83,7 @@ alter table members add column if not exists role text not null default 'member'
 alter table members add column if not exists username text unique;
 alter table members add column if not exists approved boolean not null default false;
 alter table members add column if not exists team_id text references teams(id) on delete set null;
+alter table members add column if not exists team_id_2 text references teams(id) on delete set null;
 alter table members add column if not exists phone text;
 alter table members add column if not exists email text;
 -- 기수(cohort) 미사용 전환 — 기존 컬럼이 있으면 not null 제약 해제(회원가입 시 미입력)

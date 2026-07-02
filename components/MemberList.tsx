@@ -46,12 +46,13 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
     } else alert(res.error);
   };
 
-  const onTeam = async (id: string, teamId: string | null) => {
-    const prevTeam = members.find((m) => m.id === id)?.team_id ?? null;
-    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, team_id: teamId } : m)));
-    const res = await changeTeam(id, teamId);
+  const onTeam = async (id: string, teamId: string | null, slot: 1 | 2) => {
+    const key = slot === 2 ? "team_id_2" : "team_id";
+    const prevVal = members.find((m) => m.id === id)?.[key] ?? null;
+    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, [key]: teamId } : m)));
+    const res = await changeTeam(id, teamId, slot);
     if ("error" in res) {
-      setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, team_id: prevTeam } : m)));
+      setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, [key]: prevVal } : m)));
       alert(res.error);
     }
   };
@@ -141,7 +142,8 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
               <tr>
                 <th>이름</th>
                 <th>파트</th>
-                <th className="role-cell">팀</th>
+                <th className="role-cell">팀1</th>
+                <th className="role-cell">팀2</th>
                 <th className="role-cell">권한</th>
                 <th className="role-cell">상태</th>
                 <th>관리</th>
@@ -161,12 +163,27 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
                     <select
                       className="select sm"
                       value={m.team_id ?? ""}
-                      onChange={(e) => onTeam(m.id, e.target.value || null)}
-                      aria-label={`${m.name} 팀 배정`}
+                      onChange={(e) => onTeam(m.id, e.target.value || null, 1)}
+                      aria-label={`${m.name} 팀1 배정`}
                     >
                       <option value="">미배정</option>
                       {teams.map((t) => (
-                        <option key={t.id} value={t.id}>
+                        <option key={t.id} value={t.id} disabled={t.id === m.team_id_2}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="role-cell">
+                    <select
+                      className="select sm"
+                      value={m.team_id_2 ?? ""}
+                      onChange={(e) => onTeam(m.id, e.target.value || null, 2)}
+                      aria-label={`${m.name} 팀2 배정`}
+                    >
+                      <option value="">없음</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id} disabled={t.id === m.team_id}>
                           {t.name}
                         </option>
                       ))}
@@ -214,7 +231,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
         </div>
       )}
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 10 }}>
-        팀·권한·상태 변경과 강퇴(계정 삭제)는 운영진(STAFF 이상) 전용입니다. (좌우 스크롤)
+        팀1·팀2(두 팀 참여 가능)·권한·상태 변경과 강퇴(계정 삭제)는 운영진(STAFF 이상) 전용입니다. (좌우 스크롤)
       </p>
     </>
   );

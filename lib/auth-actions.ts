@@ -44,6 +44,7 @@ function toSession(m: {
   part: string;
   initial: string;
   team_id: string | null;
+  team_id_2?: string | null;
 }): SessionUser {
   return {
     id: m.id,
@@ -52,6 +53,7 @@ function toSession(m: {
     part: m.part,
     initial: m.initial,
     team_id: m.team_id ?? null,
+    team_id_2: m.team_id_2 ?? null,
   };
 }
 
@@ -332,13 +334,26 @@ export async function kickMember(id: string): Promise<{ ok: true } | { error: st
   return { ok: true };
 }
 
-/** 팀 배정/변경 (STAFF 이상) — teamId=null 이면 미배정 */
+/** 팀 배정/변경 (STAFF 이상) — slot 1=팀1, slot 2=팀2. teamId=null 이면 해당 슬롯 해제 */
 export async function changeTeam(
   id: string,
   teamId: string | null,
+  slot: 1 | 2 = 1,
 ): Promise<{ ok: true } | { error: string }> {
   const session = await getSession();
   if (!can.manageMembers(session?.role)) return { error: "권한이 없습니다." };
-  await setTeam(id, teamId);
+  if (slot !== 1 && slot !== 2) return { error: "잘못된 팀 슬롯입니다." };
+
+  // 두 슬롯에 같은 팀을 중복 배정하지 못하게 (한 팀에 한 번만)
+  if (teamId) {
+    const members = await getAllMembers();
+    const target = members.find((m) => m.id === id);
+    const otherTeam = slot === 2 ? target?.team_id : target?.team_id_2;
+    if (otherTeam && otherTeam === teamId) {
+      return { error: "이미 다른 슬롯에 배정된 팀입니다. 서로 다른 팀을 선택하세요." };
+    }
+  }
+
+  await setTeam(id, teamId, slot);
   return { ok: true };
 }

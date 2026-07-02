@@ -12,11 +12,13 @@ const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), 
 const label = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
 
 export default function AvailabilityChecker({
-  myTeamName,
+  myTeamNames,
 }: {
-  myTeamName: string | null;
+  myTeamNames: string[];
 }) {
   const { user } = useAuth();
+  // 두 팀에 속하면 팀명을 함께 표시 (예: "1팀·2팀")
+  const teamLabel = myTeamNames.length > 0 ? myTeamNames.join("·") : "내 팀";
 
   // 오늘 = 한국시간 기준
   const today = useMemo(() => {
@@ -129,7 +131,7 @@ export default function AvailabilityChecker({
             : "로그인한 회원만 표시할 수 있습니다."}
         </p>
         <button className="btn amber" style={{ width: "100%", marginTop: 10 }} onClick={openList}>
-          일정 보기 ({myTeamName ?? "내 팀"})
+          일정 보기 ({teamLabel})
         </button>
       </div>
 
@@ -138,7 +140,7 @@ export default function AvailabilityChecker({
         <div className="modal-overlay" onClick={() => setShowList(false)}>
           <div className="card" style={{ margin: 0, width: "100%", maxWidth: 420, maxHeight: "80vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
             <div className="title-row">
-              <div className="section-title" style={{ margin: 0 }}>{myTeamName ?? "내 팀"} 안되는 일정</div>
+              <div className="section-title" style={{ margin: 0 }}>{teamLabel} 안되는 일정</div>
               <button className="btn ghost btn-sm" onClick={() => setShowList(false)}>닫기</button>
             </div>
             {listBusy ? (

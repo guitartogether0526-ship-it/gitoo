@@ -31,6 +31,8 @@
   --ok: #6bbf73;
   --ok-soft: rgba(107, 191, 115, 0.15);
   --warn: #f5b942;
+  --info: #5b9bd5;
+  --info-soft: rgba(91, 155, 213, 0.15);
 
   /* 앰버 그라데이션 — 버튼/칩/탭/스위치 공통 */
   --accent-grad: linear-gradient(180deg, var(--accent), var(--accent-strong));
@@ -541,6 +543,11 @@ body {
   box-shadow: 0 0 0 1px var(--accent-strong), 0 0 16px var(--accent-glow);
   color: var(--accent);
 }
+.cal-cell .cal-dots {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
 .cal-cell .cal-dot {
   width: 6px;
   height: 6px;
@@ -551,6 +558,14 @@ body {
 .cal-cell .cal-dot.perf {
   background: var(--danger, #e5484d);
   box-shadow: 0 0 8px rgba(229, 72, 77, 0.6);
+}
+.cal-cell .cal-dot.mt {
+  background: var(--ok, #6bbf73);
+  box-shadow: 0 0 8px rgba(107, 191, 115, 0.6);
+}
+.cal-cell .cal-dot.meeting {
+  background: var(--info, #5b9bd5);
+  box-shadow: 0 0 8px rgba(91, 155, 213, 0.6);
 }
 
 /* ---------- 안되는 일정 체크 (2주 그리드) ---------- */
