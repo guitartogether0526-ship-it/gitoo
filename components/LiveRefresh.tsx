@@ -17,6 +17,10 @@ import { useRouter } from "next/navigation";
  *    focus는 쓰지 않고, 실제 앱 복귀 신호인 'visibilitychange'(숨김→보임)만
  *    사용하고, 연속 refresh는 최소 간격으로 디바운스한다.
  *
+ * ⚠️ 편집/작성 중(입력창에 포커스가 있는 동안)에는 refresh를 미룬다. iOS에서
+ *    router.refresh로 화면이 재렌더되면 키보드가 닫히고 한글 조합이 끊겨 편집
+ *    창이 닫힌 것처럼 느껴진다. 포커스가 풀리면(편집 종료) 다음 주기에 갱신된다.
+ *
  * 각 목록 컴포넌트는 서버 props가 바뀌면 로컬 상태를 다시 맞추므로(useEffect),
  * router.refresh 결과가 실제 화면에 그대로 반영된다.
  */
@@ -28,6 +32,18 @@ export default function LiveRefresh({ intervalMs = 20000 }: { intervalMs?: numbe
     const MIN_GAP = 5000; // 연속 refresh(깜빡임) 방지 최소 간격
     const refresh = () => {
       if (document.visibilityState !== "visible") return;
+      // 편집/작성 중이면 건너뛴다 — 입력창(input·textarea·select·contentEditable)에
+      // 포커스가 있는 동안 재렌더되면 iOS에서 키보드가 닫히고 조합이 끊긴다.
+      const el = document.activeElement;
+      if (
+        el instanceof HTMLElement &&
+        (el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          el.tagName === "SELECT" ||
+          el.isContentEditable)
+      ) {
+        return;
+      }
       const now = Date.now();
       if (now - lastRef.current < MIN_GAP) return;
       lastRef.current = now;
