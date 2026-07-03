@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Member, MemberRole, MemberStatus, Team } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { can, ROLE_LABEL, ROLE_ORDER } from "@/lib/roles";
-import { partLabel } from "@/lib/parts";
+import { partLabel, PARTS } from "@/lib/parts";
 import {
   approveMember,
   rejectMember,
@@ -14,6 +14,61 @@ import {
   changeStatus,
   kickMember,
 } from "@/lib/auth-actions";
+
+type SortKey = "name" | "part" | "team1" | "team2" | "role" | "status";
+
+/** 정렬 가능한 테이블 헤더 — 클릭 시 오름차순 ↔ 내림차순 토글 */
+function SortTh({
+  label,
+  k,
+  sortKey,
+  dir,
+  onSort,
+  className,
+}: {
+  label: string;
+  k: SortKey;
+  sortKey: SortKey | null;
+  dir: 1 | -1;
+  onSort: (k: SortKey) => void;
+  className?: string;
+}) {
+  const active = sortKey === k;
+  return (
+    <th className={className} aria-sort={active ? (dir === 1 ? "ascending" : "descending") : undefined}>
+      <button
+        type="button"
+        onClick={() => onSort(k)}
+        style={{
+          background: "none",
+          border: 0,
+          padding: 0,
+          font: "inherit",
+          color: "inherit",
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 2,
+        }}
+      >
+        {label}
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ opacity: active ? 0.9 : 0.3, flexShrink: 0 }}
+        >
+          {active && dir === -1 ? <path d="M6 10l6 6 6-6" /> : <path d="M6 14l6-6 6 6" />}
+        </svg>
+      </button>
+    </th>
+  );
+}
 
 export default function MemberList({ initial, teams }: { initial: Member[]; teams: Team[] }) {
   const { user } = useAuth();
@@ -26,6 +81,52 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
 
   const pending = members.filter((m) => !m.approved);
   const approved = members.filter((m) => m.approved);
+
+  // 컬럼별 정렬 (헤더 클릭 — 같은 헤더 재클릭 시 방향 토글)
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<1 | -1>(1);
+  const onSort = (k: SortKey) => {
+    if (sortKey === k) setSortDir((d) => (d === 1 ? -1 : 1));
+    else {
+      setSortKey(k);
+      setSortDir(1);
+    }
+  };
+
+  // 미배정("")은 오름차순에서 맨 뒤로 가도록 가장 큰 문자로 치환
+  const teamName = (id: string | null) => teams.find((t) => t.id === id)?.name ?? "￿";
+  // 파트는 PARTS 순서(기타→베이스→…), 목록에 없는 파트는 뒤로
+  const partRank = (p: string) => {
+    const i = PARTS.indexOf(p);
+    return i === -1 ? PARTS.length : i;
+  };
+  const sorted = sortKey
+    ? [...approved].sort((a, b) => {
+        let d = 0;
+        switch (sortKey) {
+          case "name":
+            d = a.name.localeCompare(b.name, "ko");
+            break;
+          case "part":
+            d = partRank(a.part) - partRank(b.part);
+            break;
+          case "team1":
+            d = teamName(a.team_id).localeCompare(teamName(b.team_id), "ko");
+            break;
+          case "team2":
+            d = teamName(a.team_id_2).localeCompare(teamName(b.team_id_2), "ko");
+            break;
+          case "role":
+            d = ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role);
+            break;
+          case "status":
+            d = (a.status === "rest" ? 1 : 0) - (b.status === "rest" ? 1 : 0);
+            break;
+        }
+        // 같은 값이면 이름순 (2차 정렬)
+        return d * sortDir || a.name.localeCompare(b.name, "ko");
+      })
+    : approved;
 
   const onApprove = async (id: string) => {
     setBusy(id);
@@ -141,17 +242,17 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
           <table className="mtable">
             <thead>
               <tr>
-                <th>이름</th>
-                <th>파트</th>
-                <th className="role-cell">팀1</th>
-                <th className="role-cell">팀2</th>
-                <th className="role-cell">권한</th>
-                <th className="role-cell">상태</th>
+                <SortTh label="이름" k="name" sortKey={sortKey} dir={sortDir} onSort={onSort} />
+                <SortTh label="파트" k="part" sortKey={sortKey} dir={sortDir} onSort={onSort} />
+                <SortTh label="팀1" k="team1" sortKey={sortKey} dir={sortDir} onSort={onSort} className="role-cell" />
+                <SortTh label="팀2" k="team2" sortKey={sortKey} dir={sortDir} onSort={onSort} className="role-cell" />
+                <SortTh label="권한" k="role" sortKey={sortKey} dir={sortDir} onSort={onSort} className="role-cell" />
+                <SortTh label="상태" k="status" sortKey={sortKey} dir={sortDir} onSort={onSort} className="role-cell" />
                 <th>관리</th>
               </tr>
             </thead>
             <tbody>
-              {approved.map((m) => (
+              {sorted.map((m) => (
                 <tr key={m.id}>
                   <td>
                     <span className="m-name">{m.name}</span>
@@ -232,7 +333,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
         </div>
       )}
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 10 }}>
-        팀1·팀2(두 팀 참여 가능)·권한·상태 변경과 강퇴(계정 삭제)는 운영진(STAFF 이상) 전용입니다. (좌우 스크롤)
+        표 제목을 누르면 해당 항목으로 정렬됩니다(재클릭 시 역순). 팀1·팀2(두 팀 참여 가능)·권한·상태 변경과 강퇴(계정 삭제)는 운영진(STAFF 이상) 전용입니다. (좌우 스크롤)
       </p>
     </>
   );
