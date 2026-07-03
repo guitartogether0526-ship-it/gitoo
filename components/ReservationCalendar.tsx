@@ -16,8 +16,18 @@ const ymd = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
 const HOURS = Array.from({ length: 15 }, (_, i) => 9 + i); // 9..23
 const MINUTES = [0, 10, 20, 30, 40, 50];
 
-// 용도(운영진 전용) — 레슨/정기공연/MT/운영진회의
-const OP_PURPOSES = ["레슨", "정기공연", "MT", "운영진회의"];
+// 용도(운영진 전용) — 레슨/정기공연/MT/운영진회의/리허설(음향체크)/중간점검/재롱페스티벌
+const OP_PURPOSES = [
+  "레슨",
+  "정기공연",
+  "MT",
+  "운영진회의",
+  "리허설(음향체크)",
+  "중간점검",
+  "재롱페스티벌",
+];
+// 캘린더에 빨간 점으로 표시하는 용도 (공연·행사 계열)
+const RED_DOT_PURPOSES = ["정기공연", "리허설(음향체크)", "중간점검", "재롱페스티벌"];
 // MT 처럼 여러 날에 걸치는(기간) 용도
 const MULTI_DAY_PURPOSE = "MT";
 
@@ -61,8 +71,8 @@ const spans = (r: Reservation, dateStr: string) =>
 
 // 용도 → 캘린더 점 색상 클래스 (""=앰버 기본)
 const dotClassFor = (purpose: string) =>
-  purpose === "정기공연"
-    ? "perf" // 빨강
+  RED_DOT_PURPOSES.includes(purpose)
+    ? "perf" // 빨강 (정기공연/리허설/중간점검/재롱페스티벌)
     : purpose === "MT"
       ? "mt" // 초록
       : purpose === "운영진회의"
