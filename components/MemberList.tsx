@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Member, MemberRole, MemberStatus, Team } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { can, ROLE_LABEL, ROLE_ORDER } from "@/lib/roles";
+import { partLabel } from "@/lib/parts";
 import {
   approveMember,
   rejectMember,
@@ -110,7 +111,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
               <div className="title-row">
                 <div className="grow">
                   <span className="m-name">{m.name}</span>
-                  <span className="m-cohort">{m.part}</span>
+                  <span className="m-cohort">{partLabel(m.part, m.part2)}</span>
                   <div className="dim" style={{ fontSize: 12, marginTop: 2 }}>
                     아이디: {m.username} · {m.phone} · {m.email}
                   </div>
@@ -158,7 +159,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
                       {m.username}
                     </span>
                   </td>
-                  <td>{m.part}</td>
+                  <td>{partLabel(m.part, m.part2)}</td>
                   <td className="role-cell">
                     <select
                       className="select sm"

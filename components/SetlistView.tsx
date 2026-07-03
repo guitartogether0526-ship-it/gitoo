@@ -13,6 +13,7 @@ type MemberLite = {
   id: string;
   name: string;
   part: string;
+  part2?: string | null;
   team_id: string | null;
   team_id_2: string | null;
 };
@@ -430,7 +431,7 @@ export default function SetlistView({
                 {activeMembers.map((m) => (
                   <div key={m.id} className="res-item">
                     <span className="m-name">{m.name}</span>
-                    <span className="dim" style={{ fontSize: 13 }}>{m.part}</span>
+                    <span className="dim" style={{ fontSize: 13 }}>{m.part2 ? `${m.part} · ${m.part2}` : m.part}</span>
                   </div>
                 ))}
               </div>

@@ -69,7 +69,8 @@ export interface Member {
   name: string;
   phone: string; // 휴대폰번호
   email: string; // 이메일 (아이디/비밀번호 찾기 발송용)
-  part: string; // 담당 파트 (기타/베이스/드럼/보컬/키보드 등)
+  part: string; // 악기1 — 주 담당 파트 (기타/베이스/드럼/보컬/키보드 등)
+  part2?: string | null; // 악기2 — 선택 (두 번째 팀에서 다른 악기 담당 등, 없으면 null)
   status: MemberStatus;
   role: MemberRole; // 권한 등급
   initial: string; // 아바타 이니셜

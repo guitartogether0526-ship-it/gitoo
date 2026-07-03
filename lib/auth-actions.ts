@@ -88,12 +88,14 @@ export async function signup(input: {
   phone: string;
   email: string;
   part: string;
+  part2?: string;
 }): Promise<{ ok: true } | { error: string }> {
   const username = input.username.trim().toLowerCase();
   const name = input.name.trim();
   const phone = input.phone.trim();
   const email = input.email.trim().toLowerCase();
   const part = input.part.trim();
+  const part2 = (input.part2 ?? "").trim() || null;
 
   if (!username || !input.password || !name) return { error: "필수 항목을 모두 입력하세요." };
   if (username === ADMIN_USERNAME) return { error: "사용할 수 없는 아이디입니다." };
@@ -113,6 +115,7 @@ export async function signup(input: {
       phone,
       email,
       part: part || "미정",
+      part2,
     });
   } catch {
     return { error: "가입 처리 중 오류가 발생했습니다. 관리자에게 문의하세요." };
@@ -124,7 +127,7 @@ export async function signup(input: {
     await sendMail({
       to: notifyTo,
       subject: "[기타투게더] 새 회원가입 신청",
-      text: `새 회원가입 신청이 접수되었습니다. 관리자 승인이 필요합니다.\n\n이름: ${name}\n아이디: ${username}\n휴대폰: ${phone}\n이메일: ${email}\n파트: ${part || "미정"}`,
+      text: `새 회원가입 신청이 접수되었습니다. 관리자 승인이 필요합니다.\n\n이름: ${name}\n아이디: ${username}\n휴대폰: ${phone}\n이메일: ${email}\n파트: ${(part || "미정") + (part2 ? ` · ${part2}` : "")}`,
       html: emailHtml({
         heading: "새 회원가입 신청",
         intro: "새 가입 신청이 접수되었습니다. 관리자 승인이 필요합니다.",
@@ -133,7 +136,7 @@ export async function signup(input: {
           { label: "아이디", value: username },
           { label: "휴대폰", value: phone },
           { label: "이메일", value: email },
-          { label: "파트", value: part || "미정" },
+          { label: "파트", value: (part || "미정") + (part2 ? ` · ${part2}` : "") },
         ],
         note: "회원 관리 화면에서 승인/거절할 수 있습니다.",
       }),
@@ -287,6 +290,7 @@ export async function updateMyProfile(input: {
   phone: string;
   email: string;
   part: string;
+  part2?: string;
 }): Promise<{ user: SessionUser } | { error: string }> {
   const session = await getSession();
   if (!session) return { error: "로그인이 필요합니다." };
@@ -296,12 +300,14 @@ export async function updateMyProfile(input: {
   const phone = input.phone.trim();
   const email = input.email.trim().toLowerCase();
   const part = input.part.trim();
+  const part2 = (input.part2 ?? "").trim() || null;
 
   if (!name) return { error: "이름을 입력하세요." };
   if (!phone) return { error: "휴대폰번호를 입력하세요." };
   if (!EMAIL_RE.test(email)) return { error: "올바른 이메일 주소를 입력하세요." };
+  if (part2 && part2 === part) return { error: "악기 2는 악기 1과 다른 악기를 선택하세요." };
 
-  await setProfile(session.id, { name, phone, email, part });
+  await setProfile(session.id, { name, phone, email, part, part2 });
 
   // 세션(쿠키)에 들어가는 값만 갱신 — 이름/파트/이니셜
   const user: SessionUser = {

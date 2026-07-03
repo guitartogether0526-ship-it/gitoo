@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { SessionUser } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { login, signup, findUsername, resetPassword } from "@/lib/auth-actions";
+import { PARTS } from "@/lib/parts";
 import Logo from "./Logo";
 
 type View = "login" | "signup" | "findId" | "findPw";
@@ -107,12 +108,17 @@ function SignupForm({ onNav }: { onNav: (v: View) => void }) {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [part, setPart] = useState("기타");
+  const [part2, setPart2] = useState(""); // 악기2 (선택, "" = 없음)
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
     setError("");
+    if (part2 && part2 === part) {
+      setError("악기 2는 악기 1과 다른 악기를 선택하세요.");
+      return;
+    }
     setBusy(true);
     const res = await signup({
       username,
@@ -121,6 +127,7 @@ function SignupForm({ onNav }: { onNav: (v: View) => void }) {
       phone,
       email,
       part,
+      part2,
     });
     setBusy(false);
     if ("ok" in res) setDone(true);
@@ -171,14 +178,29 @@ function SignupForm({ onNav }: { onNav: (v: View) => void }) {
           <input className="input" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="아이디·비밀번호 찾기에 사용됩니다" autoCapitalize="none" autoComplete="email" />
         </div>
         <div className="field">
-          <label>담당 파트</label>
-          <select className="select" value={part} onChange={(e) => setPart(e.target.value)}>
-            <option>기타</option>
-            <option>베이스</option>
-            <option>드럼</option>
-            <option>보컬</option>
-            <option>키보드</option>
-            <option>기타 파트</option>
+          <label>악기 1 (주 파트)</label>
+          <select
+            className="select"
+            value={part}
+            onChange={(e) => {
+              setPart(e.target.value);
+              if (part2 === e.target.value) setPart2(""); // 악기2와 겹치면 악기2 해제
+            }}
+          >
+            {PARTS.map((p) => (
+              <option key={p}>{p}</option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label>악기 2 (선택)</label>
+          <select className="select" value={part2} onChange={(e) => setPart2(e.target.value)}>
+            <option value="">없음</option>
+            {PARTS.map((p) => (
+              <option key={p} value={p} disabled={p === part}>
+                {p}
+              </option>
+            ))}
           </select>
         </div>
         {error && <p className="form-error">{error}</p>}

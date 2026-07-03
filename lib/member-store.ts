@@ -54,6 +54,7 @@ export async function createMember(input: {
   phone: string;
   email: string;
   part: string;
+  part2?: string | null;
 }): Promise<Member> {
   const id = randomUUID();
   const member: Member = {
@@ -62,6 +63,7 @@ export async function createMember(input: {
     phone: input.phone,
     email: input.email,
     part: input.part,
+    part2: input.part2 || null,
     status: "active",
     role: "member",
     initial: input.name.trim().charAt(0) || "?",
@@ -139,10 +141,10 @@ export async function setRole(id: string, role: Member["role"]): Promise<void> {
   if (row) row.role = role;
 }
 
-/** 본인 기본정보 수정 (이름·휴대폰·이메일·파트). 아바타 이니셜은 이름에서 재계산. */
+/** 본인 기본정보 수정 (이름·휴대폰·이메일·악기1·악기2). 아바타 이니셜은 이름에서 재계산. */
 export async function setProfile(
   id: string,
-  input: { name: string; phone: string; email: string; part: string },
+  input: { name: string; phone: string; email: string; part: string; part2?: string | null },
 ): Promise<void> {
   const initial = input.name.trim().charAt(0) || "?";
   const patch = {
@@ -150,6 +152,7 @@ export async function setProfile(
     phone: input.phone.trim(),
     email: input.email.trim().toLowerCase(),
     part: input.part.trim() || "미정",
+    part2: input.part2?.trim() || null,
     initial,
   };
   const sb = getSupabaseAdmin();

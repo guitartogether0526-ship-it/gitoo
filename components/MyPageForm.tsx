@@ -6,8 +6,7 @@ import type { Member, SessionUser } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { ROLE_LABEL } from "@/lib/roles";
 import { updateMyProfile, changeMyPassword } from "@/lib/auth-actions";
-
-const PARTS = ["기타", "베이스", "드럼", "보컬", "키보드", "기타 파트"];
+import { PARTS } from "@/lib/parts";
 
 export default function MyPageForm({
   session,
@@ -22,6 +21,7 @@ export default function MyPageForm({
   const [phone, setPhone] = useState(member?.phone ?? "");
   const [email, setEmail] = useState(member?.email ?? "");
   const [part, setPart] = useState(member?.part ?? "기타");
+  const [part2, setPart2] = useState(member?.part2 ?? ""); // 악기2 (선택, "" = 없음)
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -91,8 +91,12 @@ export default function MyPageForm({
   const submit = async () => {
     setError("");
     setSaved(false);
+    if (part2 && part2 === part) {
+      setError("악기 2는 악기 1과 다른 악기를 선택하세요.");
+      return;
+    }
     setBusy(true);
-    const res = await updateMyProfile({ name, phone, email, part });
+    const res = await updateMyProfile({ name, phone, email, part, part2 });
     setBusy(false);
     if ("error" in res) {
       setError(res.error);
@@ -124,12 +128,31 @@ export default function MyPageForm({
             <input className="input" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="아이디·비밀번호 찾기에 사용됩니다" autoCapitalize="none" autoComplete="email" />
           </div>
           <div className="field">
-            <label>담당 파트</label>
-            <select className="select" value={part} onChange={(e) => setPart(e.target.value)}>
+            <label>악기 1 (주 파트)</label>
+            <select
+              className="select"
+              value={part}
+              onChange={(e) => {
+                setPart(e.target.value);
+                if (part2 === e.target.value) setPart2(""); // 악기2와 겹치면 악기2 해제
+              }}
+            >
               {PARTS.map((p) => (
                 <option key={p}>{p}</option>
               ))}
               {!PARTS.includes(part) && <option>{part}</option>}
+            </select>
+          </div>
+          <div className="field">
+            <label>악기 2 (선택)</label>
+            <select className="select" value={part2} onChange={(e) => setPart2(e.target.value)}>
+              <option value="">없음</option>
+              {PARTS.map((p) => (
+                <option key={p} value={p} disabled={p === part}>
+                  {p}
+                </option>
+              ))}
+              {!!part2 && !PARTS.includes(part2) && <option>{part2}</option>}
             </select>
           </div>
           {error && <p className="form-error">{error}</p>}

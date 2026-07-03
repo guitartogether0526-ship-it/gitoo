@@ -68,7 +68,8 @@ create table if not exists members (
   name text not null,
   phone text,                                   -- 휴대폰번호
   email text,                                   -- 이메일(아이디/비밀번호 찾기 발송용)
-  part text not null,
+  part text not null,                           -- 악기1 (주 파트)
+  part2 text,                                   -- 악기2 (선택 — 두 번째 팀에서 다른 악기 담당 등, null=없음)
   status text not null default 'active',        -- active | rest
   role text not null default 'member',          -- admin | president | treasurer | staff | member
   initial text not null,
@@ -86,6 +87,7 @@ alter table members add column if not exists team_id text references teams(id) o
 alter table members add column if not exists team_id_2 text references teams(id) on delete set null;
 alter table members add column if not exists phone text;
 alter table members add column if not exists email text;
+alter table members add column if not exists part2 text;
 -- 기수(cohort) 미사용 전환 — 기존 컬럼이 있으면 not null 제약 해제(회원가입 시 미입력)
 do $$
 begin
