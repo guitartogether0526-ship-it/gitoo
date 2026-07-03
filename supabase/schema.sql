@@ -128,8 +128,12 @@ create table if not exists push_subscriptions (
   endpoint text primary key,
   p256dh text not null,
   auth text not null,
+  member_id text,                               -- 구독한 회원 id (운영진 대상 발송 필터용)
   created_at timestamptz not null default now()
 );
+
+-- 기존 push_subscriptions 테이블 업그레이드(재실행 안전) — 구독 회원 연결
+alter table push_subscriptions add column if not exists member_id text;
 
 -- 안되는 일정(불참) 체크 — 회원이 2주 단위로 안되는 날 표시. 팀별 조회. service_role 접근.
 create table if not exists unavailable_dates (

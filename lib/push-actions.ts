@@ -10,12 +10,12 @@ import {
   type PushSub,
 } from "./push";
 
-/** 푸시 구독 저장 (로그인 사용자) */
+/** 푸시 구독 저장 (로그인 사용자) — 구독을 회원 id 와 연결(운영진 대상 발송 필터용) */
 export async function subscribePush(sub: PushSub): Promise<{ ok: true } | { error: string }> {
   const session = await getSession();
   if (!session) return { error: "로그인이 필요합니다." };
   if (!isPushConfigured()) return { error: "푸시 알림이 서버에 설정되지 않았습니다." };
-  await saveSubscription(sub);
+  await saveSubscription(sub, session.id);
   return { ok: true };
 }
 

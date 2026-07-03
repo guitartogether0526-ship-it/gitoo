@@ -31,6 +31,8 @@ export default function PushToggle() {
         const reg = await navigator.serviceWorker.ready;
         const sub = await reg.pushManager.getSubscription();
         setState(sub ? "on" : "off");
+        // 기존 구독을 현재 로그인 회원과 다시 연결 (운영진 대상 발송 필터용, 실패 무시)
+        if (sub) subscribePush(JSON.parse(JSON.stringify(sub))).catch(() => {});
       } catch {
         setState("off");
       }

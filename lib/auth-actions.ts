@@ -22,6 +22,7 @@ import {
 } from "./member-store";
 import type { MemberStatus } from "./types";
 import { isEmailConfigured, sendMail, emailHtml } from "./email";
+import { sendToStaff } from "./push";
 import { randomBytes } from "node:crypto";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -143,6 +144,17 @@ export async function signup(input: {
     });
   } catch {
     /* 알림 메일 실패는 무시 */
+  }
+
+  // 운영진(STAFF 이상) 구독자에게 푸시 알림 (실패해도 가입은 정상 처리)
+  try {
+    await sendToStaff({
+      title: "새 회원가입 신청",
+      body: `${name}(${(part || "미정") + (part2 ? ` · ${part2}` : "")}) 님이 가입을 신청했습니다. 승인이 필요합니다.`,
+      url: "/members",
+    });
+  } catch {
+    /* 푸시 실패는 무시 */
   }
 
   return { ok: true };
