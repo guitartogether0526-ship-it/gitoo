@@ -24,6 +24,7 @@ export default async function SetlistPage() {
     id: m.id,
     name: m.name,
     part: m.part,
+    part2: m.part2 ?? null,
     team_id: m.team_id,
     team_id_2: m.team_id_2,
   }));
