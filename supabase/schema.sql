@@ -68,8 +68,8 @@ create table if not exists members (
   name text not null,
   phone text,                                   -- 휴대폰번호
   email text,                                   -- 이메일(아이디/비밀번호 찾기 발송용)
-  part text not null,                           -- 악기1 (주 파트)
-  part2 text,                                   -- 악기2 (선택 — 두 번째 팀에서 다른 악기 담당 등, null=없음)
+  part text not null,                           -- 악기1 — 팀1(team_id)에서 담당하는 파트
+  part2 text,                                   -- 악기2 — 팀2(team_id_2) 담당 파트 (null=악기1과 동일)
   status text not null default 'active',        -- active | rest
   role text not null default 'member',          -- admin | president | treasurer | staff | member
   initial text not null,

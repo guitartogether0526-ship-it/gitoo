@@ -116,7 +116,7 @@ function SignupForm({ onNav }: { onNav: (v: View) => void }) {
   const submit = async () => {
     setError("");
     if (part2 && part2 === part) {
-      setError("악기 2는 악기 1과 다른 악기를 선택하세요.");
+      setError("악기 2가 악기 1과 같으면 '없음 (악기1과 동일)'을 선택하세요.");
       return;
     }
     setBusy(true);
@@ -193,9 +193,9 @@ function SignupForm({ onNav }: { onNav: (v: View) => void }) {
           </select>
         </div>
         <div className="field">
-          <label>악기 2 (선택)</label>
+          <label>악기 2 (선택 — 팀 2개일 때 팀2 담당)</label>
           <select className="select" value={part2} onChange={(e) => setPart2(e.target.value)}>
-            <option value="">없음</option>
+            <option value="">없음 (악기1과 동일)</option>
             {PARTS.map((p) => (
               <option key={p} value={p} disabled={p === part}>
                 {p}

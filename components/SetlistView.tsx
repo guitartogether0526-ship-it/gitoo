@@ -431,7 +431,10 @@ export default function SetlistView({
                 {activeMembers.map((m) => (
                   <div key={m.id} className="res-item">
                     <span className="m-name">{m.name}</span>
-                    <span className="dim" style={{ fontSize: 13 }}>{m.part2 ? `${m.part} · ${m.part2}` : m.part}</span>
+                    {/* 팀1 소속이면 악기1, 팀2 소속이면 악기2(없으면 악기1과 동일) */}
+                    <span className="dim" style={{ fontSize: 13 }}>
+                      {m.team_id === activeTeam ? m.part : m.part2 || m.part}
+                    </span>
                   </div>
                 ))}
               </div>

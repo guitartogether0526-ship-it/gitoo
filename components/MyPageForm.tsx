@@ -92,7 +92,7 @@ export default function MyPageForm({
     setError("");
     setSaved(false);
     if (part2 && part2 === part) {
-      setError("악기 2는 악기 1과 다른 악기를 선택하세요.");
+      setError("악기 2가 악기 1과 같으면 '없음 (악기1과 동일)'을 선택하세요.");
       return;
     }
     setBusy(true);
@@ -128,7 +128,7 @@ export default function MyPageForm({
             <input className="input" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="아이디·비밀번호 찾기에 사용됩니다" autoCapitalize="none" autoComplete="email" />
           </div>
           <div className="field">
-            <label>악기 1 (주 파트)</label>
+            <label>악기 1 (팀1 담당)</label>
             <select
               className="select"
               value={part}
@@ -144,9 +144,9 @@ export default function MyPageForm({
             </select>
           </div>
           <div className="field">
-            <label>악기 2 (선택)</label>
+            <label>악기 2 (팀2 담당)</label>
             <select className="select" value={part2} onChange={(e) => setPart2(e.target.value)}>
-              <option value="">없음</option>
+              <option value="">없음 (악기1과 동일)</option>
               {PARTS.map((p) => (
                 <option key={p} value={p} disabled={p === part}>
                   {p}
@@ -163,7 +163,7 @@ export default function MyPageForm({
         </div>
       </div>
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 10 }}>
-        권한·팀 변경은 운영진에게 문의하세요. (아이디는 변경할 수 없습니다)
+        팀2에서 다른 악기를 맡는 경우에만 악기 2를 선택하세요. 권한·팀 변경은 운영진에게 문의하세요. (아이디는 변경할 수 없습니다)
       </p>
 
       <div className="section-title">비밀번호 변경</div>
