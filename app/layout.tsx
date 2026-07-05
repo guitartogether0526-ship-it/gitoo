@@ -5,6 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import LiveRefresh from "@/components/LiveRefresh";
+import RefreshButton from "@/components/RefreshButton";
 import { AuthProvider } from "@/lib/auth";
 import AuthGate from "@/components/AuthGate";
 import { getSession } from "@/lib/session";
@@ -58,6 +59,7 @@ export default async function RootLayout({
               <BottomNav />
             </div>
             <LiveRefresh />
+            <RefreshButton />
           </AuthGate>
         </AuthProvider>
         <ServiceWorkerRegister />

@@ -65,7 +65,7 @@ function SheetLink({ url, style }: { url: string; style?: React.CSSProperties })
 /**
  * 회비 페이지 본문 — 구글시트 장부 표시 전용.
  * 위에서부터: 요약 카드(잔액·이월·수입·지출) → 월 선택 → 탭(납부 현황 | 지출 내역).
- * 월 전환은 ?m=<gid> 라우팅이라 20초 자동 갱신(router.refresh) 후에도 유지된다.
+ * 월 전환은 ?m=<gid> 라우팅이라 60초 자동 갱신(router.refresh) 후에도 유지된다.
  * 납부 현황 탭은 운영진(showDues)만 — 일반 회원은 지출 내역만 본다.
  */
 export default function FinanceView({
@@ -84,7 +84,7 @@ export default function FinanceView({
   sheetUrl: string;
 }) {
   const router = useRouter();
-  // 20초 자동 갱신 시 내용이 같으면 리렌더 없음 (LiveRefresh — 깜빡임 방지)
+  // 60초 자동 갱신 시 내용이 같으면 리렌더 없음 (LiveRefresh — 깜빡임 방지)
   const [tabs] = useSyncedState(initialTabs);
   const [synced] = useSyncedState({ gid: selectedGid, month: initialMonth });
   // 월 전환 직후 synced가 한 프레임 늦으므로, gid가 다르면 새 props를 그대로 사용

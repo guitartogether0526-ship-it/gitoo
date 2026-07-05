@@ -18,7 +18,7 @@ export default async function FinancePage({
   const { m } = await searchParams;
   const mParam = m && /^\d+$/.test(m) ? m : undefined;
 
-  // 탭 목록과 (달이 선택돼 있으면) 그 달 데이터를 병렬로 — 20초 자동 갱신마다 도는 경로
+  // 탭 목록과 (달이 선택돼 있으면) 그 달 데이터를 병렬로 — 60초 자동 갱신마다 도는 경로
   const [tabs, prefetched, session] = await Promise.all([
     fetchSheetTabs(),
     mParam ? fetchMonthSheet(mParam) : Promise.resolve(null),
@@ -80,7 +80,7 @@ export default async function FinancePage({
       />
 
       <p className="dim" style={{ fontSize: 11, textAlign: "center", marginTop: 12 }}>
-        총무가 구글시트를 수정하면 약 20초 안에 자동 반영됩니다
+        총무가 구글시트를 수정하면 약 1분 안에 자동 반영됩니다
       </p>
     </>
   );

@@ -866,6 +866,41 @@ body {
   backdrop-filter: blur(2px);
 }
 
+/* ---------- Floating refresh button ---------- */
+.fab-refresh {
+  position: fixed;
+  /* 앱 컬럼(--maxw) 안쪽 우하단 — 넓은 화면에서도 컬럼에 붙어 다닌다 */
+  right: max(14px, calc((100vw - var(--maxw)) / 2 + 14px));
+  bottom: calc(78px + env(safe-area-inset-bottom));
+  z-index: 45;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(28, 23, 20, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-strong);
+  color: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+.fab-refresh:active {
+  transform: scale(0.94);
+}
+.fab-refresh:disabled {
+  opacity: 0.6;
+}
+.fab-refresh .spin {
+  animation: fab-spin 0.8s linear infinite;
+}
+@keyframes fab-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* ---------- Install Banner ---------- */
 .install-banner {
   position: fixed;
