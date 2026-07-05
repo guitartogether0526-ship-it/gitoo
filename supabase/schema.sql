@@ -107,6 +107,7 @@ create table if not exists member_auth (
   password text not null                        -- scrypt 해시 ("salt:hash")
 );
 
+-- dues/expenses: 사용 중단 — 회비 페이지가 구글시트 연동(lib/sheet.ts)으로 전환됨. 과거 데이터 보존용.
 create table if not exists dues (
   id bigint generated always as identity primary key,
   member_name text not null,

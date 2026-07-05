@@ -1,12 +1,4 @@
-import type {
-  Board,
-  Post,
-  Reservation,
-  Team,
-  Song,
-  DuesPayment,
-  Expense,
-} from "./types";
+import type { Board, Post, Reservation, Team, Song } from "./types";
 
 /**
  * 목업 데이터 — 각 배열은 Supabase 테이블의 행(row) 집합을 모방한다.
@@ -140,20 +132,4 @@ export const SONGS: Song[] = [
     voted: false,
     status: "candidate",
   },
-];
-
-export const DUES: DuesPayment[] = [
-  { member_name: "김지윤", cohort: 12, paid: true, month: "2026-06" },
-  { member_name: "박서준", cohort: 12, paid: true, month: "2026-06" },
-  { member_name: "이도윤", cohort: 14, paid: true, month: "2026-06" },
-  { member_name: "정민서", cohort: 15, paid: false, month: "2026-06" },
-  { member_name: "최하은", cohort: 14, paid: false, month: "2026-06" },
-];
-
-export const EXPENSES: Expense[] = [
-  { id: "x1", date: "2026-06-01", item: "6월 회비 수입 (5명)", amount: 100000, has_receipt: false },
-  { id: "x2", date: "2026-06-05", item: "기타 줄 세트 구매", amount: -32000, has_receipt: true },
-  { id: "x3", date: "2026-06-12", item: "연습실 대관료", amount: -60000, has_receipt: true },
-  { id: "x4", date: "2026-06-20", item: "마이크 케이블 추가 구매", amount: -18000, has_receipt: true },
-  { id: "x5", date: "2026-06-22", item: "합주 후 간식비", amount: -24500, has_receipt: true },
 ];

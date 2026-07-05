@@ -1,17 +1,7 @@
-import { BOARDS, POSTS, RESERVATIONS, TEAMS, SONGS, DUES, EXPENSES } from "./mock-data";
-import type {
-  Board,
-  Post,
-  Reservation,
-  Team,
-  Song,
-  Member,
-  DuesPayment,
-  Expense,
-} from "./types";
+import { BOARDS, POSTS, RESERVATIONS, TEAMS, SONGS } from "./mock-data";
+import type { Board, Post, Reservation, Team, Song, Member } from "./types";
 import { getSupabase } from "./supabase";
 import { getAllMembers } from "./member-store";
-import { kstYearMonth } from "./date";
 
 /**
  * 데이터 접근 계층 (Data Access Layer).
@@ -100,37 +90,4 @@ export async function getSongs(): Promise<Song[]> {
 export async function getMembers(): Promise<Member[]> {
   const rows = await getAllMembers();
   return rows.slice().sort((a, b) => byKo(a.name, b.name));
-}
-
-/**
- * 이번 달 회비 납부 현황.
- *
- * ⚠️ dues 테이블은 회원 명단과 별개라, 시딩/삽입되지 않으면 비어서 "아무도 안 보임".
- *    그래서 명단은 **회원 목록에서 이번 달 기준으로 생성**하고, 납부 여부만 dues
- *    테이블(회원 이름 + 월)에서 채운다. 대상: 승인된 활동(active) 회원.
- *    (납부 토글 시 dues 행을 insert/update — components/FinanceManager 참고)
- */
-export async function getDues(): Promise<DuesPayment[]> {
-  const month = kstYearMonth(); // "YYYY-MM"
-  const [members, rows] = await Promise.all([
-    getMembers(),
-    read<DuesPayment>("dues", DUES),
-  ]);
-  const paidByName = new Map(
-    rows.filter((r) => r.month === month).map((r) => [r.member_name, r.paid]),
-  );
-  return members
-    .filter((m) => m.approved && m.status === "active")
-    .map((m) => ({
-      member_name: m.name,
-      part: m.part,
-      cohort: 0, // (레거시·미사용) 기수 컬럼 하위 호환용
-      paid: paidByName.get(m.name) ?? false,
-      month,
-    }));
-}
-
-export async function getExpenses(): Promise<Expense[]> {
-  const rows = await read<Expense>("expenses", EXPENSES);
-  return rows.slice().sort((a, b) => a.date.localeCompare(b.date));
 }

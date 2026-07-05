@@ -90,19 +90,3 @@ export interface SessionUser {
   team_id: string | null; // 소속 팀1 (운영진 배정)
   team_id_2: string | null; // 소속 팀2 (한 사람이 2개 팀 참여, 없으면 null)
 }
-
-export interface DuesPayment {
-  member_name: string;
-  part?: string; // 담당 파트 — 회원 목록에서 채운 표시용(선택)
-  cohort: number; // (레거시·미사용) 기수
-  paid: boolean;
-  month: string; // "YYYY-MM"
-}
-
-export interface Expense {
-  id: string;
-  date: string;
-  item: string;
-  amount: number; // 음수 = 지출, 양수 = 수입(회비)
-  has_receipt?: boolean; // (레거시) 영수증 첨부 여부 — UI에서는 미사용
-}
