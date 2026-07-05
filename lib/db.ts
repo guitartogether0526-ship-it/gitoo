@@ -1,6 +1,7 @@
 import { BOARDS, POSTS, RESERVATIONS, TEAMS, SONGS } from "./mock-data";
 import type { Board, Post, Reservation, Team, Song, Member } from "./types";
 import { getSupabase } from "./supabase";
+import { getSupabaseAdmin } from "./supabase-admin";
 import { getAllMembers } from "./member-store";
 
 /**
@@ -85,6 +86,18 @@ export async function getTeams(): Promise<Team[]> {
 export async function getSongs(): Promise<Song[]> {
   const rows = await read<Song>("songs", SONGS);
   return rows.slice().sort((a, b) => byKo(a.title, b.title));
+}
+
+/**
+ * 합주곡 좋아요 투표(1인 1투표) 전체.
+ * song_votes는 공개 정책이 없어(투표 위조 방지) service_role로만 읽는다.
+ * 테이블 미생성(schema.sql 미실행)·미연결 시 빈 배열 — 페이지는 좋아요 0으로 동작.
+ */
+export async function getSongVotes(): Promise<{ song_id: string; member_id: string }[]> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return [];
+  const { data } = await sb.from("song_votes").select("song_id,member_id");
+  return data ?? [];
 }
 
 export async function getMembers(): Promise<Member[]> {

@@ -7,7 +7,7 @@ import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { addTeam, renameTeam, reorderTeams } from "@/lib/team-actions";
-import { setSongStatus } from "@/lib/song-actions";
+import { setSongStatus, toggleSongVote } from "@/lib/song-actions";
 import { sendSongPush } from "@/lib/push-actions";
 import { useRefreshHold } from "@/lib/refresh-hold";
 import { useSyncedState } from "@/lib/use-synced-state";
@@ -162,27 +162,29 @@ export default function SetlistView({
     .filter((m) => m.team_id === activeTeam || m.team_id_2 === activeTeam)
     .sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
+  // 좋아요 — 회원별 1인 1투표 (서버 액션이 song_votes에 저장, 확정값 반환)
   const toggleLike = async (id: string) => {
     if (!canManageActive) return; // 다른 팀은 투표 불가
     const cur = songs.find((s) => s.id === id);
     if (!cur) return;
     const nextVoted = !cur.voted;
-    const nextLikes = cur.likes + (cur.voted ? -1 : 1);
-    setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, voted: nextVoted, likes: nextLikes } : s)));
-    const sb = getSupabase();
-    if (sb) {
-      // ⚠️ supabase-js 쿼리는 await(.then) 시점에야 실행된다 — void로 버리면 요청이 아예 안 나가서
-      //    좋아요가 저장되지 않던 버그가 있었음. 반드시 await.
-      const { error } = await sb
-        .from("songs")
-        .update({ voted: nextVoted, likes: nextLikes })
-        .eq("id", id);
-      if (error) {
-        // 저장 실패 시 화면 원복
-        setSongs((prev) =>
-          prev.map((s) => (s.id === id ? { ...s, voted: cur.voted, likes: cur.likes } : s)),
-        );
-      }
+    setSongs((prev) =>
+      prev.map((s) =>
+        s.id === id ? { ...s, voted: nextVoted, likes: s.likes + (nextVoted ? 1 : -1) } : s,
+      ),
+    );
+    const res = await toggleSongVote(id);
+    if ("error" in res) {
+      // 저장 실패 — 화면 원복
+      setSongs((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, voted: cur.voted, likes: cur.likes } : s)),
+      );
+      alert(res.error);
+    } else {
+      // 서버 확정값으로 동기화 (다른 회원 투표까지 반영된 수)
+      setSongs((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, voted: res.voted, likes: res.likes } : s)),
+      );
     }
   };
 
