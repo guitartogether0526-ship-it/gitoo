@@ -79,6 +79,16 @@ export default function SetlistView({
   // 팀원 보기 팝업 (전체)
   const [showMembers, setShowMembers] = useState(false);
 
+  // 접이식 후보곡 카드 — 펼쳐진 곡 id 집합 (선정곡은 항상 펼침)
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const toggleOpen = (id: string) =>
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   // 곡 올리기/수정 폼·팀 수정 팝업이 열려 있는 동안 자동 동기화 보류
   useRefreshHold(showForm || editId !== "" || showTeamModal);
 
@@ -354,56 +364,106 @@ export default function SetlistView({
               </div>
             </div>
           ) : (
-            <div className="card" key={s.id}>
-              <div className="title-row">
-                <div className="grow">
-                  <div className="flex items-center gap-8" style={{ flexWrap: "wrap" }}>
-                    <span className="item-name">{s.title}</span>
-                    <span className={`badge ${s.status === "confirmed" ? "amber" : ""}`}>
-                      {s.status === "confirmed" ? "★ 선정곡" : "후보"}
-                    </span>
-                  </div>
-                  <div className="item-sub">{s.artist}</div>
-                </div>
-                {canManageActive ? (
-                  <button
-                    className={`like-btn${s.voted ? " liked" : ""}`}
-                    onClick={() => toggleLike(s.id)}
-                    aria-pressed={s.voted}
+            // 선정곡 = 항상 펼침(기존 카드 그대로) · 후보곡 = 접이식(헤더 탭으로 토글)
+            (() => {
+              const isConfirmed = s.status === "confirmed";
+              const isOpen = isConfirmed || openIds.has(s.id);
+              return (
+                <div className="card" key={s.id}>
+                  <div
+                    className="title-row"
+                    onClick={isConfirmed ? undefined : () => toggleOpen(s.id)}
+                    style={isConfirmed ? undefined : { cursor: "pointer" }}
+                    aria-expanded={isConfirmed ? undefined : isOpen}
                   >
-                    <HeartIcon filled={s.voted} />
-                    {s.likes}
-                  </button>
-                ) : (
-                  <span className="like-btn" style={{ cursor: "default", opacity: 0.7 }} title="본인 팀만 투표할 수 있어요">
-                    <HeartIcon filled={false} />
-                    {s.likes}
-                  </span>
-                )}
-              </div>
+                    <div className="grow">
+                      {isOpen ? (
+                        <>
+                          <div className="flex items-center gap-8" style={{ flexWrap: "wrap" }}>
+                            <span className="item-name">{s.title}</span>
+                            <span className={`badge ${isConfirmed ? "amber" : ""}`}>
+                              {isConfirmed ? "★ 선정곡" : "후보"}
+                            </span>
+                          </div>
+                          <div className="item-sub">{s.artist}</div>
+                        </>
+                      ) : (
+                        // 접힌 상태 — 곡명 - 아티스트 한 줄
+                        <div className="flex items-center gap-8" style={{ flexWrap: "wrap" }}>
+                          <span className="item-name">{s.title}</span>
+                          <span className="item-sub" style={{ margin: 0 }}>- {s.artist}</span>
+                        </div>
+                      )}
+                    </div>
+                    {canManageActive ? (
+                      <button
+                        className={`like-btn${s.voted ? " liked" : ""}`}
+                        onClick={(e) => {
+                          e.stopPropagation(); // 좋아요 탭이 접기/펼치기로 번지지 않게
+                          toggleLike(s.id);
+                        }}
+                        aria-pressed={s.voted}
+                      >
+                        <HeartIcon filled={s.voted} />
+                        {s.likes}
+                      </button>
+                    ) : (
+                      <span className="like-btn" style={{ cursor: "default", opacity: 0.7 }} title="본인 팀만 투표할 수 있어요">
+                        <HeartIcon filled={false} />
+                        {s.likes}
+                      </span>
+                    )}
+                    {!isConfirmed && (
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{
+                          flexShrink: 0,
+                          alignSelf: "center",
+                          opacity: 0.5,
+                          transform: isOpen ? "rotate(180deg)" : undefined,
+                          transition: "transform .15s",
+                        }}
+                      >
+                        <path d="M6 9l6 6 6-6" />
+                      </svg>
+                    )}
+                  </div>
 
-              {s.youtube_url && (
-                <a className="yt-link" href={s.youtube_url} target="_blank" rel="noopener noreferrer">
-                  ▶ 유튜브로 보기
-                </a>
-              )}
+                  {isOpen && (
+                    <>
+                      {s.youtube_url && (
+                        <a className="yt-link" href={s.youtube_url} target="_blank" rel="noopener noreferrer">
+                          ▶ 유튜브로 보기
+                        </a>
+                      )}
 
-              {canManageActive && (
-                <div className="btn-row" style={{ marginTop: 8 }}>
-                  {s.status === "confirmed" ? (
-                    <button className="btn ghost btn-sm" disabled={statusBusy === s.id} onClick={() => changeStatus(s.id, "candidate")}>
-                      {statusBusy === s.id ? "저장 중…" : "후보로 되돌리기"}
-                    </button>
-                  ) : (
-                    <button className="btn amber btn-sm" disabled={statusBusy === s.id} onClick={() => changeStatus(s.id, "confirmed")}>
-                      {statusBusy === s.id ? "저장 중…" : "★ 선정곡으로 하기"}
-                    </button>
+                      {canManageActive && (
+                        <div className="btn-row" style={{ marginTop: 8 }}>
+                          {isConfirmed ? (
+                            <button className="btn ghost btn-sm" disabled={statusBusy === s.id} onClick={() => changeStatus(s.id, "candidate")}>
+                              {statusBusy === s.id ? "저장 중…" : "후보로 되돌리기"}
+                            </button>
+                          ) : (
+                            <button className="btn amber btn-sm" disabled={statusBusy === s.id} onClick={() => changeStatus(s.id, "confirmed")}>
+                              {statusBusy === s.id ? "저장 중…" : "★ 선정곡으로 하기"}
+                            </button>
+                          )}
+                          <button className="btn ghost btn-sm" onClick={() => startEdit(s)}>수정</button>
+                          <button className="btn danger btn-sm" onClick={() => deleteSong(s.id)}>삭제</button>
+                        </div>
+                      )}
+                    </>
                   )}
-                  <button className="btn ghost btn-sm" onClick={() => startEdit(s)}>수정</button>
-                  <button className="btn danger btn-sm" onClick={() => deleteSong(s.id)}>삭제</button>
                 </div>
-              )}
-            </div>
+              );
+            })()
           ),
         )
       )}

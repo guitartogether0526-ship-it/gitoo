@@ -14,7 +14,7 @@ import "server-only";
  *   E열 "합계" 행의 F = 지출 총액 · "이월금액" 행의 F = 전월 이월 · "총합계" 행의 F = 잔액
  *   B열 "특이사항" 아래 = 비고 (B=이름, C=내용)
  *
- * ⚠️ 행 번호는 달마다 다르다(회원 수 변동, gviz가 앞쪽 빈 행 제거) — 반드시 라벨로 찾는다.
+ * ⚠️ 행 번호는 달마다 다르다(회원 수 변동) — 반드시 라벨로 찾는다.
  * ⚠️ 파서는 성명/내역/합계/이월금액/총합계/특이사항 라벨 문자열에 의존한다. 총무가
  *    라벨을 바꾸면 그 달은 "읽지 못함" 안내로 표시된다(앱은 죽지 않음).
  */
@@ -79,27 +79,59 @@ export async function fetchSheetTabs(): Promise<SheetTab[] | null> {
   return tabs.length > 0 ? tabs : null;
 }
 
-type GvizCell = { v?: unknown; f?: string } | null | undefined;
+/**
+ * 최소 CSV 파서 (RFC4180 따옴표 필드 지원 — "1,980,000" 같은 콤마 포함 숫자 대응).
+ * ⚠️ gviz JSON을 쓰지 않는 이유: gviz는 열 타입을 추론해서(납부액 C열=number)
+ *    타입이 다른 셀(숫자 열의 텍스트 — 특이사항 내용, 선납 "-" 표기)을 null로
+ *    버린다. CSV export는 표시값을 그대로 주고 행 번호도 시트와 1:1이다.
+ */
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else inQuotes = false;
+      } else field += ch;
+    } else if (ch === '"') inQuotes = true;
+    else if (ch === ",") {
+      row.push(field);
+      field = "";
+    } else if (ch === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else if (ch !== "\r") field += ch;
+  }
+  row.push(field);
+  rows.push(row);
+  return rows;
+}
 
-const cellStr = (c: GvizCell) => String(c?.v ?? "").trim();
-const cellNum = (c: GvizCell) => (typeof c?.v === "number" ? c.v : null);
+const cellStr = (row: string[], k: number) => (row[k] ?? "").trim();
+// "1,980,000" → 1980000. 숫자가 아니면("-"·텍스트) null — raw로 따로 보존된다.
+const cellNum = (row: string[], k: number) => {
+  const s = cellStr(row, k).replace(/,/g, "");
+  return s !== "" && /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : null;
+};
 
-/** 한 달(탭 gid) 데이터를 gviz JSON으로 읽어 라벨 기반으로 파싱. 실패 시 null. */
+/** 한 달(탭 gid) 데이터를 CSV export로 읽어 라벨 기반으로 파싱. 실패 시 null. */
 export async function fetchMonthSheet(gid: string): Promise<MonthSheet | null> {
   const text = await fetchText(
-    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${gid}&headers=0&range=A1:F100`,
+    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`,
   );
   if (!text) return null;
-
-  let rows: { c?: GvizCell[] }[];
-  try {
-    // 응답은 google.visualization.Query.setResponse({...}); 래퍼로 감싸져 있다
-    const json = JSON.parse(text.slice(text.indexOf("(") + 1, text.lastIndexOf(")")));
-    if (!json?.table?.rows) return null; // 오류 응답(비공개 전환 등)
-    rows = json.table.rows;
-  } catch {
-    return null;
-  }
+  // 비공개 전환 등으로 HTML(로그인 페이지)이 오면 CSV가 아님
+  if (text.trimStart().startsWith("<")) return null;
+  // 선두 BOM(U+FEFF) 제거 후 파싱
+  const rows = parseCsv(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
 
   const members: SheetMember[] = [];
   const expenses: SheetExpense[] = [];
@@ -116,30 +148,29 @@ export async function fetchMonthSheet(gid: string): Promise<MonthSheet | null> {
 
   // B·C열(회비)과 E·F열(지출)은 같은 행을 공유하는 독립 리스트 — 라벨 분기가 수집보다 먼저
   for (const row of rows) {
-    const c = row.c ?? [];
-    const b = cellStr(c[1]); // B열
-    const e = cellStr(c[4]); // E열
+    const b = cellStr(row, 1); // B열
+    const e = cellStr(row, 4); // E열
 
     if (b === "성명") inMembers = true;
     else if (b === "합계") {
-      incomeTotal = cellNum(c[2]);
+      incomeTotal = cellNum(row, 2);
       membersDone = true;
     } else if (b === "특이사항") {
       inNotes = true;
       membersDone = true;
-    } else if (inNotes && b) notes.push({ name: b, note: cellStr(c[2]) });
+    } else if (inNotes && b) notes.push({ name: b, note: cellStr(row, 2) });
     else if (inMembers && !membersDone && b)
-      members.push({ name: b, amount: cellNum(c[2]), raw: cellStr(c[2]) });
+      members.push({ name: b, amount: cellNum(row, 2), raw: cellStr(row, 2) });
 
     if (e === "내역") inExpenses = true;
     else if (e === "합계") {
-      expenseTotal = cellNum(c[5]);
+      expenseTotal = cellNum(row, 5);
       expensesDone = true;
-    } else if (e === "이월금액") carryover = cellNum(c[5]);
-    else if (e === "총합계") grandTotal = cellNum(c[5]);
+    } else if (e === "이월금액") carryover = cellNum(row, 5);
+    else if (e === "총합계") grandTotal = cellNum(row, 5);
     else if (e.startsWith("*")) {
       // "* 지출내역" · "* 총합계산" 등 섹션 제목 — 무시
-    } else if (inExpenses && !expensesDone && e) expenses.push({ item: e, amount: cellNum(c[5]) });
+    } else if (inExpenses && !expensesDone && e) expenses.push({ item: e, amount: cellNum(row, 5) });
   }
 
   // 합계 라벨이 비어 있으면 항목 합산으로 폴백
