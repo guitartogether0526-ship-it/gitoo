@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { addTeam, renameTeam, reorderTeams } from "@/lib/team-actions";
 import { setSongStatus } from "@/lib/song-actions";
+import { sendSongPush } from "@/lib/push-actions";
 import { useRefreshHold } from "@/lib/refresh-hold";
 import { useSyncedState } from "@/lib/use-synced-state";
 
@@ -202,6 +203,8 @@ export default function SetlistView({
       }
       if (!res.error && res.data) {
         setSongs((prev) => [...prev, res.data as Song]);
+        // 같은 팀 소속 회원에게만 푸시 알림 (올린 본인 제외)
+        void sendSongPush(activeTeam, payload.title, payload.artist);
         router.refresh();
       }
     } else {

@@ -99,6 +99,36 @@ export async function sendToAll(payload: PushPayload): Promise<{ sent: number }>
 }
 
 /**
+ * 특정 팀 소속 회원(팀1 또는 팀2) 구독에게만 발송.
+ * excludeMemberId 는 행위자 본인 제외용(본인이 올린 곡 알림은 본인에게 안 감).
+ */
+export async function sendToTeam(
+  teamId: string,
+  payload: PushPayload,
+  excludeMemberId?: string,
+): Promise<{ sent: number }> {
+  if (!ensureVapid()) return { sent: 0 };
+  const sb = getSupabaseAdmin();
+  if (!sb) return { sent: 0 };
+
+  // 팀1·팀2 소속을 각각 조회해 합침 (한 사람이 두 팀 참여 가능)
+  const [t1, t2] = await Promise.all([
+    sb.from("members").select("id").eq("team_id", teamId),
+    sb.from("members").select("id").eq("team_id_2", teamId),
+  ]);
+  const ids = [...new Set([...(t1.data ?? []), ...(t2.data ?? [])].map((m) => m.id))].filter(
+    (id) => id !== excludeMemberId,
+  );
+  if (ids.length === 0) return { sent: 0 };
+
+  const { data } = await sb
+    .from("push_subscriptions")
+    .select("endpoint,p256dh,auth")
+    .in("member_id", ids);
+  return sendToSubs(sb, data ?? [], payload);
+}
+
+/**
  * 운영진(STAFF 이상: admin·회장·총무·STAFF) 구독에게만 발송.
  * member_id 가 연결된 구독만 대상 — 구독을 다시 켜기 전의 옛 구독(연결 없음)은 제외.
  */
