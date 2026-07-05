@@ -748,6 +748,20 @@ body {
   text-align: center;
 }
 
+/* ---------- 회원표(팀×파트) 팝업 ---------- */
+.mtable.member-grid td {
+  vertical-align: top; /* 한 셀에 여러 명 세로 나열 */
+}
+.mtable.member-grid tbody th {
+  /* 행 머리(파트명) — 열 헤더 스타일(배경·강한 밑줄) 해제 */
+  background: none;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.mtable.member-grid tbody tr:last-child th {
+  border-bottom: none;
+}
+
 /* ---------- Table (finance) ---------- */
 .ledger {
   width: 100%;

@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Member, MemberRole, MemberStatus, Team } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { can, ROLE_LABEL, ROLE_ORDER } from "@/lib/roles";
 import { partLabel, PARTS } from "@/lib/parts";
+import { useSyncedState } from "@/lib/use-synced-state";
+import MemberTableModal from "@/components/MemberTableModal";
 import {
   approveMember,
   rejectMember,
@@ -74,10 +76,11 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
   const { user } = useAuth();
   const router = useRouter();
   const canManage = can.manageMembers(user?.role);
-  const [members, setMembers] = useState<Member[]>(initial);
+  // 새 가입 신청 등 서버 최신 데이터를 반영하되, 내용이 같으면 리렌더 없음 (LiveRefresh/새로고침 시)
+  const [members, setMembers] = useSyncedState<Member[]>(initial);
   const [busy, setBusy] = useState<string>("");
-  // 새 가입 신청 등 서버 최신 데이터를 화면에 반영 (LiveRefresh/새로고침 시)
-  useEffect(() => setMembers(initial), [initial]);
+  // 팀·파트별 회원표 팝업
+  const [showTable, setShowTable] = useState(false);
 
   const pending = members.filter((m) => !m.approved);
   const approved = members.filter((m) => m.approved);
@@ -232,7 +235,15 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
       )}
 
       {/* 회원 목록 */}
-      <div className="section-title">회원 목록 ({approved.length})</div>
+      <div
+        className="section-title"
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+      >
+        <span>회원 목록 ({approved.length})</span>
+        <button className="btn ghost btn-sm" onClick={() => setShowTable(true)}>
+          표로 보기
+        </button>
+      </div>
       {approved.length === 0 ? (
         <div className="card">
           <p className="dim" style={{ margin: 0, fontSize: 13 }}>아직 승인된 회원이 없습니다.</p>
@@ -335,6 +346,11 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 10 }}>
         표 제목을 누르면 해당 항목으로 정렬됩니다(재클릭 시 역순). 팀1·팀2(두 팀 참여 가능)·권한·상태 변경과 강퇴(계정 삭제)는 운영진(STAFF 이상) 전용입니다. (좌우 스크롤)
       </p>
+
+      {/* 팀·파트별 회원표 팝업 */}
+      {showTable && (
+        <MemberTableModal members={members} teams={teams} onClose={() => setShowTable(false)} />
+      )}
     </>
   );
 }
