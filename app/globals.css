@@ -757,8 +757,10 @@ body {
 }
 
 /* ---------- 회원표(팀×파트) 팝업 ---------- */
-.mtable.member-grid td {
-  vertical-align: top; /* 한 셀에 여러 명 세로 나열 */
+.mtable.member-grid td,
+.mtable.member-grid th {
+  text-align: center; /* 저장 이미지와 동일하게 칸 가운데 정렬 */
+  vertical-align: middle;
 }
 .mtable.member-grid tbody th {
   /* 행 머리(파트명) — 열 헤더 스타일(배경·강한 밑줄) 해제 */
