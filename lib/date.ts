@@ -34,3 +34,10 @@ export function kstYearMonth(base: Date = new Date()): string {
 export function kstMonthLabel(base: Date = new Date()): string {
   return `${kstParts(base).m}월`;
 }
+
+/** "2026-07-11" → "7월 11일(토)" — 날짜 문자열 표시용 (실행 타임존 무관) */
+export function koDateLabel(ymd: string): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const day = ["일", "월", "화", "수", "목", "금", "토"][new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+  return `${m}월 ${d}일(${day})`;
+}

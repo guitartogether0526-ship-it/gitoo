@@ -7,6 +7,7 @@ import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { kstParts } from "@/lib/date";
+import { sendReservationPush } from "@/lib/push-actions";
 import { useRefreshHold } from "@/lib/refresh-hold";
 import { useSyncedState } from "@/lib/use-synced-state";
 
@@ -194,6 +195,15 @@ export default function ReservationCalendar({
         return;
       }
       setReservations((prev) => [...prev, res.data as Reservation]);
+      // 합주(팀 예약)면 그 팀에게, 개인연습이면 본인에게 푸시 (그 외 용도는 서버에서 무시)
+      if (payload.purpose === "합주" || payload.purpose === "개인연습") {
+        void sendReservationPush(
+          payload.purpose,
+          payload.reserved_by,
+          payload.date,
+          payload.time_label,
+        );
+      }
       setNotice(
         degraded
           ? "예약은 저장됐지만 MT 기간(종료 날짜)이 반영되지 않았습니다. 운영진에게 스키마 반영(supabase/schema.sql 재실행)을 요청하세요."
