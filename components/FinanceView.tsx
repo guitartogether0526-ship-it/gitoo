@@ -224,25 +224,42 @@ function DuesTab({ data, monthName }: { data: MonthSheet; monthName: string }) {
   // 납부액(숫자) = 납부, "-" 등 텍스트 표기 = 선납, 빈칸 = 미납. 카운트에는 선납 포함.
   const isPaid = (m: MonthSheet["members"][number]) => m.amount !== null || m.raw !== "";
   const paid = data.members.filter(isPaid).length;
+  // 미납자만 보기 토글
+  const [onlyUnpaid, setOnlyUnpaid] = useState(false);
+  const shown = onlyUnpaid ? data.members.filter((m) => !isPaid(m)) : data.members;
 
   return (
     <>
-      <div className="section-title">
-        {monthName} 납부 현황 ({paid}/{data.members.length})
+      <div
+        className="section-title"
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+      >
+        <span>
+          {monthName} 납부 현황 ({paid}/{data.members.length})
+        </span>
+        {data.members.length > 0 && (
+          <button className="btn ghost btn-sm" onClick={() => setOnlyUnpaid((v) => !v)}>
+            {onlyUnpaid ? "전체 보기" : "미납자 보기"}
+          </button>
+        )}
       </div>
       <div className="card">
         {data.members.length === 0 ? (
           <p className="dim" style={{ margin: 0, fontSize: 13 }}>
             아직 기록이 없습니다.
           </p>
+        ) : shown.length === 0 ? (
+          <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+            미납자가 없습니다.
+          </p>
         ) : (
-          data.members.map((m, i) => (
+          shown.map((m, i) => (
             <div
               key={`${m.name}-${i}`}
               className="flex between items-center"
               style={{
                 padding: "10px 0",
-                borderBottom: i < data.members.length - 1 ? "1px solid var(--border)" : "none",
+                borderBottom: i < shown.length - 1 ? "1px solid var(--border)" : "none",
               }}
             >
               <span>{m.name}</span>
