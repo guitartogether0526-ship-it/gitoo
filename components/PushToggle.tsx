@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { subscribePush, unsubscribePush } from "@/lib/push-actions";
-import { enablePush, getPushSubscription, pushConfigured, pushSupported } from "@/lib/push-client";
+import {
+  enablePush,
+  getPushSubscription,
+  pushConfigured,
+  pushSupported,
+  PUSH_CHANGED_EVENT,
+} from "@/lib/push-client";
 
 type State = "checking" | "unsupported" | "unconfigured" | "on" | "off" | "denied" | "busy";
 
@@ -11,7 +17,7 @@ export default function PushToggle() {
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    (async () => {
+    const check = async () => {
       if (!pushConfigured()) return setState("unconfigured");
       if (!pushSupported()) return setState("unsupported");
       if (Notification.permission === "denied") return setState("denied");
@@ -23,7 +29,11 @@ export default function PushToggle() {
       } catch {
         setState("off");
       }
-    })();
+    };
+    void check();
+    // 상단 배너 등 다른 곳에서 구독 상태가 바뀌면 즉시 다시 확인
+    window.addEventListener(PUSH_CHANGED_EVENT, check);
+    return () => window.removeEventListener(PUSH_CHANGED_EVENT, check);
   }, []);
 
   const enable = async () => {

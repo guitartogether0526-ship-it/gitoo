@@ -7,6 +7,9 @@ import { subscribePush } from "./push-actions";
 
 const PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
+/** 구독 상태 변경 알림 이벤트 — 배너에서 켜면 마이페이지 토글이 즉시 반영되도록 */
+export const PUSH_CHANGED_EVENT = "gt-push-changed";
+
 export function pushConfigured(): boolean {
   return !!PUBLIC_KEY;
 }
@@ -44,6 +47,8 @@ export async function enablePush(): Promise<{ status: "on" | "denied" | "error";
     });
     const res = await subscribePush(JSON.parse(JSON.stringify(sub)));
     if ("error" in res) return { status: "error", msg: res.error };
+    // 다른 곳(마이페이지 토글 등)에 상태 변경을 알림
+    window.dispatchEvent(new Event(PUSH_CHANGED_EVENT));
     return { status: "on" };
   } catch {
     return { status: "error", msg: "알림 설정 중 오류가 발생했습니다." };

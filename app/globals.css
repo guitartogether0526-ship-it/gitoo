@@ -698,6 +698,14 @@ body {
   color: var(--on-accent);
   background: var(--accent-grad);
 }
+/* 탭이 많을 때 여러 줄로 감싸기 — 한 줄에 4개 (합주곡 팀 탭: 1~4팀 / 5~8팀) */
+.tab-row.wrap {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+.tab-row.wrap .tab {
+  flex: 1 0 calc((100% - 18px) / 4);
+}
 
 /* ---------- Member table ---------- */
 .table-wrap {

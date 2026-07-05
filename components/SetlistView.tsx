@@ -280,8 +280,8 @@ export default function SetlistView({
 
   return (
     <>
-      {/* 팀별 탭 */}
-      <div className="tab-row">
+      {/* 팀별 탭 — 4개씩 줄바꿈 (1~4팀 / 5~8팀) */}
+      <div className="tab-row wrap">
         {teamList.map((t) => (
           <button
             key={t.id}
