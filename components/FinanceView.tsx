@@ -219,14 +219,19 @@ export default function FinanceView({
   );
 }
 
-/** 납부 현황 탭 (운영진 전용) — 이름별 납부/선납/미납. 금액은 표시하지 않는다. */
+/** 납부 현황 탭 (운영진 전용) — 이름별 납부/선납/미납/탈퇴. 금액은 표시하지 않는다. */
 function DuesTab({ data, monthName }: { data: MonthSheet; monthName: string }) {
-  // 납부액(숫자) = 납부, "-" 등 텍스트 표기 = 선납, 빈칸 = 미납. 카운트에는 선납 포함.
-  const isPaid = (m: MonthSheet["members"][number]) => m.amount !== null || m.raw !== "";
+  // C열 값: 숫자 = 납부 · "탈퇴" = 탈퇴(카운트 제외) · 그 외 텍스트("-" 등) = 선납 · 빈칸 = 미납
+  const isWithdrawn = (m: MonthSheet["members"][number]) => m.raw === "탈퇴";
+  const isPaid = (m: MonthSheet["members"][number]) =>
+    !isWithdrawn(m) && (m.amount !== null || m.raw !== "");
   const paid = data.members.filter(isPaid).length;
-  // 미납자만 보기 토글
+  const total = data.members.filter((m) => !isWithdrawn(m)).length;
+  // 미납자만 보기 토글 (탈퇴자는 미납 아님 — 제외)
   const [onlyUnpaid, setOnlyUnpaid] = useState(false);
-  const shown = onlyUnpaid ? data.members.filter((m) => !isPaid(m)) : data.members;
+  const shown = onlyUnpaid
+    ? data.members.filter((m) => !isPaid(m) && !isWithdrawn(m))
+    : data.members;
 
   return (
     <>
@@ -235,7 +240,7 @@ function DuesTab({ data, monthName }: { data: MonthSheet; monthName: string }) {
         style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
       >
         <span>
-          {monthName} 납부 현황 ({paid}/{data.members.length})
+          {monthName} 납부 현황 ({paid}/{total})
         </span>
         {data.members.length > 0 && (
           <button className="btn ghost btn-sm" onClick={() => setOnlyUnpaid((v) => !v)}>
@@ -263,7 +268,9 @@ function DuesTab({ data, monthName }: { data: MonthSheet; monthName: string }) {
               }}
             >
               <span>{m.name}</span>
-              {m.amount !== null ? (
+              {isWithdrawn(m) ? (
+                <span className="badge">탈퇴</span>
+              ) : m.amount !== null ? (
                 <span className="badge ok">납부</span>
               ) : m.raw !== "" ? (
                 <span className="badge amber">선납</span>

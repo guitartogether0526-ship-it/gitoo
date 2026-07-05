@@ -162,7 +162,7 @@ export default function SetlistView({
     .filter((m) => m.team_id === activeTeam || m.team_id_2 === activeTeam)
     .sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
-  const toggleLike = (id: string) => {
+  const toggleLike = async (id: string) => {
     if (!canManageActive) return; // 다른 팀은 투표 불가
     const cur = songs.find((s) => s.id === id);
     if (!cur) return;
@@ -170,7 +170,20 @@ export default function SetlistView({
     const nextLikes = cur.likes + (cur.voted ? -1 : 1);
     setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, voted: nextVoted, likes: nextLikes } : s)));
     const sb = getSupabase();
-    if (sb) void sb.from("songs").update({ voted: nextVoted, likes: nextLikes }).eq("id", id);
+    if (sb) {
+      // ⚠️ supabase-js 쿼리는 await(.then) 시점에야 실행된다 — void로 버리면 요청이 아예 안 나가서
+      //    좋아요가 저장되지 않던 버그가 있었음. 반드시 await.
+      const { error } = await sb
+        .from("songs")
+        .update({ voted: nextVoted, likes: nextLikes })
+        .eq("id", id);
+      if (error) {
+        // 저장 실패 시 화면 원복
+        setSongs((prev) =>
+          prev.map((s) => (s.id === id ? { ...s, voted: cur.voted, likes: cur.likes } : s)),
+        );
+      }
+    }
   };
 
   // 곡 선정/후보 저장 (서버 액션) + 완료 팝업
