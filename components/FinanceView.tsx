@@ -219,9 +219,9 @@ export default function FinanceView({
   );
 }
 
-/** 납부 현황 탭 (운영진 전용) — 이름별 납부/미납. 금액은 표시하지 않는다. */
+/** 납부 현황 탭 (운영진 전용) — 이름별 납부/선납/미납. 금액은 표시하지 않는다. */
 function DuesTab({ data, monthName }: { data: MonthSheet; monthName: string }) {
-  // 납부액 또는 "-" 등 표기가 있으면 납부로 센다 (빈칸만 미납)
+  // 납부액(숫자) = 납부, "-" 등 텍스트 표기 = 선납, 빈칸 = 미납. 카운트에는 선납 포함.
   const isPaid = (m: MonthSheet["members"][number]) => m.amount !== null || m.raw !== "";
   const paid = data.members.filter(isPaid).length;
 
@@ -246,8 +246,10 @@ function DuesTab({ data, monthName }: { data: MonthSheet; monthName: string }) {
               }}
             >
               <span>{m.name}</span>
-              {isPaid(m) ? (
+              {m.amount !== null ? (
                 <span className="badge ok">납부</span>
+              ) : m.raw !== "" ? (
+                <span className="badge amber">선납</span>
               ) : (
                 <span className="badge danger">미납</span>
               )}
