@@ -866,6 +866,20 @@ body {
   backdrop-filter: blur(2px);
 }
 
+/* ---------- Push enable banner (헤더 아래 상단바) ---------- */
+.push-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--accent-strong);
+}
+.push-banner b {
+  color: var(--accent);
+}
+
 /* ---------- Floating refresh button ---------- */
 .fab-refresh {
   position: fixed;

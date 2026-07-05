@@ -2,17 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { subscribePush, unsubscribePush } from "@/lib/push-actions";
-
-const PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-
-function urlBase64ToUint8Array(base64: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
-  const b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(b64);
-  const arr = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
-  return arr;
-}
+import { enablePush, getPushSubscription, pushConfigured, pushSupported } from "@/lib/push-client";
 
 type State = "checking" | "unsupported" | "unconfigured" | "on" | "off" | "denied" | "busy";
 
@@ -22,14 +12,11 @@ export default function PushToggle() {
 
   useEffect(() => {
     (async () => {
-      if (!PUBLIC_KEY) return setState("unconfigured");
-      if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) {
-        return setState("unsupported");
-      }
+      if (!pushConfigured()) return setState("unconfigured");
+      if (!pushSupported()) return setState("unsupported");
       if (Notification.permission === "denied") return setState("denied");
       try {
-        const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.getSubscription();
+        const sub = await getPushSubscription();
         setState(sub ? "on" : "off");
         // 기존 구독을 현재 로그인 회원과 다시 연결 (운영진 대상 발송 필터용, 실패 무시)
         if (sub) subscribePush(JSON.parse(JSON.stringify(sub))).catch(() => {});
@@ -42,26 +29,11 @@ export default function PushToggle() {
   const enable = async () => {
     setMsg("");
     setState("busy");
-    try {
-      const perm = await Notification.requestPermission();
-      if (perm !== "granted") {
-        setState(perm === "denied" ? "denied" : "off");
-        return;
-      }
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(PUBLIC_KEY as string) as unknown as BufferSource,
-      });
-      const res = await subscribePush(JSON.parse(JSON.stringify(sub)));
-      if ("error" in res) {
-        setMsg(res.error);
-        setState("off");
-        return;
-      }
-      setState("on");
-    } catch (e) {
-      setMsg("알림 설정 중 오류가 발생했습니다.");
+    const res = await enablePush();
+    if (res.status === "on") setState("on");
+    else if (res.status === "denied") setState("denied");
+    else {
+      setMsg(res.msg ?? "");
       setState("off");
     }
   };

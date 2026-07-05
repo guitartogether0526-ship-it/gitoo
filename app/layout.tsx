@@ -6,6 +6,7 @@ import BottomNav from "@/components/BottomNav";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import LiveRefresh from "@/components/LiveRefresh";
 import RefreshButton from "@/components/RefreshButton";
+import PushBanner from "@/components/PushBanner";
 import { AuthProvider } from "@/lib/auth";
 import AuthGate from "@/components/AuthGate";
 import { getSession } from "@/lib/session";
@@ -55,6 +56,7 @@ export default async function RootLayout({
           <AuthGate>
             <div className="app-shell">
               <AppHeader />
+              <PushBanner />
               <main className="app-main">{children}</main>
               <BottomNav />
             </div>
