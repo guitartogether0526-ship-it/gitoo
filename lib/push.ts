@@ -98,6 +98,22 @@ export async function sendToAll(payload: PushPayload): Promise<{ sent: number }>
   return sendToSubs(sb, data ?? [], payload);
 }
 
+/** 특정 회원 id 목록의 구독에게 발송. */
+export async function sendToMembers(
+  memberIds: string[],
+  payload: PushPayload,
+): Promise<{ sent: number }> {
+  if (!ensureVapid()) return { sent: 0 };
+  const sb = getSupabaseAdmin();
+  if (!sb || memberIds.length === 0) return { sent: 0 };
+
+  const { data } = await sb
+    .from("push_subscriptions")
+    .select("endpoint,p256dh,auth")
+    .in("member_id", memberIds);
+  return sendToSubs(sb, data ?? [], payload);
+}
+
 /**
  * 특정 팀 소속 회원(팀1 또는 팀2) 구독에게만 발송.
  * excludeMemberId 는 행위자 본인 제외용(본인이 올린 곡 알림은 본인에게 안 감).
@@ -107,7 +123,6 @@ export async function sendToTeam(
   payload: PushPayload,
   excludeMemberId?: string,
 ): Promise<{ sent: number }> {
-  if (!ensureVapid()) return { sent: 0 };
   const sb = getSupabaseAdmin();
   if (!sb) return { sent: 0 };
 
@@ -119,13 +134,7 @@ export async function sendToTeam(
   const ids = [...new Set([...(t1.data ?? []), ...(t2.data ?? [])].map((m) => m.id))].filter(
     (id) => id !== excludeMemberId,
   );
-  if (ids.length === 0) return { sent: 0 };
-
-  const { data } = await sb
-    .from("push_subscriptions")
-    .select("endpoint,p256dh,auth")
-    .in("member_id", ids);
-  return sendToSubs(sb, data ?? [], payload);
+  return sendToMembers(ids, payload);
 }
 
 /**
