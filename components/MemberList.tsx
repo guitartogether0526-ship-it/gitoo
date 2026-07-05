@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth";
 import { can, ROLE_LABEL, ROLE_ORDER } from "@/lib/roles";
 import { partLabel, PARTS } from "@/lib/parts";
 import { useSyncedState } from "@/lib/use-synced-state";
+import { useRefreshHold } from "@/lib/refresh-hold";
 import MemberTableModal from "@/components/MemberTableModal";
 import {
   approveMember,
@@ -79,8 +80,9 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
   // 새 가입 신청 등 서버 최신 데이터를 반영하되, 내용이 같으면 리렌더 없음 (LiveRefresh/새로고침 시)
   const [members, setMembers] = useSyncedState<Member[]>(initial);
   const [busy, setBusy] = useState<string>("");
-  // 팀·파트별 회원표 팝업
+  // 팀·파트별 회원표 팝업 — 열려 있는 동안 자동 동기화 보류 (닫으면 다음 주기에 재개)
   const [showTable, setShowTable] = useState(false);
+  useRefreshHold(showTable);
 
   const pending = members.filter((m) => !m.approved);
   const approved = members.filter((m) => m.approved);
