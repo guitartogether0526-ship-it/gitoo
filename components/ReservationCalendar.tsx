@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Reservation } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { kstParts } from "@/lib/date";
+import { useRefreshHold } from "@/lib/refresh-hold";
+import { useSyncedState } from "@/lib/use-synced-state";
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -103,11 +105,12 @@ export default function ReservationCalendar({
 
   const [view, setView] = useState({ y: ty, m: tm - 1 });
   const [selected, setSelected] = useState<string>(todayStr);
-  const [reservations, setReservations] = useState<Reservation[]>(initial);
+  // 다른 사람이 등록한 예약 등 서버 최신 데이터를 반영하되, 내용이 같으면 리렌더 없음
+  const [reservations, setReservations] = useSyncedState<Reservation[]>(initial);
   // 수정 중인 예약 id (인라인 편집 폼 노출)
   const [editId, setEditId] = useState<string | null>(null);
-  // 다른 사람이 등록한 예약 등 서버 최신 데이터를 화면에 반영 (LiveRefresh/새로고침 시)
-  useEffect(() => setReservations(initial), [initial]);
+  // 예약 수정 폼이 열려 있는 동안 자동 동기화 보류
+  useRefreshHold(editId !== null);
 
   // 예약 등록 폼 — 시작/종료 시간(시·분)
   const [sh, setSh] = useState(19);

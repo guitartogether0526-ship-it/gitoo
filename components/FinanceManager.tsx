@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DuesPayment, Expense } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { kstMonthLabel, kstYmd } from "@/lib/date";
+import { useRefreshHold } from "@/lib/refresh-hold";
+import { useSyncedState } from "@/lib/use-synced-state";
 
 function formatDate(d: string) {
   const [, m, day] = d.split("-");
@@ -26,11 +28,9 @@ export default function FinanceManager({
   // 회비 납부 현황은 운영진(관리자·회장·총무·STAFF)만 열람
   const canViewDues = can.manageMembers(user?.role);
 
-  const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
-  const [dues, setDues] = useState<DuesPayment[]>(initialDues);
-  // 서버가 다시 읽어온 최신 데이터를 화면에 반영 (LiveRefresh/새로고침 시)
-  useEffect(() => setExpenses(initialExpenses), [initialExpenses]);
-  useEffect(() => setDues(initialDues), [initialDues]);
+  // 서버 최신 데이터를 화면에 반영하되, 내용이 같으면 리렌더 없음 (LiveRefresh/새로고침 시)
+  const [expenses, setExpenses] = useSyncedState<Expense[]>(initialExpenses);
+  const [dues, setDues] = useSyncedState<DuesPayment[]>(initialDues);
 
   // 지출/수입 추가 폼
   const [showForm, setShowForm] = useState(false);
@@ -39,6 +39,9 @@ export default function FinanceManager({
   const [kind, setKind] = useState<"out" | "in">("out");
   // 수정 중인 내역 id (인라인 편집 폼 노출)
   const [editId, setEditId] = useState<string | null>(null);
+
+  // 내역 추가/수정 폼이 열려 있는 동안 자동 동기화 보류
+  useRefreshHold(showForm || editId !== null);
 
   const income = expenses.filter((e) => e.amount > 0).reduce((s, e) => s + e.amount, 0);
   const outcome = expenses.filter((e) => e.amount < 0).reduce((s, e) => s + e.amount, 0);

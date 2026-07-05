@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Song, Team } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
@@ -8,6 +8,8 @@ import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { addTeam, renameTeam, reorderTeams } from "@/lib/team-actions";
 import { setSongStatus } from "@/lib/song-actions";
+import { useRefreshHold } from "@/lib/refresh-hold";
+import { useSyncedState } from "@/lib/use-synced-state";
 
 type MemberLite = {
   id: string;
@@ -46,12 +48,10 @@ export default function SetlistView({
   const router = useRouter();
   const canManageTeams = can.manageTeams(user?.role);
 
-  const [teamList, setTeamList] = useState<Team[]>(teams);
-  const [songs, setSongs] = useState<Song[]>(initial);
+  // 다른 사람이 올린 곡/투표 등 서버 최신 데이터를 반영하되, 내용이 같으면 리렌더 없음
+  const [teamList, setTeamList] = useSyncedState<Team[]>(teams);
+  const [songs, setSongs] = useSyncedState<Song[]>(initial);
   const [activeTeam, setActiveTeam] = useState<string>(teams[0]?.id ?? "");
-  // 다른 사람이 올린 곡/투표 등 서버 최신 데이터를 화면에 반영 (LiveRefresh/새로고침 시)
-  useEffect(() => setTeamList(teams), [teams]);
-  useEffect(() => setSongs(initial), [initial]);
 
   // 현재 보고 있는 팀을 관리할 수 있는가 (본인 소속 팀 또는 운영진)
   const canManageActive = canManageTeams || myTeamIds.includes(activeTeam);
@@ -77,6 +77,9 @@ export default function SetlistView({
 
   // 팀원 보기 팝업 (전체)
   const [showMembers, setShowMembers] = useState(false);
+
+  // 곡 올리기/수정 폼·팀 수정 팝업이 열려 있는 동안 자동 동기화 보류
+  useRefreshHold(showForm || editId !== "" || showTeamModal);
 
   const openTeamModal = () => {
     setDraft(teamList.map((t) => ({ ...t })));

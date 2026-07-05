@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Board, Post } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
 import { sendNoticePush } from "@/lib/push-actions";
+import { useRefreshHold } from "@/lib/refresh-hold";
+import { useSyncedState } from "@/lib/use-synced-state";
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -27,12 +29,10 @@ export default function BoardView({
   // 운영진(회장·총무·STAFF, admin) — 게시글 삭제 권한
   const isOperator = can.manageBoards(user?.role);
 
-  const [boards, setBoards] = useState<Board[]>(initialBoards);
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  // 서버 최신 데이터를 화면에 반영하되, 내용이 같으면 리렌더 없음 (LiveRefresh/새로고침 시)
+  const [boards, setBoards] = useSyncedState<Board[]>(initialBoards);
+  const [posts, setPosts] = useSyncedState<Post[]>(initialPosts);
   const [activeBoard, setActiveBoard] = useState<string>(initialBoards[0]?.id ?? "");
-  // 서버가 다시 읽어온 최신 데이터를 화면에 반영 (LiveRefresh/새로고침 시)
-  useEffect(() => setBoards(initialBoards), [initialBoards]);
-  useEffect(() => setPosts(initialPosts), [initialPosts]);
 
   // 글쓰기 폼
   const [showForm, setShowForm] = useState(false);
@@ -45,6 +45,9 @@ export default function BoardView({
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
   const [editPinned, setEditPinned] = useState(false);
+
+  // 글 작성/수정 폼이 열려 있는 동안 자동 동기화 보류 (입력 포커스가 없는 순간에도 보호)
+  useRefreshHold(showForm || editingId !== "");
 
   // 공지사항 게시판: 접힘/펼침 상태 (열린 글 id 모음)
   const [openPosts, setOpenPosts] = useState<Set<string>>(new Set());

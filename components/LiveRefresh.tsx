@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { hasRefreshHold } from "@/lib/refresh-hold";
 
 /**
  * 라이브 갱신 — 새로고침 없이 최신 데이터가 화면에 반영되도록 한다.
@@ -21,8 +22,11 @@ import { useRouter } from "next/navigation";
  *    router.refresh로 화면이 재렌더되면 키보드가 닫히고 한글 조합이 끊겨 편집
  *    창이 닫힌 것처럼 느껴진다. 포커스가 풀리면(편집 종료) 다음 주기에 갱신된다.
  *
- * 각 목록 컴포넌트는 서버 props가 바뀌면 로컬 상태를 다시 맞추므로(useEffect),
- * router.refresh 결과가 실제 화면에 그대로 반영된다.
+ * ⚠️ 작성·수정 폼/편집 팝업이 열려 있는 동안(lib/refresh-hold의 useRefreshHold)은
+ *    입력 포커스가 없어도 refresh를 보류한다. 닫히면 다음 주기에 갱신된다.
+ *
+ * 각 목록 컴포넌트는 서버 props가 바뀌면 로컬 상태를 다시 맞추므로(useSyncedState —
+ * 내용이 같으면 리렌더 없음), router.refresh 결과가 실제 화면에 그대로 반영된다.
  */
 export default function LiveRefresh({ intervalMs = 20000 }: { intervalMs?: number }) {
   const router = useRouter();
@@ -32,6 +36,8 @@ export default function LiveRefresh({ intervalMs = 20000 }: { intervalMs?: numbe
     const MIN_GAP = 5000; // 연속 refresh(깜빡임) 방지 최소 간격
     const refresh = () => {
       if (document.visibilityState !== "visible") return;
+      // 작성·수정 폼/팝업이 열려 있으면 보류 — 닫히면 다음 주기(≤20초)에 갱신된다.
+      if (hasRefreshHold()) return;
       // 편집/작성 중이면 건너뛴다 — 입력창(input·textarea·select·contentEditable)에
       // 포커스가 있는 동안 재렌더되면 iOS에서 키보드가 닫히고 조합이 끊긴다.
       const el = document.activeElement;
