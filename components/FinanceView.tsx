@@ -131,6 +131,25 @@ export default function FinanceView({
         </div>
       </div>
 
+      {/* 특이사항 — 선택한 달 시트의 특이사항 행(B=이름, C~=병합 셀 내용). 운영진 전용 */}
+      {showDues && data && (
+        <div className="card" style={{ opacity: isPending ? 0.55 : 1, transition: "opacity .15s" }}>
+          <div className="s-label">특이사항</div>
+          {data.notes.length === 0 ? (
+            <p className="dim" style={{ margin: "6px 0 0", fontSize: 13 }}>
+              없음
+            </p>
+          ) : (
+            data.notes.map((n, i) => (
+              <p key={i} style={{ margin: "6px 0 0", fontSize: 13 }}>
+                <span style={{ fontWeight: 700 }}>{n.name}</span>
+                {n.note && <span className="dim"> — {n.note}</span>}
+              </p>
+            ))
+          )}
+        </div>
+      )}
+
       {/* 월 선택 — 시트 탭 목록(최신 달이 앞). 화살표는 목록 순서 기준 이동 */}
       <div className="flex items-center mt-12" style={{ gap: 8 }}>
         <button
@@ -200,7 +219,7 @@ export default function FinanceView({
   );
 }
 
-/** 납부 현황 탭 (운영진 전용) — 이름별 납부/미납 + 특이사항. 금액은 표시하지 않는다. */
+/** 납부 현황 탭 (운영진 전용) — 이름별 납부/미납. 금액은 표시하지 않는다. */
 function DuesTab({ data, monthName }: { data: MonthSheet; monthName: string }) {
   // 납부액 또는 "-" 등 표기가 있으면 납부로 센다 (빈칸만 미납)
   const isPaid = (m: MonthSheet["members"][number]) => m.amount !== null || m.raw !== "";
@@ -236,19 +255,6 @@ function DuesTab({ data, monthName }: { data: MonthSheet; monthName: string }) {
           ))
         )}
       </div>
-      {data.notes.length > 0 && (
-        <>
-          <div className="section-title">특이사항</div>
-          <div className="card">
-            {data.notes.map((n, i) => (
-              <p key={i} className="dim" style={{ margin: i > 0 ? "6px 0 0" : 0, fontSize: 13 }}>
-                {n.name}
-                {n.note && ` — ${n.note}`}
-              </p>
-            ))}
-          </div>
-        </>
-      )}
     </>
   );
 }
