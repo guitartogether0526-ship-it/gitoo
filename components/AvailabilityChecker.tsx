@@ -32,10 +32,12 @@ export default function AvailabilityChecker({
   const [myUnavail, setMyUnavail] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
 
-  // 일정 보기 팝업
+  // 일정 보기 팝업 — 팀별 섹션으로 표시
   const [showList, setShowList] = useState(false);
   const [listBusy, setListBusy] = useState(false);
-  const [teamDays, setTeamDays] = useState<{ date: string; names: string[] }[]>([]);
+  const [teamGroups, setTeamGroups] = useState<
+    { teamId: string; teamName: string; days: { date: string; names: string[] }[] }[]
+  >([]);
   const [listError, setListError] = useState("");
 
   useEffect(() => {
@@ -80,10 +82,10 @@ export default function AvailabilityChecker({
     setListBusy(false);
     if ("error" in res) {
       setListError(res.error);
-      setTeamDays([]);
+      setTeamGroups([]);
       return;
     }
-    setTeamDays(res.days);
+    setTeamGroups(res.teams);
   };
 
   const fmtListDate = (ymd: string) => {
@@ -147,19 +149,31 @@ export default function AvailabilityChecker({
               <p className="dim" style={{ fontSize: 13 }}>불러오는 중…</p>
             ) : listError ? (
               <p className="form-error" style={{ marginBottom: 0 }}>{listError}</p>
-            ) : teamDays.length === 0 ? (
+            ) : teamGroups.every((g) => g.days.length === 0) ? (
               <p className="dim" style={{ fontSize: 13, marginBottom: 0 }}>표시된 안되는 날이 없습니다.</p>
             ) : (
-              <div style={{ marginTop: 8 }}>
-                {teamDays.map((d) => (
-                  <div key={d.date} style={{ padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-                    <div className="m-name" style={{ fontSize: 14 }}>{fmtListDate(d.date)}</div>
-                    <div className="dim" style={{ fontSize: 13, marginTop: 2 }}>
-                      {d.names.join(", ")} <span style={{ opacity: 0.6 }}>({d.names.length}명 불참)</span>
+              teamGroups.map((g) => (
+                <div key={g.teamId} style={{ marginTop: 12 }}>
+                  {/* 두 팀 소속일 때만 팀명 구분 헤더 표시 (한 팀이면 팝업 제목과 중복) */}
+                  {teamGroups.length > 1 && (
+                    <div className="m-name" style={{ fontSize: 14, paddingBottom: 4, borderBottom: "1px solid var(--border)" }}>
+                      {g.teamName}
                     </div>
-                  </div>
-                ))}
-              </div>
+                  )}
+                  {g.days.length === 0 ? (
+                    <p className="dim" style={{ fontSize: 13, margin: "6px 0 0" }}>표시된 안되는 날이 없습니다.</p>
+                  ) : (
+                    g.days.map((d) => (
+                      <div key={d.date} style={{ padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+                        <div className="m-name" style={{ fontSize: 14 }}>{fmtListDate(d.date)}</div>
+                        <div className="dim" style={{ fontSize: 13, marginTop: 2 }}>
+                          {d.names.join(", ")} <span style={{ opacity: 0.6 }}>({d.names.length}명 불참)</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ))
             )}
           </div>
         </div>

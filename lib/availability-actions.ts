@@ -3,6 +3,7 @@
 import { getSession } from "./session";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { getAllMembers } from "./member-store";
+import { getTeams } from "./db";
 import { kstYmd } from "./date";
 
 /** 내 '안되는 날' 추가/해제 */
@@ -41,16 +42,17 @@ export async function getMyUnavailable(): Promise<string[]> {
   return (data ?? []).map((r) => r.date as string);
 }
 
-/** 본인 팀의 '안되는 날' 현황 — 날짜별 안되는 사람 목록. 본인 팀만 조회. */
+/** 본인 팀의 '안되는 날' 현황 — 팀별로 나눠 날짜별 안되는 사람 목록. 본인 팀만 조회. */
 export async function getTeamUnavailable(): Promise<
-  { days: { date: string; names: string[] }[] } | { error: string }
+  | { teams: { teamId: string; teamName: string; days: { date: string; names: string[] }[] }[] }
+  | { error: string }
 > {
   const session = await getSession();
   if (!session) return { error: "로그인이 필요합니다." };
 
   const members = await getAllMembers();
   const me = members.find((m) => m.id === session.id);
-  // 본인 소속 팀(최대 2개) — 두 팀에 속하면 두 팀 팀원 모두 조회
+  // 본인 소속 팀(최대 2개) — 두 팀에 속하면 팀별 섹션으로 각각 조회
   const myTeams = [
     me?.team_id ?? session.team_id ?? null,
     me?.team_id_2 ?? session.team_id_2 ?? null,
@@ -64,30 +66,38 @@ export async function getTeamUnavailable(): Promise<
   const teamMembers = members.filter(
     (m) => (m.team_id && myTeams.includes(m.team_id)) || (m.team_id_2 && myTeams.includes(m.team_id_2)),
   );
-  const ids = teamMembers.map((m) => m.id);
   const nameById = new Map(teamMembers.map((m) => [m.id, m.name]));
-  if (ids.length === 0) return { days: [] };
+  const teamNameById = new Map((await getTeams()).map((t) => [t.id, t.name]));
 
-  // 오늘 이후만 (한국시간 기준)
+  // 오늘 이후만 (한국시간 기준) — 두 팀이면 인원이 겹칠 수 있어 한 번에 조회 후 팀별로 나눈다
   const todayStr = kstYmd();
+  const ids = teamMembers.map((m) => m.id);
+  const { data } = ids.length
+    ? await sb
+        .from("unavailable_dates")
+        .select("member_id,date")
+        .in("member_id", ids)
+        .gte("date", todayStr)
+    : { data: [] };
 
-  const { data } = await sb
-    .from("unavailable_dates")
-    .select("member_id,date")
-    .in("member_id", ids)
-    .gte("date", todayStr);
+  const teams = myTeams.map((teamId) => {
+    const inTeam = new Set(
+      teamMembers.filter((m) => m.team_id === teamId || m.team_id_2 === teamId).map((m) => m.id),
+    );
+    const byDate = new Map<string, string[]>();
+    for (const r of data ?? []) {
+      if (!inTeam.has(r.member_id as string)) continue;
+      const name = nameById.get(r.member_id as string);
+      if (!name) continue;
+      const arr = byDate.get(r.date as string) ?? [];
+      arr.push(name);
+      byDate.set(r.date as string, arr);
+    }
+    const days = [...byDate.entries()]
+      .map(([date, names]) => ({ date, names: names.sort((a, b) => a.localeCompare(b, "ko")) }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    return { teamId, teamName: teamNameById.get(teamId) ?? "내 팀", days };
+  });
 
-  const byDate = new Map<string, string[]>();
-  for (const r of data ?? []) {
-    const name = nameById.get(r.member_id as string);
-    if (!name) continue;
-    const arr = byDate.get(r.date as string) ?? [];
-    arr.push(name);
-    byDate.set(r.date as string, arr);
-  }
-  const days = [...byDate.entries()]
-    .map(([date, names]) => ({ date, names: names.sort((a, b) => a.localeCompare(b, "ko")) }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  return { days };
+  return { teams };
 }
