@@ -68,6 +68,7 @@ export default function SetlistView({
   const [eTitle, setETitle] = useState("");
   const [eArtist, setEArtist] = useState("");
   const [eYoutube, setEYoutube] = useState("");
+  const [eCreatedBy, setECreatedBy] = useState(""); // 기존 곡은 작성자 기록이 없어 수정 폼으로 채운다
 
   // 팀 수정 팝업 (운영진)
   const [showTeamModal, setShowTeamModal] = useState(false);
@@ -218,12 +219,14 @@ export default function SetlistView({
       likes: 0,
       voted: false,
       status: "candidate" as const,
+      created_by: user?.name ?? null,
     };
     const sb = getSupabase();
     if (sb) {
       let res = await sb.from("songs").insert(payload).select().single();
       if (res.error) {
-        const { youtube_url: _yt, ...rest } = payload;
+        // 컬럼 미생성(schema.sql 미실행) DB 대응 — 새 컬럼을 빼고 재시도
+        const { youtube_url: _yt, created_by: _cb, ...rest } = payload;
         res = await sb.from("songs").insert(rest).select().single();
       }
       if (!res.error && res.data) {
@@ -246,6 +249,7 @@ export default function SetlistView({
     setETitle(s.title);
     setEArtist(s.artist);
     setEYoutube(s.youtube_url ?? "");
+    setECreatedBy(s.created_by ?? "");
   };
   const cancelEdit = () => setEditId("");
 
@@ -255,6 +259,7 @@ export default function SetlistView({
       title: eTitle.trim(),
       artist: eArtist.trim(),
       youtube_url: normalizeUrl(eYoutube) || null,
+      created_by: eCreatedBy.trim() || null,
     };
     setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
     setEditId("");
@@ -372,6 +377,10 @@ export default function SetlistView({
                   <label>유튜브 링크</label>
                   <input className="input" type="url" inputMode="url" value={eYoutube} onChange={(e) => setEYoutube(e.target.value)} placeholder="https://youtu.be/..." autoCapitalize="none" />
                 </div>
+                <div className="field">
+                  <label>올린 사람</label>
+                  <input className="input" value={eCreatedBy} onChange={(e) => setECreatedBy(e.target.value)} placeholder="예: 홍길동 (기존 곡은 비어 있어요)" maxLength={20} />
+                </div>
                 <div className="btn-row">
                   <button className="btn amber btn-sm" onClick={() => saveEdit(s.id)}>저장</button>
                   <button className="btn ghost btn-sm" onClick={cancelEdit}>취소</button>
@@ -400,7 +409,10 @@ export default function SetlistView({
                               {isConfirmed ? "★ 선정곡" : "후보"}
                             </span>
                           </div>
-                          <div className="item-sub">{s.artist}</div>
+                          <div className="item-sub">
+                            {s.artist}
+                            {s.created_by && <span className="dim"> · 올린이 {s.created_by}</span>}
+                          </div>
                         </>
                       ) : (
                         // 접힌 상태 — 곡명 - 아티스트 한 줄

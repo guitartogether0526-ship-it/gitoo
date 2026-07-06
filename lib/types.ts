@@ -58,6 +58,7 @@ export interface Song {
   likes: number; // 좋아요 수 — song_votes(1인 1투표) 집계로 서버에서 계산 (songs 테이블 컬럼은 레거시)
   voted: boolean; // 보는 사람이 투표했는지 — 세션 기준 서버 계산 (songs 테이블 컬럼은 레거시)
   status: "candidate" | "confirmed"; // 후보 / 선정(확정)
+  created_by?: string | null; // 올린 사람 이름 — 새 곡은 자동 기록, 기존 곡은 수정 폼으로 채움
 }
 
 /** 권한 등급 (높은 → 낮은): 관리자(admin) · 회장 · 총무 · STAFF · 회원 */

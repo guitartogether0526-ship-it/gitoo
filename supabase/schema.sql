@@ -57,11 +57,14 @@ create table if not exists songs (
   sheets jsonb not null default '[]',           -- (레거시)
   likes integer not null default 0,             -- (레거시 — song_votes 집계로 대체)
   voted boolean not null default false,          -- (레거시 — song_votes로 대체)
-  status text not null default 'candidate'     -- candidate | confirmed
+  status text not null default 'candidate',    -- candidate | confirmed
+  created_by text                               -- 올린 사람 이름 (기존 곡은 수정 폼으로 채움)
 );
 
 -- 기존 songs 테이블 업그레이드(재실행 안전) — 유튜브 링크 컬럼
 alter table songs add column if not exists youtube_url text;
+-- 기존 songs 테이블 업그레이드(재실행 안전) — 올린 사람 이름 컬럼
+alter table songs add column if not exists created_by text;
 
 -- 합주곡 좋아요(1인 1투표) — 회원별 투표. service_role(서버 액션)만 접근.
 -- member_id는 admin 특수 계정(members에 없음)도 투표할 수 있게 FK 없이 저장.
