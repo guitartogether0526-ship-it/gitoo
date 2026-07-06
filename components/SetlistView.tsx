@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Song, Team } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
@@ -52,7 +52,21 @@ export default function SetlistView({
   // 다른 사람이 올린 곡/투표 등 서버 최신 데이터를 반영하되, 내용이 같으면 리렌더 없음
   const [teamList, setTeamList] = useSyncedState<Team[]>(teams);
   const [songs, setSongs] = useSyncedState<Song[]>(initial);
-  const [activeTeam, setActiveTeam] = useState<string>(teams[0]?.id ?? "");
+
+  // 선택한 팀 탭 — 페이지 이동·앱 재로드로 컴포넌트가 다시 마운트돼도 마지막에 보던 팀 유지.
+  // SSR에는 localStorage가 없어(하이드레이션 불일치 방지) 마운트 후 복원한다.
+  const [activeTeam, setActiveTeamState] = useState<string>(teams[0]?.id ?? "");
+  useEffect(() => {
+    const saved = window.localStorage.getItem("setlist-team");
+    if (saved && teams.some((t) => t.id === saved)) setActiveTeamState(saved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const setActiveTeam = (id: string) => {
+    setActiveTeamState(id);
+    try {
+      window.localStorage.setItem("setlist-team", id);
+    } catch {}
+  };
 
   // 현재 보고 있는 팀을 관리할 수 있는가 (본인 소속 팀 또는 운영진)
   const canManageActive = canManageTeams || myTeamIds.includes(activeTeam);
