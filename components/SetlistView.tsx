@@ -148,14 +148,21 @@ export default function SetlistView({
     setShowTeamModal(false);
   };
 
+  // 정렬 — 기본 가나다순, 토글 시 좋아요 많은 순(동률은 가나다순)
+  const [sortByLikes, setSortByLikes] = useState(false);
+
   // 표시할 곡: 본인팀/운영진은 전체, 다른 팀은 선정곡만
   const teamSongs = useMemo(
     () =>
       songs
         .filter((s) => s.team_id === activeTeam)
         .filter((s) => canManageActive || s.status === "confirmed")
-        .sort((a, b) => a.title.localeCompare(b.title, "ko")),
-    [songs, activeTeam, canManageActive],
+        .sort((a, b) =>
+          sortByLikes
+            ? b.likes - a.likes || a.title.localeCompare(b.title, "ko")
+            : a.title.localeCompare(b.title, "ko"),
+        ),
+    [songs, activeTeam, canManageActive, sortByLikes],
   );
 
   const activeTeamName = teamList.find((t) => t.id === activeTeam)?.name ?? "";
@@ -349,9 +356,19 @@ export default function SetlistView({
         </>
       )}
 
-      <div className="section-title">
-        {activeTeamName} 합주곡 ({teamSongs.length})
-        {!canManageActive && <span className="dim" style={{ fontSize: 12, fontWeight: 400 }}> · 선정곡만 표시</span>}
+      <div className="section-title flex items-center" style={{ justifyContent: "space-between", gap: 8 }}>
+        <span>
+          {activeTeamName} 합주곡 ({teamSongs.length})
+          {!canManageActive && <span className="dim" style={{ fontSize: 12, fontWeight: 400 }}> · 선정곡만 표시</span>}
+        </span>
+        <button
+          className="btn ghost btn-sm"
+          style={{ flexShrink: 0 }}
+          onClick={() => setSortByLikes((v) => !v)}
+          aria-pressed={sortByLikes}
+        >
+          {sortByLikes ? "가나다순 보기" : "좋아요순 보기"}
+        </button>
       </div>
 
       {teamSongs.length === 0 ? (
