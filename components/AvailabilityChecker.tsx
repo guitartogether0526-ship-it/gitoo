@@ -152,28 +152,31 @@ export default function AvailabilityChecker({
             ) : teamGroups.every((g) => g.days.length === 0) ? (
               <p className="dim" style={{ fontSize: 13, marginBottom: 0 }}>표시된 안되는 날이 없습니다.</p>
             ) : (
-              teamGroups.map((g) => (
-                <div key={g.teamId} style={{ marginTop: 12 }}>
-                  {/* 두 팀 소속일 때만 팀명 구분 헤더 표시 (한 팀이면 팝업 제목과 중복) */}
-                  {teamGroups.length > 1 && (
-                    <div className="m-name" style={{ fontSize: 14, paddingBottom: 4, borderBottom: "1px solid var(--border)" }}>
-                      {g.teamName}
-                    </div>
-                  )}
-                  {g.days.length === 0 ? (
-                    <p className="dim" style={{ fontSize: 13, margin: "6px 0 0" }}>표시된 안되는 날이 없습니다.</p>
-                  ) : (
-                    g.days.map((d) => (
-                      <div key={d.date} style={{ padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-                        <div className="m-name" style={{ fontSize: 14 }}>{fmtListDate(d.date)}</div>
-                        <div className="dim" style={{ fontSize: 13, marginTop: 2 }}>
-                          {d.names.join(", ")} <span style={{ opacity: 0.6 }}>({d.names.length}명 불참)</span>
-                        </div>
+              // 두 팀 소속이면 좌우 2열로 나란히 표시
+              <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+                {teamGroups.map((g) => (
+                  <div key={g.teamId} style={{ flex: 1, minWidth: 0 }}>
+                    {/* 두 팀 소속일 때만 팀명 구분 헤더 표시 (한 팀이면 팝업 제목과 중복) */}
+                    {teamGroups.length > 1 && (
+                      <div className="m-name" style={{ fontSize: 14, paddingBottom: 4, borderBottom: "1px solid var(--border)" }}>
+                        {g.teamName}
                       </div>
-                    ))
-                  )}
-                </div>
-              ))
+                    )}
+                    {g.days.length === 0 ? (
+                      <p className="dim" style={{ fontSize: 13, margin: "6px 0 0" }}>표시된 안되는 날이 없습니다.</p>
+                    ) : (
+                      g.days.map((d) => (
+                        <div key={d.date} style={{ padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+                          <div className="m-name" style={{ fontSize: 14 }}>{fmtListDate(d.date)}</div>
+                          <div className="dim" style={{ fontSize: 13, marginTop: 2 }}>
+                            {d.names.join(", ")} <span style={{ opacity: 0.6 }}>({d.names.length}명 불참)</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
