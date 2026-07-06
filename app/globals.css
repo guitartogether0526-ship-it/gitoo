@@ -602,6 +602,23 @@ body {
   opacity: 0.35;
   cursor: default;
 }
+/* 일정 보기 캘린더 — 녹색 = 모두 가능, 빨강 = 안되는 사람 있음(클릭해 이름 보기) */
+.av-cell.free {
+  border-color: rgba(107, 191, 115, 0.45);
+  background: var(--ok-soft);
+  color: var(--ok);
+  cursor: default;
+}
+.av-cell.busy {
+  border-color: rgba(224, 106, 79, 0.55);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.av-cell.busy.open {
+  background: var(--danger);
+  color: #fff;
+  border-color: transparent;
+}
 .cal-cell.sun {
   color: var(--danger);
 }

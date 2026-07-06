@@ -32,13 +32,18 @@ export default function AvailabilityChecker({
   const [myUnavail, setMyUnavail] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
 
-  // 일정 보기 팝업 — 팀별 섹션으로 표시
+  // 일정 보기 팝업 — 팀 선택 탭 + 월 캘린더(녹색 = 모두 가능, 빨강 = 안되는 사람 있음)
   const [showList, setShowList] = useState(false);
   const [listBusy, setListBusy] = useState(false);
   const [teamGroups, setTeamGroups] = useState<
     { teamId: string; teamName: string; days: { date: string; names: string[] }[] }[]
   >([]);
   const [listError, setListError] = useState("");
+  const [activeListTeam, setActiveListTeam] = useState("");
+  const [listMonth, setListMonth] = useState<Date>(
+    () => new Date(today.getFullYear(), today.getMonth(), 1),
+  );
+  const [openDay, setOpenDay] = useState<string | null>(null); // 이름을 펼쳐 보는 날짜
 
   useEffect(() => {
     getMyUnavailable()
@@ -86,7 +91,27 @@ export default function AvailabilityChecker({
       return;
     }
     setTeamGroups(res.teams);
+    setActiveListTeam(res.teams[0]?.teamId ?? "");
+    setListMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+    setOpenDay(null);
   };
+
+  // 현재 선택한 팀의 날짜별 안되는 사람 목록
+  const namesByDate = useMemo(() => {
+    const g = teamGroups.find((t) => t.teamId === activeListTeam);
+    return new Map((g?.days ?? []).map((d) => [d.date, d.names]));
+  }, [teamGroups, activeListTeam]);
+
+  // 일정 보기 캘린더의 날짜 칸 (앞쪽 빈칸 + 그 달의 날짜들)
+  const listMonthCells = useMemo(() => {
+    const y = listMonth.getFullYear();
+    const m = listMonth.getMonth();
+    const blanks = new Date(y, m, 1).getDay();
+    const count = new Date(y, m + 1, 0).getDate();
+    return { blanks, dates: Array.from({ length: count }, (_, i) => new Date(y, m, i + 1)) };
+  }, [listMonth]);
+
+  const openNames = openDay ? (namesByDate.get(openDay) ?? []) : [];
 
   const fmtListDate = (ymd: string) => {
     const [y, m, dd] = ymd.split("-").map(Number);
@@ -149,34 +174,91 @@ export default function AvailabilityChecker({
               <p className="dim" style={{ fontSize: 13 }}>불러오는 중…</p>
             ) : listError ? (
               <p className="form-error" style={{ marginBottom: 0 }}>{listError}</p>
-            ) : teamGroups.every((g) => g.days.length === 0) ? (
-              <p className="dim" style={{ fontSize: 13, marginBottom: 0 }}>표시된 안되는 날이 없습니다.</p>
             ) : (
-              // 두 팀 소속이면 좌우 2열로 나란히 표시
-              <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-                {teamGroups.map((g) => (
-                  <div key={g.teamId} style={{ flex: 1, minWidth: 0 }}>
-                    {/* 두 팀 소속일 때만 팀명 구분 헤더 표시 (한 팀이면 팝업 제목과 중복) */}
-                    {teamGroups.length > 1 && (
-                      <div className="m-name" style={{ fontSize: 14, paddingBottom: 4, borderBottom: "1px solid var(--border)" }}>
-                        {g.teamName}
-                      </div>
-                    )}
-                    {g.days.length === 0 ? (
-                      <p className="dim" style={{ fontSize: 13, margin: "6px 0 0" }}>표시된 안되는 날이 없습니다.</p>
-                    ) : (
-                      g.days.map((d) => (
-                        <div key={d.date} style={{ padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-                          <div className="m-name" style={{ fontSize: 14 }}>{fmtListDate(d.date)}</div>
-                          <div className="dim" style={{ fontSize: 13, marginTop: 2 }}>
-                            {d.names.join(", ")} <span style={{ opacity: 0.6 }}>({d.names.length}명 불참)</span>
-                          </div>
-                        </div>
-                      ))
-                    )}
+              <>
+                {/* 두 팀 소속이면 팀 선택 탭 */}
+                {teamGroups.length > 1 && (
+                  <div className="tab-row" style={{ marginTop: 10 }}>
+                    {teamGroups.map((g) => (
+                      <button
+                        key={g.teamId}
+                        className={`tab${activeListTeam === g.teamId ? " active" : ""}`}
+                        onClick={() => {
+                          setActiveListTeam(g.teamId);
+                          setOpenDay(null);
+                        }}
+                      >
+                        {g.teamName} 보기
+                      </button>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+
+                {/* 월 캘린더 */}
+                <div className="cal-head" style={{ marginTop: 10 }}>
+                  <button
+                    className="cal-nav"
+                    onClick={() => {
+                      setListMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+                      setOpenDay(null);
+                    }}
+                    aria-label="이전 달"
+                  >
+                    ‹
+                  </button>
+                  <span className="cal-title">{listMonth.getFullYear()}년 {listMonth.getMonth() + 1}월</span>
+                  <button
+                    className="cal-nav"
+                    onClick={() => {
+                      setListMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+                      setOpenDay(null);
+                    }}
+                    aria-label="다음 달"
+                  >
+                    ›
+                  </button>
+                </div>
+
+                <div className="av-grid" style={{ marginTop: 8 }}>
+                  {DOW.map((d) => (
+                    <div key={d} className="av-dow">{d}</div>
+                  ))}
+                  {Array.from({ length: listMonthCells.blanks }, (_, i) => (
+                    <div key={`blank-${i}`} />
+                  ))}
+                  {listMonthCells.dates.map((d) => {
+                    const ymd = toYmd(d);
+                    const past = ymd < todayYmd;
+                    const busy = (namesByDate.get(ymd) ?? []).length > 0;
+                    const cls = past ? " past" : busy ? " busy" : " free";
+                    return (
+                      <button
+                        key={ymd}
+                        className={`av-cell${cls}${openDay === ymd ? " open" : ""}`}
+                        disabled={past || !busy}
+                        onClick={() => setOpenDay((prev) => (prev === ymd ? null : ymd))}
+                        title={ymd === todayYmd ? "오늘" : ""}
+                      >
+                        {d.getDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <p className="dim" style={{ fontSize: 11, margin: "10px 0 0" }}>
+                  녹색 = 모두 가능 · 빨강 = 안되는 사람 있음. 빨간 날짜를 누르면 이름이 표시됩니다.
+                </p>
+
+                {/* 선택한 날짜의 안되는 사람 — 같은 날짜를 다시 누르면 닫힘 */}
+                {openDay && openNames.length > 0 && (
+                  <div style={{ marginTop: 10, padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 10 }}>
+                    <div className="m-name" style={{ fontSize: 14 }}>{fmtListDate(openDay)}</div>
+                    <div className="dim" style={{ fontSize: 13, marginTop: 2 }}>
+                      {openNames.join(", ")} <span style={{ opacity: 0.6 }}>({openNames.length}명 불참)</span>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
