@@ -32,11 +32,13 @@ create table if not exists reservations (
   end_date date,                                -- MT(1박2일 등) 종료 날짜. null=당일 예약
   time_label text not null,
   reserved_by text not null,
-  purpose text not null default '합주'
+  purpose text not null default '합주',
+  created_by_id text                            -- 등록자 회원 id(수정·취소 권한 판별, null=기존 예약)
 );
 
--- 기존 reservations 테이블 업그레이드(재실행 안전) — MT 여러 날 예약용 종료 날짜
+-- 기존 reservations 테이블 업그레이드(재실행 안전) — MT 여러 날 예약용 종료 날짜 / 등록자 id
 alter table reservations add column if not exists end_date date;
+alter table reservations add column if not exists created_by_id text;
 
 create table if not exists teams (
   id text primary key default gen_random_uuid()::text,

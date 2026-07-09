@@ -178,16 +178,24 @@ export default function ReservationCalendar({
       time_label: isMulti ? mtLabel : timeLabel,
       reserved_by: reservedBy.trim(),
       purpose,
+      created_by_id: user?.id ?? null, // 등록자 본인 수정·취소 권한 판별용
     };
     const sb = getSupabase();
     if (sb) {
-      // end_date 컬럼이 아직 없을 수 있어 실패 시 컬럼 없이 재시도
+      // 새 컬럼(created_by_id/end_date)이 아직 없을 수 있어 실패 시 컬럼을 빼며 재시도
       let res = await sb.from("reservations").insert(payload).select().single();
-      let degraded = false; // MT 기간(end_date)을 저장하지 못하고 당일로 저장됨
+      let noCreator = false; // 등록자 id를 저장하지 못함(본인 수정 권한 미반영)
+      let noEndDate = false; // MT 기간(end_date)을 저장하지 못하고 당일로 저장됨
       if (res.error) {
-        const { end_date: _ed, ...rest } = payload;
-        res = await sb.from("reservations").insert(rest).select().single();
-        degraded = !res.error && isMulti;
+        const { created_by_id: _cb, ...withoutCreator } = payload;
+        res = await sb.from("reservations").insert(withoutCreator).select().single();
+        noCreator = !res.error;
+        if (res.error) {
+          const { end_date: _ed, ...rest } = withoutCreator;
+          res = await sb.from("reservations").insert(rest).select().single();
+          noCreator = !res.error;
+          noEndDate = !res.error && isMulti;
+        }
       }
       if (res.error || !res.data) {
         // 저장 실패 — 조용히 넘어가지 않고 알리고 폼 값 유지
@@ -204,9 +212,13 @@ export default function ReservationCalendar({
           payload.time_label,
         );
       }
+      const missing = [
+        noEndDate ? "MT 기간(종료 날짜)" : "",
+        noCreator ? "등록자 정보(본인 수정 권한)" : "",
+      ].filter(Boolean);
       setNotice(
-        degraded
-          ? "예약은 저장됐지만 MT 기간(종료 날짜)이 반영되지 않았습니다. 운영진에게 스키마 반영(supabase/schema.sql 재실행)을 요청하세요."
+        missing.length
+          ? `예약은 저장됐지만 ${missing.join(" · ")}가 반영되지 않았습니다. 운영진에게 스키마 반영(supabase/schema.sql 재실행)을 요청하세요.`
           : "",
       );
       router.refresh();
@@ -342,7 +354,12 @@ export default function ReservationCalendar({
           </p>
         ) : (
           selectedList.map((r) => {
-            const canCancel = canManage || r.reserved_by === myName;
+            // 수정·취소 = 운영진 또는 등록자 본인.
+            // created_by_id 없는 기존 예약은 예약자명이 본인 이름일 때만 (팀명 예약은 운영진만)
+            const canCancel =
+              canManage ||
+              (!!user?.id && r.created_by_id === user.id) ||
+              r.reserved_by === myName;
             const editing = editId === r.id;
             const isSpan = !!r.end_date && r.end_date !== r.date;
             return (

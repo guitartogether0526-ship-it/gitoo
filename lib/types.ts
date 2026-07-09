@@ -32,6 +32,7 @@ export interface Reservation {
   time_label: string; // 예: "19:00 - 21:00" (MT는 "1박2일" 등 기간 라벨)
   reserved_by: string;
   purpose: string; // 합주/개인연습/레슨/정기공연/MT/운영진회의
+  created_by_id?: string | null; // 등록자 회원 id (수정·취소 권한 판별용, 기존 예약은 null)
 }
 
 export interface SheetMusic {
