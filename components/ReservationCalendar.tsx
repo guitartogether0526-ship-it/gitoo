@@ -156,13 +156,13 @@ export default function ReservationCalendar({
 
   const addReservation = async () => {
     setTimeError("");
+    const range: [number, number] = [startMin, endMin];
     if (!isMulti) {
       // 당일 예약: 시간 유효성 + 겹침 검사 (MT는 기간 예약이라 시간 검사 없음)
       if (endMin <= startMin) {
         setTimeError("종료 시간이 시작 시간보다 늦어야 합니다.");
         return;
       }
-      const range: [number, number] = [startMin, endMin];
       const conflict = selectedDayRes.some((r) => overlaps(range, parseRange(r.time_label)));
       if (conflict) {
         setTimeError("이미 예약된 시간과 겹칩니다. 다른 시간을 선택해 주세요.");
@@ -182,6 +182,21 @@ export default function ReservationCalendar({
     };
     const sb = getSupabase();
     if (sb) {
+      // ⚠️ 저장 직전 서버 최신 목록으로 겹침 재검사 — 위 검사는 화면(로컬) 데이터 기준이라,
+      // 화면이 오래된 사이 다른 사람이 등록한 예약을 놓쳐 같은 시간에 중복 예약이 생겼었다.
+      // 최신 목록을 받아 검사하고, 화면 상태도 그 데이터로 맞춰 상대 예약이 바로 보이게 한다.
+      const { data: latest } = await sb.from("reservations").select();
+      if (latest) {
+        const rows = latest as Reservation[];
+        setReservations(rows);
+        if (
+          !isMulti &&
+          rows.some((r) => spans(r, selected) && overlaps(range, parseRange(r.time_label)))
+        ) {
+          setTimeError("그 사이 등록된 예약과 시간이 겹칩니다. 예약 현황을 확인해 주세요.");
+          return;
+        }
+      }
       // 새 컬럼(created_by_id/end_date)이 아직 없을 수 있어 실패 시 컬럼을 빼며 재시도
       let res = await sb.from("reservations").insert(payload).select().single();
       let noCreator = false; // 등록자 id를 저장하지 못함(본인 수정 권한 미반영)
@@ -242,6 +257,7 @@ export default function ReservationCalendar({
     }
   };
 
+  // 겹침이면 오류 문구를 돌려주고(편집 폼에 표시, 폼 유지) 저장하지 않는다. 성공 시 null.
   const update = async (
     id: string,
     payload: {
@@ -250,11 +266,29 @@ export default function ReservationCalendar({
       purpose: string;
       end_date: string | null;
     },
-  ) => {
+  ): Promise<string | null> => {
+    const sb = getSupabase();
+    // 등록과 동일하게 저장 직전 서버 최신 목록으로 겹침 재검사 (기간 예약은 시간 검사 없음)
+    if (sb && payload.end_date == null) {
+      const target = reservations.find((r) => r.id === id);
+      const range = parseRange(payload.time_label);
+      const { data: latest } = await sb.from("reservations").select();
+      if (latest && target && range) {
+        const rows = latest as Reservation[];
+        setReservations(rows);
+        if (
+          rows.some(
+            (r) =>
+              r.id !== id && spans(r, target.date) && overlaps(range, parseRange(r.time_label)),
+          )
+        ) {
+          return "그 사이 등록된 예약과 시간이 겹칩니다. 예약 현황을 확인해 주세요.";
+        }
+      }
+    }
     setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, ...payload } : r)));
     setEditId(null);
     setNotice("");
-    const sb = getSupabase();
     if (sb) {
       // end_date 컬럼이 아직 없을 수 있어 실패 시 컬럼 없이 재시도
       let { error } = await sb.from("reservations").update(payload).eq("id", id);
@@ -272,6 +306,7 @@ export default function ReservationCalendar({
       }
       router.refresh();
     }
+    return null;
   };
 
   const cells: (number | null)[] = [
@@ -532,7 +567,7 @@ function ReservationEditor({
     reserved_by: string;
     purpose: string;
     end_date: string | null;
-  }) => void;
+  }) => Promise<string | null>; // 겹침 등 오류면 문구 반환(폼에 표시), 성공이면 null
   onCancel: () => void;
 }) {
   const init = parseRange(res.time_label) ?? [19 * 60, 21 * 60];
@@ -558,7 +593,7 @@ function ReservationEditor({
     new Set([res.purpose, "합주", "개인연습", ...(canManage ? OP_PURPOSES : [])]),
   );
 
-  const save = () => {
+  const save = async () => {
     setErr("");
     if (!isMulti) {
       const startMin = sh * 60 + sm;
@@ -575,12 +610,13 @@ function ReservationEditor({
     }
     const reservedBy = by.trim();
     if (!reservedBy) return;
-    onSave({
+    const msg = await onSave({
       time_label: isMulti ? mtLabel : `${pad(sh)}:${pad(sm)} - ${pad(eh)}:${pad(em)}`,
       reserved_by: reservedBy,
       purpose,
       end_date: isMulti ? mtEnd : null,
     });
+    if (msg) setErr(msg); // 서버 최신 데이터와 겹침 — 폼 유지한 채 오류 표시
   };
 
   return (
