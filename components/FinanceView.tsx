@@ -65,7 +65,7 @@ function SheetLink({ url, style }: { url: string; style?: React.CSSProperties })
 /**
  * 회비 페이지 본문 — 구글시트 장부 표시 전용.
  * 위에서부터: 요약 카드(잔액·이월·수입·지출) → 월 선택 → 탭(납부 현황 | 지출 내역).
- * 월 전환은 ?m=<gid> 라우팅이라 60초 자동 갱신(router.refresh) 후에도 유지된다.
+ * 월 전환은 ?m=<gid> 라우팅이라 갱신(router.refresh) 후에도 유지된다.
  * 납부 현황 탭은 운영진(showDues)만 — 일반 회원은 지출 내역만 본다.
  */
 export default function FinanceView({
