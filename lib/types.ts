@@ -35,12 +35,6 @@ export interface Reservation {
   created_by_id?: string | null; // 등록자 회원 id (수정·취소 권한 판별용, 기존 예약은 null)
 }
 
-export interface SheetMusic {
-  part: string; // 담당 파트
-  file_label: string;
-  file_url: string;
-}
-
 /** 합주 팀(밴드) — 셋리스트가 팀별 탭으로 분리됨 */
 export interface Team {
   id: string;
@@ -54,8 +48,6 @@ export interface Song {
   title: string;
   artist: string;
   youtube_url: string | null; // 유튜브 링크
-  parts: string[]; // 담당 파트 목록 (레거시)
-  sheets: SheetMusic[]; // 악보 (레거시)
   likes: number; // 좋아요 수 — song_votes(1인 1투표) 집계로 서버에서 계산 (songs 테이블 컬럼은 레거시)
   voted: boolean; // 보는 사람이 투표했는지 — 세션 기준 서버 계산 (songs 테이블 컬럼은 레거시)
   status: "candidate" | "confirmed"; // 후보 / 선정(확정)

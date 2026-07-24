@@ -123,6 +123,7 @@ export async function sendToTeam(
   payload: PushPayload,
   excludeMemberId?: string,
 ): Promise<{ sent: number }> {
+  if (!ensureVapid()) return { sent: 0 };
   const sb = getSupabaseAdmin();
   if (!sb) return { sent: 0 };
 

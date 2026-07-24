@@ -72,13 +72,15 @@ export async function getTeamUnavailable(): Promise<
   // 오늘 이후만 (한국시간 기준) — 두 팀이면 인원이 겹칠 수 있어 한 번에 조회 후 팀별로 나눈다
   const todayStr = kstYmd();
   const ids = teamMembers.map((m) => m.id);
-  const { data } = ids.length
+  const { data, error } = ids.length
     ? await sb
         .from("unavailable_dates")
         .select("member_id,date")
         .in("member_id", ids)
         .gte("date", todayStr)
-    : { data: [] };
+    : { data: [], error: null };
+  // 오류를 삼키면 전부 "모두 가능"(녹색)으로 잘못 표시된다
+  if (error) return { error: "일정을 불러오지 못했습니다: " + error.message };
 
   const teams = myTeams.map((teamId) => {
     const inTeam = new Set(

@@ -13,15 +13,10 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function writeCookie(user: SessionUser | null) {
+// 세션 쿠키 설정은 서버 액션(login·updateMyProfile)이 서명해서 한다 — 클라이언트는 삭제만
+function clearCookie() {
   if (typeof document === "undefined") return;
-  if (user) {
-    const value = encodeURIComponent(JSON.stringify(user));
-    // 30일 유지
-    document.cookie = `${SESSION_COOKIE}=${value}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`;
-  } else {
-    document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0; samesite=lax`;
-  }
+  document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0; samesite=lax`;
 }
 
 export function AuthProvider({
@@ -36,7 +31,6 @@ export function AuthProvider({
 
   const login = useCallback(
     (u: SessionUser) => {
-      writeCookie(u);
       setUser(u);
       // 서버 컴포넌트(인사말·장부 등)를 새 세션으로 다시 렌더
       router.refresh();
@@ -45,7 +39,7 @@ export function AuthProvider({
   );
 
   const logout = useCallback(() => {
-    writeCookie(null);
+    clearCookie();
     setUser(null);
     router.refresh();
   }, [router]);

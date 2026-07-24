@@ -1,11 +1,13 @@
 import { getMembers, getTeams } from "@/lib/db";
-import { PARTS } from "@/lib/parts";
+import { getSession } from "@/lib/session";
+import { can } from "@/lib/roles";
+import { PARTS, partRank } from "@/lib/parts";
 import MemberList from "@/components/MemberList";
 
 export const dynamic = "force-dynamic";
 
 export default async function MembersPage() {
-  const [members, teams] = await Promise.all([getMembers(), getTeams()]);
+  const [session, members, teams] = await Promise.all([getSession(), getMembers(), getTeams()]);
   const approved = members.filter((m) => m.approved);
   const pending = members.length - approved.length;
   const staff = approved.filter((m) => m.role !== "member").length;
@@ -18,11 +20,7 @@ export default async function MembersPage() {
     }
   }
   const partSummary = [...partCounts.entries()]
-    .sort(([a], [b]) => {
-      const ia = PARTS.indexOf(a);
-      const ib = PARTS.indexOf(b);
-      return (ia === -1 ? PARTS.length : ia) - (ib === -1 ? PARTS.length : ib);
-    })
+    .sort(([a], [b]) => partRank(a) - partRank(b))
     .map(([p, n]) => `${p} ${n}`)
     .join(" · ");
 
@@ -38,7 +36,9 @@ export default async function MembersPage() {
           )}
         </p>
       </div>
-      <MemberList initial={members} teams={teams} />
+      {/* 명단(이름·연락처 포함)은 운영진에게만 전달 — 클라이언트 렌더 가드만으로는
+          RSC 페이로드(페이지 소스)에 전체 개인정보가 실려 나간다 */}
+      <MemberList initial={can.manageMembers(session?.role) ? members : []} teams={teams} />
     </>
   );
 }

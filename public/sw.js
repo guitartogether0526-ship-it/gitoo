@@ -72,6 +72,24 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+/* 브라우저가 구독을 자동 교체하면 새 구독을 서버에 다시 등록 — 회원 연결 유지.
+   이 처리가 없으면 옛 구독이 410으로 정리된 뒤 마이페이지 재방문 전까지 알림이 끊긴다. */
+self.addEventListener("pushsubscriptionchange", (event) => {
+  const oldSub = event.oldSubscription;
+  event.waitUntil(
+    self.registration.pushManager
+      .subscribe(oldSub ? oldSub.options : { userVisibleOnly: true })
+      .then((sub) =>
+        fetch("/api/push/resubscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ old: oldSub ? oldSub.endpoint : null, sub }),
+        })
+      )
+      .catch(() => {})
+  );
+});
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || "/";

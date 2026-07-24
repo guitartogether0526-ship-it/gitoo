@@ -64,17 +64,18 @@ export default function AvailabilityChecker({
     if (ymd < todayYmd) return; // 지난 날짜 불가
     setError("");
     const has = myUnavail.has(ymd);
-    const next = new Set(myUnavail);
-    if (has) next.delete(ymd);
-    else next.add(ymd);
-    setMyUnavail(next);
+    // 함수형 갱신 — 스냅샷 기반이면 저장 대기 중 누른 다른 날짜가 지워진다
+    const apply = (on: boolean) =>
+      setMyUnavail((prev) => {
+        const next = new Set(prev);
+        if (on) next.add(ymd);
+        else next.delete(ymd);
+        return next;
+      });
+    apply(!has);
     const res = await setUnavailable(ymd, !has);
     if ("error" in res) {
-      // 롤백
-      const rb = new Set(next);
-      if (has) rb.add(ymd);
-      else rb.delete(ymd);
-      setMyUnavail(rb);
+      apply(has); // 롤백
       setError(res.error);
     }
   };

@@ -46,11 +46,12 @@ export const POSTS: Post[] = [
 ];
 
 // 연습실 1개 — 캘린더에 날짜별로 등록된 예약들 (2026-06 기준)
+// ⚠️ purpose 는 실제 로직과 같은 문자열("합주"/"개인연습")을 쓴다 — 홈 필터·푸시 분기가 이 값으로 매칭
 export const RESERVATIONS: Reservation[] = [
-  { id: "rv1", date: "2026-06-28", time_label: "15:00 - 18:00", reserved_by: "록 밴드 A", purpose: "정기 합주" },
-  { id: "rv2", date: "2026-06-30", time_label: "19:00 - 21:00", reserved_by: "나", purpose: "개인 연습" },
+  { id: "rv1", date: "2026-06-28", time_label: "15:00 - 18:00", reserved_by: "록 밴드 A", purpose: "합주" },
+  { id: "rv2", date: "2026-06-30", time_label: "19:00 - 21:00", reserved_by: "나", purpose: "개인연습" },
   { id: "rv3", date: "2026-07-02", time_label: "20:00 - 22:00", reserved_by: "어쿠스틱 팀", purpose: "합주" },
-  { id: "rv4", date: "2026-07-05", time_label: "14:00 - 16:00", reserved_by: "이도윤", purpose: "개인 연습" },
+  { id: "rv4", date: "2026-07-05", time_label: "14:00 - 16:00", reserved_by: "이도윤", purpose: "개인연습" },
   { id: "rv5", date: "2026-07-05", time_label: "18:00 - 20:00", reserved_by: "재즈 합주반", purpose: "합주" },
 ];
 
@@ -68,12 +69,6 @@ export const SONGS: Song[] = [
     title: "Bohemian Rhapsody",
     artist: "Queen",
     youtube_url: "https://www.youtube.com/watch?v=fJ9rUzIMcZQ",
-    parts: ["보컬", "기타1", "기타2", "베이스", "드럼", "키보드"],
-    sheets: [
-      { part: "기타1", file_label: "Guitar 1 TAB", file_url: "#guitar1-bohemian" },
-      { part: "베이스", file_label: "Bass Score", file_url: "#bass-bohemian" },
-      { part: "키보드", file_label: "Piano Sheet", file_url: "#piano-bohemian" },
-    ],
     likes: 18,
     voted: false,
     status: "confirmed",
@@ -84,11 +79,6 @@ export const SONGS: Song[] = [
     title: "Don't Look Back in Anger",
     artist: "Oasis",
     youtube_url: "https://www.youtube.com/watch?v=r8OipmKFDeM",
-    parts: ["보컬", "기타1", "기타2", "베이스", "드럼"],
-    sheets: [
-      { part: "기타1", file_label: "Guitar 1 TAB", file_url: "#guitar1-oasis" },
-      { part: "기타2", file_label: "Guitar 2 TAB", file_url: "#guitar2-oasis" },
-    ],
     likes: 24,
     voted: true,
     status: "candidate",
@@ -99,11 +89,6 @@ export const SONGS: Song[] = [
     title: "밤편지",
     artist: "아이유",
     youtube_url: "https://www.youtube.com/watch?v=BzYnNdJhZQw",
-    parts: ["보컬", "기타", "베이스", "드럼"],
-    sheets: [
-      { part: "기타", file_label: "Guitar Chord", file_url: "#guitar-iu" },
-      { part: "보컬", file_label: "Vocal Lead Sheet", file_url: "#vocal-iu" },
-    ],
     likes: 31,
     voted: false,
     status: "confirmed",
@@ -114,8 +99,6 @@ export const SONGS: Song[] = [
     title: "사랑했지만",
     artist: "김광석",
     youtube_url: "https://www.youtube.com/watch?v=Sx4Y6Bd5Ut0",
-    parts: ["보컬", "기타", "하모니카"],
-    sheets: [{ part: "기타", file_label: "Guitar Chord", file_url: "#guitar-kgs" }],
     likes: 12,
     voted: false,
     status: "candidate",
@@ -126,8 +109,6 @@ export const SONGS: Song[] = [
     title: "Fly Me to the Moon",
     artist: "Frank Sinatra",
     youtube_url: "https://www.youtube.com/watch?v=ZEcqHA7dbwM",
-    parts: ["보컬", "기타", "베이스", "드럼", "키보드"],
-    sheets: [{ part: "키보드", file_label: "Lead Sheet", file_url: "#piano-fly" }],
     likes: 9,
     voted: false,
     status: "candidate",

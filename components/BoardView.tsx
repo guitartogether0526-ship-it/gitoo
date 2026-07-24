@@ -9,10 +9,12 @@ import { can } from "@/lib/roles";
 import { sendNoticePush } from "@/lib/push-actions";
 import { useRefreshHold } from "@/lib/refresh-hold";
 import { useSyncedState } from "@/lib/use-synced-state";
+import { kstParts } from "@/lib/date";
 
+// SSR(UTC 서버)에서도 KST 날짜로 표시 — 실행 타임존을 타면 자정 직후 어제로 나온다
 function formatDate(iso: string) {
-  const d = new Date(iso);
-  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  const { m, d } = kstParts(new Date(iso));
+  return `${m}월 ${d}일`;
 }
 
 export default function BoardView({
@@ -24,10 +26,9 @@ export default function BoardView({
 }) {
   const { user } = useAuth();
   const router = useRouter();
+  // 운영진(회장·총무·STAFF, admin) — 게시판 추가·게시글 삭제 권한
   const canManageBoards = can.manageBoards(user?.role);
   const canWriteNotice = can.writeNotice(user?.role);
-  // 운영진(회장·총무·STAFF, admin) — 게시글 삭제 권한
-  const isOperator = can.manageBoards(user?.role);
 
   // 서버 최신 데이터를 화면에 반영하되, 내용이 같으면 리렌더 없음 (LiveRefresh/새로고침 시)
   const [boards, setBoards] = useSyncedState<Board[]>(initialBoards);
@@ -80,7 +81,7 @@ export default function BoardView({
   const deletePost = async (p: Post) => {
     const authorMatch = !!user && !!p.author_id && user.id === p.author_id;
     // 일반 게시판: 운영진만 / 건의사항: 운영진 또는 작성자
-    if (!(isOperator || (isAnon && authorMatch))) return;
+    if (!(canManageBoards || (isAnon && authorMatch))) return;
     if (!window.confirm("이 게시글을 삭제할까요? 되돌릴 수 없습니다.")) return;
     const sb = getSupabase();
     if (sb) await sb.from("posts").delete().eq("id", p.id);
@@ -148,10 +149,13 @@ export default function BoardView({
     const sb = getSupabase();
     if (sb) {
       const { data, error } = await sb.from("posts").insert(payload).select().single();
-      if (!error && data) {
-        setPosts((prev) => [...prev, data as Post]);
-        router.refresh();
+      if (error || !data) {
+        // 저장 실패 — 입력값을 지우거나 푸시를 보내지 않고 알린다
+        alert("글 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        return;
       }
+      setPosts((prev) => [...prev, data as Post]);
+      router.refresh();
     } else {
       setPosts((prev) => [
         ...prev,
@@ -247,8 +251,8 @@ export default function BoardView({
           const authorMatch = !!user && !!p.author_id && user.id === p.author_id;
           // 건의사항(익명): 수정=작성자만, 삭제=작성자+운영진
           // 일반 게시판: 수정=작성자+운영진, 삭제=운영진만
-          const canEditThis = isAnon ? authorMatch : isOperator || authorMatch;
-          const canDeleteThis = isAnon ? isOperator || authorMatch : isOperator;
+          const canEditThis = isAnon ? authorMatch : canManageBoards || authorMatch;
+          const canDeleteThis = isAnon ? canManageBoards || authorMatch : canManageBoards;
           const displayAuthor = isAnon ? "익명" : p.author;
           const isEditing = editingId === p.id;
 

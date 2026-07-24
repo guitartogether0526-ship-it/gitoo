@@ -84,7 +84,7 @@ export default function FinanceView({
   sheetUrl: string;
 }) {
   const router = useRouter();
-  // 60초 자동 갱신 시 내용이 같으면 리렌더 없음 (LiveRefresh — 깜빡임 방지)
+  // 새로고침으로 온 서버 데이터가 내용이 같으면 리렌더 없음 (깜빡임 방지)
   const [tabs] = useSyncedState(initialTabs);
   const [synced] = useSyncedState({ gid: selectedGid, month: initialMonth });
   // 월 전환 직후 synced가 한 프레임 늦으므로, gid가 다르면 새 props를 그대로 사용

@@ -115,7 +115,8 @@ export async function findByEmail(email: string): Promise<Member[]> {
   const e = email.trim().toLowerCase();
   const sb = getSupabaseAdmin();
   if (sb) {
-    const { data } = await sb.from("members").select("*").ilike("email", e);
+    // eq 사용 — ilike는 입력의 %·_가 와일드카드로 동작해 "%@gmail.com"으로 전 회원이 걸린다
+    const { data } = await sb.from("members").select("*").eq("email", e);
     return (data as Member[] | null) ?? [];
   }
   return mem.rows.filter((r) => r.email.trim().toLowerCase() === e).map(strip);

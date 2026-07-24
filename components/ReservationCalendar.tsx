@@ -65,6 +65,9 @@ const mdLabel = (s: string) => {
   const [, m, d] = s.split("-");
   return `${Number(m)}월 ${Number(d)}일`;
 };
+// MT 종료 날짜(최소 1박) — 유효하지 않으면 시작 다음 날로 보정
+const mtEndOf = (start: string, end: string, multi: boolean) =>
+  multi ? (end && end > start ? end : addDaysStr(start, 1)) : "";
 
 // 예약이 특정 날짜를 포함하는지 (MT 등 기간 예약은 시작~종료 사이 모든 날 포함)
 const spans = (r: Reservation, dateStr: string) =>
@@ -95,8 +98,6 @@ export default function ReservationCalendar({
   const router = useRouter();
   const canManage = can.manageReservations(user?.role);
   const myName = user?.name ?? "나";
-  // 예약자 선택지: 본인 이름 + 소속 팀명(최대 2개). 팀 없으면 개인 이름만.
-  const reserverOptions = [myName, ...myTeamNames];
   // 팀 배정 시 기본 예약자 = 첫 팀 (개인연습 체크 시에만 개인 이름)
   const defaultReserver = myTeamNames[0] ?? myName;
 
@@ -128,8 +129,7 @@ export default function ReservationCalendar({
   const isPersonal = purpose === "개인연습";
   // MT 등 기간(여러 날) 예약 여부
   const isMulti = purpose === MULTI_DAY_PURPOSE;
-  // MT 종료 날짜(최소 1박) — 유효하지 않으면 시작 다음 날로 보정
-  const mtEnd = isMulti ? (endDate && endDate > selected ? endDate : addDaysStr(selected, 1)) : "";
+  const mtEnd = mtEndOf(selected, endDate, isMulti);
   const mtLabel = mtEnd ? nightsLabelOf(selected, mtEnd) : "";
 
   const firstDay = new Date(view.y, view.m, 1).getDay();
@@ -248,11 +248,18 @@ export default function ReservationCalendar({
   };
 
   const remove = async (id: string) => {
+    const before = reservations;
     setReservations((prev) => prev.filter((r) => r.id !== id));
     if (editId === id) setEditId(null);
     const sb = getSupabase();
     if (sb) {
-      await sb.from("reservations").delete().eq("id", id);
+      const { error } = await sb.from("reservations").delete().eq("id", id);
+      if (error) {
+        // 삭제 실패 — 화면에서만 사라진 것처럼 보이지 않게 복원하고 알림
+        setReservations(before);
+        setNotice("예약 취소에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        return;
+      }
       router.refresh();
     }
   };
@@ -314,8 +321,7 @@ export default function ReservationCalendar({
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
 
-  const [, mo, dd] = selected.split("-");
-  const selectedLabel = `${Number(mo)}월 ${Number(dd)}일`;
+  const selectedLabel = mdLabel(selected);
 
   return (
     <>
@@ -394,7 +400,7 @@ export default function ReservationCalendar({
             const canCancel =
               canManage ||
               (!!user?.id && r.created_by_id === user.id) ||
-              r.reserved_by === myName;
+              (!r.created_by_id && r.reserved_by === myName);
             const editing = editId === r.id;
             const isSpan = !!r.end_date && r.end_date !== r.date;
             return (
@@ -468,43 +474,15 @@ export default function ReservationCalendar({
             </div>
           ) : (
             <>
-              <div className="field">
-                <label>시작 시간</label>
-                <div className="flex items-center gap-8">
-                  <select className="select" value={sh} onChange={(e) => setSh(Number(e.target.value))}>
-                    {HOURS.map((h) => (
-                      <option key={h} value={h}>{pad(h)}시</option>
-                    ))}
-                  </select>
-                  <select className="select" value={sm} onChange={(e) => setSm(Number(e.target.value))}>
-                    {MINUTES.map((m) => (
-                      <option key={m} value={m}>{pad(m)}분</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="field">
-                <label>종료 시간</label>
-                <div className="flex items-center gap-8">
-                  <select className="select" value={eh} onChange={(e) => setEh(Number(e.target.value))}>
-                    {HOURS.map((h) => (
-                      <option key={h} value={h}>{pad(h)}시</option>
-                    ))}
-                  </select>
-                  <select className="select" value={em} onChange={(e) => setEm(Number(e.target.value))}>
-                    {MINUTES.map((m) => (
-                      <option key={m} value={m}>{pad(m)}분</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              <TimeField label="시작 시간" h={sh} m={sm} setH={setSh} setM={setSm} />
+              <TimeField label="종료 시간" h={eh} m={em} setH={setEh} setM={setEm} />
             </>
           )}
           {timeError && <p className="form-error">{timeError}</p>}
           <div className="field">
             <label>예약자</label>
             <div className="flex items-center gap-8">
-              {!isPersonal && reserverOptions.length > 1 ? (
+              {!isPersonal && myTeamNames.length > 0 ? (
                 <select className="select grow" value={by} onChange={(e) => setBy(e.target.value)}>
                   <option value={myName}>{myName} (개인)</option>
                   {myTeamNames.map((tn) => (
@@ -547,6 +525,39 @@ export default function ReservationCalendar({
   );
 }
 
+// 시작/종료 시간(시·분) 선택 쌍 — 등록 폼·편집 폼 공용
+function TimeField({
+  label,
+  h,
+  m,
+  setH,
+  setM,
+}: {
+  label: string;
+  h: number;
+  m: number;
+  setH: (n: number) => void;
+  setM: (n: number) => void;
+}) {
+  return (
+    <div className="field">
+      <label>{label}</label>
+      <div className="flex items-center gap-8">
+        <select className="select" value={h} onChange={(e) => setH(Number(e.target.value))}>
+          {HOURS.map((hh) => (
+            <option key={hh} value={hh}>{pad(hh)}시</option>
+          ))}
+        </select>
+        <select className="select" value={m} onChange={(e) => setM(Number(e.target.value))}>
+          {MINUTES.map((mm) => (
+            <option key={mm} value={mm}>{pad(mm)}분</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
 // 기존 예약의 시간·예약자·용도(및 MT 기간)를 인라인 편집하는 폼
 function ReservationEditor({
   res,
@@ -581,9 +592,7 @@ function ReservationEditor({
   const [err, setErr] = useState("");
 
   const isMulti = purpose === MULTI_DAY_PURPOSE;
-  const mtEnd = isMulti
-    ? (endDate && endDate > res.date ? endDate : addDaysStr(res.date, 1))
-    : "";
+  const mtEnd = mtEndOf(res.date, endDate, isMulti);
   const mtLabel = mtEnd ? nightsLabelOf(res.date, mtEnd) : "";
 
   // 예약자 선택지: 현재 값 + 본인 이름 + 소속 팀명(최대 2개)
@@ -640,36 +649,8 @@ function ReservationEditor({
           </div>
         ) : (
           <>
-            <div className="field">
-              <label>시작 시간</label>
-              <div className="flex items-center gap-8">
-                <select className="select" value={sh} onChange={(e) => setSh(Number(e.target.value))}>
-                  {HOURS.map((h) => (
-                    <option key={h} value={h}>{pad(h)}시</option>
-                  ))}
-                </select>
-                <select className="select" value={sm} onChange={(e) => setSm(Number(e.target.value))}>
-                  {MINUTES.map((m) => (
-                    <option key={m} value={m}>{pad(m)}분</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="field">
-              <label>종료 시간</label>
-              <div className="flex items-center gap-8">
-                <select className="select" value={eh} onChange={(e) => setEh(Number(e.target.value))}>
-                  {HOURS.map((h) => (
-                    <option key={h} value={h}>{pad(h)}시</option>
-                  ))}
-                </select>
-                <select className="select" value={em} onChange={(e) => setEm(Number(e.target.value))}>
-                  {MINUTES.map((m) => (
-                    <option key={m} value={m}>{pad(m)}분</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <TimeField label="시작 시간" h={sh} m={sm} setH={setSh} setM={setSm} />
+            <TimeField label="종료 시간" h={eh} m={em} setH={setEh} setM={setEm} />
           </>
         )}
         {err && <p className="form-error">{err}</p>}

@@ -8,3 +8,9 @@ export const PARTS = ["기타", "베이스", "드럼", "보컬", "키보드", "�
 export function partLabel(part: string, part2?: string | null): string {
   return part2 ? `${part} · ${part2}` : part;
 }
+
+/** 정렬용 — PARTS 순서 랭크. 목록에 없는 파트는 맨 뒤 */
+export function partRank(p: string): number {
+  const i = PARTS.indexOf(p);
+  return i === -1 ? PARTS.length : i;
+}

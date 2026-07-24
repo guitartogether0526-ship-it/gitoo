@@ -25,16 +25,6 @@ export function kstParts(base: Date = new Date()): { y: number; m: number; d: nu
   return { y, m, d };
 }
 
-/** KST 기준 현재 "YYYY-MM" */
-export function kstYearMonth(base: Date = new Date()): string {
-  return kstYmd(base).slice(0, 7);
-}
-
-/** KST 기준 현재 월 라벨 "7월" */
-export function kstMonthLabel(base: Date = new Date()): string {
-  return `${kstParts(base).m}월`;
-}
-
 /** "2026-07-11" → "7월 11일(토)" — 날짜 문자열 표시용 (실행 타임존 무관) */
 export function koDateLabel(ymd: string): string {
   const [y, m, d] = ymd.split("-").map(Number);

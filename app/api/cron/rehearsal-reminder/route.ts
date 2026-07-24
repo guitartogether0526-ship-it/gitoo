@@ -14,11 +14,12 @@ export const dynamic = "force-dynamic";
  * 푸시 알림을 보낸다.
  *
  * 보안: Vercel에 CRON_SECRET 환경변수를 설정하면 cron 요청에 자동으로
- * `Authorization: Bearer <CRON_SECRET>` 헤더가 붙는다. 설정돼 있으면 검사한다.
+ * `Authorization: Bearer <CRON_SECRET>` 헤더가 붙는다. 미설정이면 호출 거부 —
+ * 조건부로 열어두면 env 누락 시 누구나 GET으로 전 회원에게 푸시를 쏠 수 있다.
  */
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
-  if (secret && req.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

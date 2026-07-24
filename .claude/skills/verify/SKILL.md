@@ -11,14 +11,16 @@ description: gitoo(기타투게더 PWA) 변경 사항을 실제 앱을 띄워 �
 - Supabase env 없어도 목업 폴백으로 페이지는 뜬다 (회원/게시판 등 실데이터 검증은 env 필요).
 
 ## 로그인 (SSR 검증용)
-세션은 서명 없는 JSON 쿠키 `gt-user` (lib/session-cookie.ts, lib/session.ts).
-curl로 아무 역할이나 위조 가능:
+세션은 **HMAC 서명된** 쿠키 `gt-user` = `base64url(JSON) + "." + HMAC-SHA256` (lib/session.ts).
+서명 키는 `SESSION_SECRET ?? SUPABASE_SERVICE_ROLE_KEY ?? ADMIN_PASSWORD ?? ""` — .env.local의
+같은 키로 서명하면 아무 역할이나 만들 수 있다:
 
 ```bash
-COOKIE="gt-user=$(python -c "import urllib.parse;print(urllib.parse.quote('{\"id\":\"verify\",\"name\":\"검증용\",\"role\":\"member\",\"part\":\"기타\",\"initial\":\"검\",\"team_id\":null,\"team_id_2\":null}'))")"
+COOKIE="gt-user=$(node --env-file=.env.local -e "const c=require('crypto');const s=process.env.SESSION_SECRET??process.env.SUPABASE_SERVICE_ROLE_KEY??process.env.ADMIN_PASSWORD??'';const p=Buffer.from(JSON.stringify({id:'verify',name:'검증용',role:'member',part:'기타',initial:'검',team_id:null,team_id_2:null})).toString('base64url');console.log(p+'.'+c.createHmac('sha256',s).update(p).digest('base64url'))")"
 curl -s -H "Cookie: $COOKIE" http://localhost:3000/<페이지> -o out.html
 ```
-- role을 `admin`/`treasurer` 등으로 바꿔 권한 분기 확인. 쿠키 없이 요청하면 로그인 화면(AuthGate).
+- role을 `admin`/`treasurer` 등으로 바꿔 권한 분기 확인. 쿠키 없이(또는 서명이 틀리면) 로그인 화면(AuthGate).
+- env가 하나도 없는 순수 데모 모드는 빈 키로 서명되므로 위 명령 그대로 동작한다.
 - 클라이언트 내비게이션이 치는 요청은 `-H "RSC: 1"` 로 흉내 낼 수 있다.
 
 ## 주의

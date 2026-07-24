@@ -7,6 +7,10 @@ import { kstYmd } from "@/lib/date";
 
 type CellMember = { id: string; name: string; resting: boolean };
 
+// 기타는 팀당 2자리 고정 — 빈 자리는 null("—"로 표시), 인원이 넘치면 그만큼 늘어남
+const guitarSlots = (cell: CellMember[]): (CellMember | null)[] =>
+  [...cell, null, null].slice(0, Math.max(2, cell.length));
+
 /**
  * 승인 회원을 팀×파트로 그루핑한다.
  * 팀↔악기 페어링: 팀1 소속이면 악기1(part), 팀2 소속이면 악기2(part2, 없으면 part).
@@ -165,9 +169,7 @@ export default function MemberTableModal({
       ctx.fillText(part, M + partColW / 2, y + rowHs[r] / 2);
       teams.forEach((t, i) => {
         const cell = get(t.id, part);
-        // 기타는 팀당 2자리 고정 — 빈 자리는 "—", 자리 사이는 격자선
-        const slots: (CellMember | null)[] =
-          part === "기타" ? [...cell, null, null].slice(0, Math.max(2, cell.length)) : cell;
+        const slots: (CellMember | null)[] = part === "기타" ? guitarSlots(cell) : cell;
         if (slots.length === 0) {
           ctx.fillStyle = color.dim;
           ctx.font = `13px ${FONT}`;
@@ -251,12 +253,11 @@ export default function MemberTableModal({
           <div className="section-title grow" style={{ margin: 0 }}>
             팀·파트별 회원표
           </div>
-          {partRows.length > 0 && (
-            <button
-              className="btn ghost btn-sm"
-              onClick={downloadImage}
-              style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
-            >
+          <button
+            className="btn ghost btn-sm"
+            onClick={downloadImage}
+            style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
+          >
               <svg
                 width="12"
                 height="12"
@@ -272,20 +273,15 @@ export default function MemberTableModal({
                 <path d="M7 10l5 5 5-5" />
                 <path d="M12 15V3" />
               </svg>
-              이미지 저장
-            </button>
-          )}
+            이미지 저장
+          </button>
           <button className="btn ghost btn-sm" onClick={onClose}>
             닫기
           </button>
         </div>
 
-        {partRows.length === 0 ? (
-          <p className="dim" style={{ fontSize: 13, marginBottom: 0 }}>
-            아직 팀에 배정된 회원이 없습니다.
-          </p>
-        ) : (
-          <div className="table-wrap" style={{ marginTop: 8 }}>
+        {/* partRows는 표준 PARTS를 항상 포함해 비지 않는다 */}
+        <div className="table-wrap" style={{ marginTop: 8 }}>
             <table className="mtable member-grid">
               <thead>
                 <tr>
@@ -303,11 +299,8 @@ export default function MemberTableModal({
                     <th scope="row">{part}</th>
                     {teams.map((t) => {
                       const cellMembers = get(t.id, part);
-                      // 기타는 팀당 2자리 고정 — 빈 자리는 "—", 자리 사이는 격자선
                       const slots: (CellMember | null)[] =
-                        part === "기타"
-                          ? [...cellMembers, null, null].slice(0, Math.max(2, cellMembers.length))
-                          : cellMembers;
+                        part === "기타" ? guitarSlots(cellMembers) : cellMembers;
                       return (
                         <td key={t.id}>
                           {slots.length === 0 ? (
@@ -344,8 +337,7 @@ export default function MemberTableModal({
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
+        </div>
 
         {unassigned.length > 0 && (
           <p className="dim" style={{ fontSize: 12, marginTop: 8, marginBottom: 0 }}>

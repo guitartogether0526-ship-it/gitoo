@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { getBoards, getPosts, getMembers, getSongs, getTeams, getReservations } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { kstYmd } from "@/lib/date";
+import { kstYmd, kstParts } from "@/lib/date";
 import NoticeCard from "@/components/NoticeCard";
 
 export const dynamic = "force-dynamic";
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
 
+// 서버(UTC)에서 렌더되므로 KST로 변환해 표시 — 안 하면 자정~09시 글이 어제 날짜로 나온다
 function formatDate(iso: string) {
-  const d = new Date(iso);
-  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  const { m, d } = kstParts(new Date(iso));
+  return `${m}월 ${d}일`;
 }
 
 // 예약 날짜("YYYY-MM-DD") → "7월 2일 (목)"

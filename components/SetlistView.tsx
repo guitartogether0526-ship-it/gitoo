@@ -150,14 +150,24 @@ export default function SetlistView({
       return;
     }
     setTeamBusy(true);
+    let failed = "";
     // 이름 변경분 저장
     for (const t of draft) {
       const orig = teamList.find((x) => x.id === t.id);
-      if (orig && orig.name !== t.name.trim()) await renameTeam(t.id, t.name.trim());
+      if (orig && orig.name !== t.name.trim()) {
+        const res = await renameTeam(t.id, t.name.trim());
+        if ("error" in res && !failed) failed = res.error;
+      }
     }
     // 순서 저장
-    await reorderTeams(draft.map((t) => t.id));
+    const ro = await reorderTeams(draft.map((t) => t.id));
+    if ("error" in ro && !failed) failed = ro.error;
     setTeamBusy(false);
+    if (failed) {
+      // 저장 실패를 성공처럼 닫지 않는다 — 모달 유지 + 오류 표시
+      setTeamError(failed);
+      return;
+    }
     setTeamList(draft.map((t, i) => ({ ...t, name: t.name.trim(), sort_order: i })));
     setShowTeamModal(false);
   };
@@ -185,10 +195,12 @@ export default function SetlistView({
     .sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
   // 좋아요 — 회원별 1인 1투표 (서버 액션이 song_votes에 저장, 확정값 반환)
+  const [likeBusy, setLikeBusy] = useState(false);
   const toggleLike = async (id: string) => {
-    if (!canManageActive) return; // 다른 팀은 투표 불가
+    if (!canManageActive || likeBusy) return; // 다른 팀은 투표 불가 · 연타 중복 요청 방지
     const cur = songs.find((s) => s.id === id);
     if (!cur) return;
+    setLikeBusy(true);
     const nextVoted = !cur.voted;
     setSongs((prev) =>
       prev.map((s) =>
@@ -196,6 +208,7 @@ export default function SetlistView({
       ),
     );
     const res = await toggleSongVote(id);
+    setLikeBusy(false);
     if ("error" in res) {
       // 저장 실패 — 화면 원복
       setSongs((prev) =>
@@ -235,8 +248,6 @@ export default function SetlistView({
       title: title.trim(),
       artist: artist.trim(),
       youtube_url: normalizeUrl(youtube) || null,
-      parts: [],
-      sheets: [],
       likes: 0,
       voted: false,
       status: "candidate" as const,
@@ -250,12 +261,15 @@ export default function SetlistView({
         const { youtube_url: _yt, created_by: _cb, ...rest } = payload;
         res = await sb.from("songs").insert(rest).select().single();
       }
-      if (!res.error && res.data) {
-        setSongs((prev) => [...prev, res.data as Song]);
-        // 같은 팀 소속 회원에게만 푸시 알림 (올린 본인 제외)
-        void sendSongPush(activeTeam, payload.title, payload.artist);
-        router.refresh();
+      if (res.error || !res.data) {
+        // 저장 실패 — 입력값을 지우지 않고 알린다
+        alert("곡 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        return;
       }
+      setSongs((prev) => [...prev, res.data as Song]);
+      // 같은 팀 소속 회원에게만 푸시 알림 (올린 본인 제외)
+      void sendSongPush(activeTeam, payload.title, payload.artist);
+      router.refresh();
     } else {
       setSongs((prev) => [...prev, { id: `song-${activeTeam}-${prev.length}`, ...payload }]);
     }

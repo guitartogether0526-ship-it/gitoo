@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { Member, MemberRole, MemberStatus, Team } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { can, ROLE_LABEL, ROLE_ORDER } from "@/lib/roles";
-import { partLabel, PARTS } from "@/lib/parts";
+import { partLabel, partRank } from "@/lib/parts";
 import { useSyncedState } from "@/lib/use-synced-state";
 import { useRefreshHold } from "@/lib/refresh-hold";
 import MemberTableModal from "@/components/MemberTableModal";
@@ -100,11 +100,6 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
 
   // 미배정("")은 오름차순에서 맨 뒤로 가도록 가장 큰 문자로 치환
   const teamName = (id: string | null) => teams.find((t) => t.id === id)?.name ?? "￿";
-  // 파트는 PARTS 순서(기타→베이스→…), 목록에 없는 파트는 뒤로
-  const partRank = (p: string) => {
-    const i = PARTS.indexOf(p);
-    return i === -1 ? PARTS.length : i;
-  };
   const sorted = sortKey
     ? [...approved].sort((a, b) => {
         let d = 0;
@@ -153,36 +148,28 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
     } else alert(res.error);
   };
 
-  const onTeam = async (id: string, teamId: string | null, slot: 1 | 2) => {
-    const key = slot === 2 ? "team_id_2" : "team_id";
-    const prevVal = members.find((m) => m.id === id)?.[key] ?? null;
-    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, [key]: teamId } : m)));
-    const res = await changeTeam(id, teamId, slot);
+  // 낙관적 갱신 공통 — 필드 패치 → 서버 액션 → 실패 시 원복 + 알림
+  const patchField = async <K extends keyof Member>(
+    id: string,
+    key: K,
+    value: Member[K],
+    action: () => Promise<{ ok: true } | { error: string }>,
+  ) => {
+    const prevVal = members.find((m) => m.id === id)?.[key];
+    setMembers((prev) => prev.map((m) => (m.id === id ? ({ ...m, [key]: value } as Member) : m)));
+    const res = await action();
     if ("error" in res) {
-      setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, [key]: prevVal } : m)));
+      setMembers((prev) => prev.map((m) => (m.id === id ? ({ ...m, [key]: prevVal } as Member) : m)));
       alert(res.error);
     }
   };
 
-  const onRole = async (id: string, role: MemberRole) => {
-    const prevRole = members.find((m) => m.id === id)?.role;
-    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, role } : m)));
-    const res = await changeRole(id, role);
-    if ("error" in res) {
-      setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, role: prevRole ?? "member" } : m)));
-      alert(res.error);
-    }
-  };
-
-  const onStatus = async (id: string, status: MemberStatus) => {
-    const prevStatus = members.find((m) => m.id === id)?.status;
-    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, status } : m)));
-    const res = await changeStatus(id, status);
-    if ("error" in res) {
-      setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, status: prevStatus ?? "active" } : m)));
-      alert(res.error);
-    }
-  };
+  const onTeam = (id: string, teamId: string | null, slot: 1 | 2) =>
+    patchField(id, slot === 2 ? "team_id_2" : "team_id", teamId, () => changeTeam(id, teamId, slot));
+  const onRole = (id: string, role: MemberRole) =>
+    patchField(id, "role", role, () => changeRole(id, role));
+  const onStatus = (id: string, status: MemberStatus) =>
+    patchField(id, "status", status, () => changeStatus(id, status));
 
   const onKick = async (m: Member) => {
     if (!window.confirm(`${m.name} 님을 강퇴(계정 삭제)할까요?\n같은 아이디로 재가입은 가능합니다.`)) return;

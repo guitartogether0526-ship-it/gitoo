@@ -1,11 +1,10 @@
 "use server";
 
-import type { SessionUser } from "./types";
+import type { SessionUser, MemberRole, MemberStatus } from "./types";
 import { ADMIN_USER } from "./admin";
 import { can } from "./roles";
-import { getSession } from "./session";
+import { getSession, setSessionCookie } from "./session";
 import { hashPassword, verifyPassword } from "./password";
-import type { MemberRole } from "./types";
 import {
   createMember,
   findByEmail,
@@ -20,7 +19,6 @@ import {
   setTeam,
   usernameTaken,
 } from "./member-store";
-import type { MemberStatus } from "./types";
 import { isEmailConfigured, sendMail, emailHtml } from "./email";
 import { sendToStaff } from "./push";
 import { randomBytes } from "node:crypto";
@@ -67,8 +65,9 @@ export async function login(usernameRaw: string, password: string): Promise<Logi
   if (username === ADMIN_USERNAME) {
     if (!ADMIN_PASSWORD)
       return { error: "관리자 로그인이 설정되지 않았습니다. 환경변수 ADMIN_PASSWORD 를 설정하세요." };
-    if (password === ADMIN_PASSWORD) return { user: ADMIN_USER };
-    return { error: "비밀번호가 올바르지 않습니다." };
+    if (password !== ADMIN_PASSWORD) return { error: "비밀번호가 올바르지 않습니다." };
+    await setSessionCookie(ADMIN_USER);
+    return { user: ADMIN_USER };
   }
 
   const cred = await getCredential(username);
@@ -78,7 +77,9 @@ export async function login(usernameRaw: string, password: string): Promise<Logi
   if (!cred.member.approved) {
     return { error: "가입 승인 대기 중입니다. 관리자 승인 후 로그인할 수 있어요." };
   }
-  return { user: toSession(cred.member) };
+  const user = toSession(cred.member);
+  await setSessionCookie(user);
+  return { user };
 }
 
 /** 회원가입 — 승인 대기(approved=false) 상태로 생성 */
@@ -216,9 +217,9 @@ export async function resetPassword(input: {
   }
 
   const tempPassword = genTempPassword();
-  await setPasswordById(cred.member.id, hashPassword(tempPassword));
 
   if (!isEmailConfigured()) {
+    await setPasswordById(cred.member.id, hashPassword(tempPassword));
     return { ok: true, sent: false, tempPassword };
   }
 
@@ -233,7 +234,9 @@ export async function resetPassword(input: {
       note: "본인이 요청하지 않았다면 이 메일을 무시하세요.",
     }),
   });
+  // 발송이 확인된 뒤에만 비밀번호 교체 — 먼저 바꾸면 메일 실패 시 기존 비밀번호만 날아가 잠긴다
   if (!sent) return { error: "이메일 발송에 실패했습니다. 관리자에게 문의하세요." };
+  await setPasswordById(cred.member.id, hashPassword(tempPassword));
   return { ok: true, sent: true };
 }
 
@@ -328,6 +331,7 @@ export async function updateMyProfile(input: {
     part: part || "미정",
     initial: name.charAt(0) || "?",
   };
+  await setSessionCookie(user);
   return { user };
 }
 

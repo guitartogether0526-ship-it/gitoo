@@ -18,7 +18,7 @@ export default async function FinancePage({
   const { m } = await searchParams;
   const mParam = m && /^\d+$/.test(m) ? m : undefined;
 
-  // 탭 목록과 (달이 선택돼 있으면) 그 달 데이터를 병렬로 — 60초 자동 갱신마다 도는 경로
+  // 탭 목록과 (달이 선택돼 있으면) 그 달 데이터를 병렬로 — 페이지 진입·수동 새로고침마다 도는 경로
   const [tabs, prefetched, session] = await Promise.all([
     fetchSheetTabs(),
     mParam ? fetchMonthSheet(mParam) : Promise.resolve(null),
