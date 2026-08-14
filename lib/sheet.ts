@@ -4,8 +4,8 @@ import "server-only";
  * 구글시트 회비 장부 연동 (읽기 전용).
  *
  * 총무가 관리하는 링크 공개 스프레드시트를 익명으로 읽어 회비 페이지에
- * 반영한다. 페이지 진입·앱 복귀·수동 새로고침마다 서버 컴포넌트가 다시 fetch하므로
- * 총무가 시트를 수정하면 별도 작업 없이 자동 반영된다. (API 키 불필요)
+ * 반영한다. 총무가 시트를 수정하면 별도 작업 없이 자동 반영된다(60초 캐시 —
+ * 아래 fetchText 참고). (API 키 불필요)
  *
  * 시트 구조 — 탭 하나 = 한 달("26년 7월" 등), "양식" 탭이 원본 템플릿:
  *   B열 "성명" 헤더 아래 = 회원 이름, C열 = 납부액 (빈칸=미납, "-" 등 텍스트=선납 표기)
@@ -58,7 +58,12 @@ export interface MonthSheet {
 
 async function fetchText(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(8000) });
+    // 60초 캐시 — 구글시트 왕복(수 초)이 페이지 진입·새로고침마다 그대로 대기시간이 됐다.
+    // 대가: 총무가 시트를 고치면 최대 60초 뒤 반영.
+    const res = await fetch(url, {
+      next: { revalidate: 60 },
+      signal: AbortSignal.timeout(8000),
+    });
     if (!res.ok) return null;
     return await res.text();
   } catch {

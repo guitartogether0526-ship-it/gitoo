@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/session";
-import { getMembers } from "@/lib/db";
+import { getMember } from "@/lib/db";
 import MyPageForm from "@/components/MyPageForm";
 import PushToggle from "@/components/PushToggle";
 
@@ -7,8 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function MyPage() {
   const session = await getSession();
-  const members = await getMembers();
-  const me = members.find((m) => m.id === session?.id) ?? null;
+  const me = session ? await getMember(session.id) : null;
 
   return (
     <>

@@ -23,8 +23,17 @@ let warnedNoSupabase = false;
  * - 미연결(env 없음): 목업(fallback) 반환 + 1회 경고. (env 추가 후 dev 서버 재시작 필요)
  * - 연결됨: 실제 DB 결과를 그대로 반환(빈 테이블이면 빈 배열). 오류 시에만 목업 폴백.
  *   ⚠️ 빈 테이블을 목업으로 되돌리지 않음 — 안 그러면 시드 목업이 계속 되살아나 삭제가 안 되는 것처럼 보임.
+ *
+ * narrow: 서버에서 미리 걸러 오기 위한 필터(예: 다가오는 예약만). 화면에 안 쓸 행까지
+ * 전량 받아오면 그대로 새로고침 대기시간이 된다.
+ * ⚠️ 목업 폴백엔 필터가 적용되지 않는다(Supabase 미연결/오류 때만 쓰이는 경로) —
+ *    호출부의 JS 필터를 지우지 말 것.
  */
-async function read<T>(table: string, fallback: T[]): Promise<T[]> {
+async function read<T>(
+  table: string,
+  fallback: T[],
+  narrow?: (q: any) => any,
+): Promise<T[]> {
   const sb = getSupabase();
   if (!sb) {
     if (!warnedNoSupabase) {
@@ -36,7 +45,8 @@ async function read<T>(table: string, fallback: T[]): Promise<T[]> {
     }
     return fallback;
   }
-  const { data, error } = await sb.from(table).select("*");
+  const q = sb.from(table).select("*");
+  const { data, error } = await (narrow ? narrow(q) : q);
   if (error) {
     console.error(`[db] '${table}' 조회 실패 — 목업으로 폴백:`, error.message);
     return fallback;
@@ -56,8 +66,13 @@ export async function getBoards(): Promise<Board[]> {
   );
 }
 
-export async function getPosts(): Promise<Post[]> {
-  const rows = await read<Post>("posts", POSTS);
+/** pinnedOnly: 홈 화면처럼 상단 고정글만 필요할 때 — 전체 글을 받아오지 않는다. */
+export async function getPosts(opts?: { pinnedOnly?: boolean }): Promise<Post[]> {
+  const rows = await read<Post>(
+    "posts",
+    POSTS,
+    opts?.pinnedOnly ? (q) => q.eq("pinned", true) : undefined,
+  );
   // 상단 고정 우선, 이후 최신순
   return rows.slice().sort((a, b) =>
     a.pinned === b.pinned
@@ -68,8 +83,17 @@ export async function getPosts(): Promise<Post[]> {
   );
 }
 
-export async function getReservations(): Promise<Reservation[]> {
-  const rows = await read<Reservation>("reservations", RESERVATIONS);
+/**
+ * from: "YYYY-MM-DD" 이후 시작하는 예약만 (미지정 시 전체).
+ * ⚠️ 시작일 기준이라 from 이전에 시작해 걸쳐 있는 기간 예약(MT)은 빠진다 — 호출부가
+ *    필요한 만큼 여유를 두고 from을 잡을 것.
+ */
+export async function getReservations(from?: string): Promise<Reservation[]> {
+  const rows = await read<Reservation>(
+    "reservations",
+    RESERVATIONS,
+    from ? (q) => q.gte("date", from) : undefined,
+  );
   return rows
     .slice()
     .sort((a, b) => a.date.localeCompare(b.date) || a.time_label.localeCompare(b.time_label));
@@ -83,8 +107,13 @@ export async function getTeams(): Promise<Team[]> {
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || byKo(a.name, b.name));
 }
 
-export async function getSongs(): Promise<Song[]> {
-  const rows = await read<Song>("songs", SONGS);
+/** confirmedOnly: 홈 화면처럼 선정곡만 필요할 때 — 후보곡까지 받아오지 않는다. */
+export async function getSongs(opts?: { confirmedOnly?: boolean }): Promise<Song[]> {
+  const rows = await read<Song>(
+    "songs",
+    SONGS,
+    opts?.confirmedOnly ? (q) => q.eq("status", "confirmed") : undefined,
+  );
   return rows.slice().sort((a, b) => byKo(a.title, b.title));
 }
 
@@ -104,3 +133,6 @@ export async function getMembers(): Promise<Member[]> {
   const rows = await getAllMembers();
   return rows.slice().sort((a, b) => byKo(a.name, b.name));
 }
+
+/** 회원 1명 — "나"만 필요한 화면(홈·예약·마이페이지)에서 전체 명단 조회 대신 사용 */
+export { getMemberById as getMember } from "./member-store";

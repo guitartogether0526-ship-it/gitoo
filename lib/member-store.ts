@@ -37,6 +37,17 @@ export async function getAllMembers(): Promise<Member[]> {
   return mem.rows.map(strip);
 }
 
+/** 회원 1명 조회 — 전체 명단이 필요 없는 화면에서 쓴다. 없으면 null. */
+export async function getMemberById(id: string): Promise<Member | null> {
+  const sb = getSupabaseAdmin();
+  if (sb) {
+    const { data } = await sb.from("members").select("*").eq("id", id).maybeSingle();
+    return (data as Member | null) ?? null;
+  }
+  const row = mem.rows.find((r) => r.id === id);
+  return row ? strip(row) : null;
+}
+
 export async function usernameTaken(username: string): Promise<boolean> {
   const u = username.toLowerCase();
   const sb = getSupabaseAdmin();

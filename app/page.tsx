@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getBoards, getPosts, getMembers, getSongs, getTeams, getReservations } from "@/lib/db";
+import { getBoards, getPosts, getMember, getSongs, getTeams, getReservations } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { kstYmd, kstParts } from "@/lib/date";
 import NoticeCard from "@/components/NoticeCard";
@@ -22,14 +22,16 @@ function formatResDate(date: string) {
 }
 
 export default async function DashboardPage() {
-  const [session, boards, posts, members, songs, teams, reservations] = await Promise.all([
-    getSession(),
+  // 세션은 쿠키 읽기(네트워크 없음) — 나머지 조회는 홈에 실제로 보이는 것만 병렬로 가져온다.
+  const session = await getSession();
+  const todayStr = kstYmd(); // 오늘 = 한국시간 기준
+  const [boards, posts, me, songs, teams, reservations] = await Promise.all([
     getBoards(),
-    getPosts(),
-    getMembers(),
-    getSongs(),
+    getPosts({ pinnedOnly: true }),
+    session ? getMember(session.id) : null,
+    getSongs({ confirmedOnly: true }),
     getTeams(),
-    getReservations(),
+    getReservations(todayStr),
   ]);
 
   // 공지사항 게시판의 상단 고정글만 홈에 노출
@@ -37,7 +39,6 @@ export default async function DashboardPage() {
   const pinnedNotices = posts.filter((p) => noticeBoardIds.has(p.board_id) && p.pinned);
 
   // 본인 팀 — 회원 테이블의 최신 배정값 우선(미배정 시 세션값). 최대 2개 팀.
-  const me = members.find((m) => m.id === session?.id);
   const myTeamIds = [
     me?.team_id ?? session?.team_id ?? null,
     me?.team_id_2 ?? session?.team_id_2 ?? null,
@@ -50,8 +51,7 @@ export default async function DashboardPage() {
   const scheduleTitle = myTeams.length === 1 ? `${myTeams[0].name} 합주일정` : "내 합주일정";
   const songTitle = myTeams.length === 1 ? `${myTeams[0].name} 선정곡` : "우리 팀 선정곡";
 
-  // 내 합주일정 — 본인 팀 이름으로 예약된 다가오는 일정 (오늘=한국시간 기준)
-  const todayStr = kstYmd();
+  // 내 합주일정 — 본인 팀 이름으로 예약된 다가오는 일정
   const mySchedule = hasTeam
     ? reservations.filter(
         (r) =>
