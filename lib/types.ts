@@ -36,11 +36,20 @@ export interface Reservation {
 }
 
 /** 합주 팀(밴드) — 셋리스트가 팀별 탭으로 분리됨 */
+/** 합주곡 페이지 구분 — 팀은 둘 중 한 페이지에만 속한다 */
+export const TEAM_CATEGORIES = ["정기공연", "재롱페스티벌"] as const;
+export type TeamCategory = (typeof TEAM_CATEGORIES)[number];
+
 export interface Team {
   id: string;
   name: string;
   sort_order?: number; // 탭 표시 순서(운영진 드래그로 변경). 미설정 시 이름순.
+  category?: TeamCategory; // 소속 페이지. 미설정(구 데이터)은 정기공연으로 본다.
 }
+
+/** 구 데이터(category 없음)는 정기공연으로 취급 */
+export const teamCategory = (t: { category?: string | null }): TeamCategory =>
+  t.category === "재롱페스티벌" ? "재롱페스티벌" : "정기공연";
 
 export interface Song {
   id: string;

@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Song, Team } from "@/lib/types";
+import { type Song, type Team, type TeamCategory, TEAM_CATEGORIES, teamCategory } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
-import { addTeam, renameTeam, reorderTeams, deleteTeam } from "@/lib/team-actions";
+import { addTeam, updateTeam, reorderTeams, deleteTeam } from "@/lib/team-actions";
 import { setSongStatus, toggleSongVote } from "@/lib/song-actions";
 import { sendSongPush } from "@/lib/push-actions";
 import { useRefreshHold } from "@/lib/refresh-hold";
@@ -55,19 +55,34 @@ export default function SetlistView({
   const [teamList, setTeamList] = useSyncedState<Team[]>(teams);
   const [songs, setSongs] = useSyncedState<Song[]>(initial);
 
-  // 선택한 팀 탭 — 페이지 이동·앱 재로드로 컴포넌트가 다시 마운트돼도 마지막에 보던 팀 유지.
+  // 페이지 구분(정기공연/재롱페스티벌) + 선택한 팀 탭.
+  // 페이지 이동·앱 재로드로 다시 마운트돼도 마지막에 보던 팀 유지(구분은 그 팀에서 역산).
   // SSR에는 localStorage가 없어(하이드레이션 불일치 방지) 마운트 후 복원한다.
   const [activeTeam, setActiveTeamState] = useState<string>(teams[0]?.id ?? "");
+  const [activeCat, setActiveCat] = useState<TeamCategory>(
+    teams[0] ? teamCategory(teams[0]) : "정기공연",
+  );
   useEffect(() => {
     const saved = window.localStorage.getItem("setlist-team");
-    if (saved && teams.some((t) => t.id === saved)) setActiveTeamState(saved);
+    const t = teams.find((x) => x.id === saved);
+    if (t) {
+      setActiveTeamState(t.id);
+      setActiveCat(teamCategory(t));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const setActiveTeam = (id: string) => {
     setActiveTeamState(id);
     try {
-      window.localStorage.setItem("setlist-team", id);
+      if (id) window.localStorage.setItem("setlist-team", id);
     } catch {}
+  };
+
+  // 현재 페이지의 팀 탭 — 구분을 바꾸면 그 페이지의 첫 팀으로 이동
+  const catTeams = teamList.filter((t) => teamCategory(t) === activeCat);
+  const switchCat = (c: TeamCategory) => {
+    setActiveCat(c);
+    setActiveTeam(teamList.find((t) => teamCategory(t) === c)?.id ?? "");
   };
 
   // 현재 보고 있는 팀을 관리할 수 있는가 (본인 소속 팀 또는 운영진)
@@ -127,13 +142,15 @@ export default function SetlistView({
   };
   const setDraftName = (i: number, name: string) =>
     setDraft((prev) => prev.map((t, idx) => (idx === i ? { ...t, name } : t)));
+  const setDraftCat = (i: number, category: TeamCategory) =>
+    setDraft((prev) => prev.map((t, idx) => (idx === i ? { ...t, category } : t)));
 
   const addTeamInModal = async () => {
     setTeamError("");
     const name = newTeam.trim();
     if (!name) return;
     setTeamBusy(true);
-    const res = await addTeam(name);
+    const res = await addTeam(name, activeCat); // 지금 보고 있는 페이지에 추가
     setTeamBusy(false);
     if ("error" in res) {
       setTeamError(res.error);
@@ -159,7 +176,10 @@ export default function SetlistView({
     setDraft((prev) => prev.filter((x) => x.id !== t.id));
     setTeamList((prev) => prev.filter((x) => x.id !== t.id));
     setSongs((prev) => prev.filter((s) => s.team_id !== t.id));
-    if (activeTeam === t.id) setActiveTeam(teamList.find((x) => x.id !== t.id)?.id ?? "");
+    if (activeTeam === t.id)
+      setActiveTeam(
+        teamList.find((x) => x.id !== t.id && teamCategory(x) === activeCat)?.id ?? "",
+      );
   };
 
   const saveTeams = async () => {
@@ -171,11 +191,12 @@ export default function SetlistView({
     }
     setTeamBusy(true);
     let failed = "";
-    // 이름 변경분 저장
+    // 이름·페이지 구분 변경분 저장
     for (const t of draft) {
       const orig = teamList.find((x) => x.id === t.id);
-      if (orig && orig.name !== t.name.trim()) {
-        const res = await renameTeam(t.id, t.name.trim());
+      if (!orig) continue;
+      if (orig.name !== t.name.trim() || teamCategory(orig) !== teamCategory(t)) {
+        const res = await updateTeam(t.id, t.name.trim(), teamCategory(t));
         if ("error" in res && !failed) failed = res.error;
       }
     }
@@ -190,6 +211,9 @@ export default function SetlistView({
     }
     setTeamList(draft.map((t, i) => ({ ...t, name: t.name.trim(), sort_order: i })));
     setShowTeamModal(false);
+    // 옮긴 팀이 지금 보는 페이지에서 사라졌으면 첫 팀으로
+    if (!draft.some((t) => t.id === activeTeam && teamCategory(t) === activeCat))
+      setActiveTeam(draft.find((t) => teamCategory(t) === activeCat)?.id ?? "");
   };
 
   // 정렬 — 기본 가나다순, 토글 시 좋아요 많은 순(동률은 가나다순)
@@ -343,9 +367,22 @@ export default function SetlistView({
 
   return (
     <>
+      {/* 페이지 구분 — 정기공연 / 재롱페스티벌 */}
+      <div className="tab-row" style={{ marginBottom: 6 }}>
+        {TEAM_CATEGORIES.map((c) => (
+          <button
+            key={c}
+            className={`tab${activeCat === c ? " active" : ""}`}
+            onClick={() => switchCat(c)}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+
       {/* 팀별 탭 — 4개씩 줄바꿈 (1~4팀 / 5~8팀) */}
       <div className="tab-row wrap">
-        {teamList.map((t) => (
+        {catTeams.map((t) => (
           <button
             key={t.id}
             className={`tab${activeTeam === t.id ? " active" : ""}`}
@@ -355,6 +392,15 @@ export default function SetlistView({
           </button>
         ))}
       </div>
+
+      {catTeams.length === 0 && (
+        <div className="card">
+          <p className="dim" style={{ margin: 0, fontSize: 13 }}>
+            {activeCat} 팀이 아직 없습니다.
+            {canManageTeams ? " 아래 '팀 수정'에서 추가하세요." : " 운영진에게 문의하세요."}
+          </p>
+        </div>
+      )}
 
       {/* 팀 도구 버튼 */}
       <div className="flex items-center gap-8" style={{ marginTop: 8 }}>
@@ -369,7 +415,7 @@ export default function SetlistView({
       </div>
 
       {/* 곡 올리기 — 본인팀/운영진만 */}
-      {canManageActive && (
+      {canManageActive && !!activeTeam && (
         <>
           <button className="btn amber" style={{ width: "100%", marginTop: 8 }} onClick={() => setShowForm((v) => !v)}>
             {showForm ? "닫기" : "＋ 곡 올리기"}
@@ -407,6 +453,9 @@ export default function SetlistView({
         </>
       )}
 
+      {/* 곡 목록 — 팀이 없는 페이지에서는 감춘다 */}
+      {!!activeTeam && (
+        <>
       <div className="section-title flex items-center" style={{ justifyContent: "space-between", gap: 8 }}>
         <span>
           {activeTeamName} 합주곡 ({teamSongs.length})
@@ -566,6 +615,8 @@ export default function SetlistView({
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 8 }}>
         본인 팀 곡은 올리기·수정·삭제·선정이 가능하고, 다른 팀은 선정곡만 볼 수 있어요. (운영진은 전체 관리)
       </p>
+        </>
+      )}
 
       {/* 선정/후보 저장 결과 팝업 */}
       {statusMsg && (
@@ -616,21 +667,35 @@ export default function SetlistView({
               <div className="section-title" style={{ margin: 0 }}>팀 수정</div>
               <button className="btn ghost btn-sm" onClick={() => setShowTeamModal(false)}>닫기</button>
             </div>
-            <p className="dim" style={{ fontSize: 12, marginTop: 4 }}>이름을 수정하고 ▲▼로 순서를 바꾼 뒤 저장하세요. 추가·삭제는 즉시 반영됩니다.</p>
+            <p className="dim" style={{ fontSize: 12, marginTop: 4 }}>이름·페이지(정기공연/재롱페스티벌)를 고르고 ▲▼로 순서를 바꾼 뒤 저장하세요. 추가·삭제는 즉시 반영됩니다.</p>
 
             <div style={{ marginTop: 8 }}>
               {draft.map((t, i) => (
-                <div key={t.id} className="flex items-center gap-8" style={{ marginBottom: 8 }}>
-                  <input className="input grow" value={t.name} onChange={(e) => setDraftName(i, e.target.value)} maxLength={30} />
-                  <button className="btn ghost btn-sm" onClick={() => moveTeam(i, -1)} disabled={i === 0} aria-label="위로">▲</button>
-                  <button className="btn ghost btn-sm" onClick={() => moveTeam(i, 1)} disabled={i === draft.length - 1} aria-label="아래로">▼</button>
-                  <button className="btn danger btn-sm" disabled={teamBusy} onClick={() => removeTeamInModal(t)} aria-label={`${t.name} 삭제`}>삭제</button>
+                <div key={t.id} style={{ marginBottom: 10 }}>
+                  <div className="flex items-center gap-8">
+                    <input className="input grow" value={t.name} onChange={(e) => setDraftName(i, e.target.value)} maxLength={30} />
+                    <button className="btn ghost btn-sm" onClick={() => moveTeam(i, -1)} disabled={i === 0} aria-label="위로">▲</button>
+                    <button className="btn ghost btn-sm" onClick={() => moveTeam(i, 1)} disabled={i === draft.length - 1} aria-label="아래로">▼</button>
+                  </div>
+                  <div className="flex items-center gap-8" style={{ marginTop: 4 }}>
+                    <select
+                      className="select sm grow"
+                      value={teamCategory(t)}
+                      onChange={(e) => setDraftCat(i, e.target.value as TeamCategory)}
+                      aria-label={`${t.name} 페이지 구분`}
+                    >
+                      {TEAM_CATEGORIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                    <button className="btn danger btn-sm" disabled={teamBusy} onClick={() => removeTeamInModal(t)} aria-label={`${t.name} 삭제`}>삭제</button>
+                  </div>
                 </div>
               ))}
             </div>
 
             <div className="field" style={{ marginTop: 4 }}>
-              <label>새 팀 추가</label>
+              <label>새 팀 추가 ({activeCat})</label>
               <div className="flex items-center gap-8">
                 <input
                   className="input grow"
