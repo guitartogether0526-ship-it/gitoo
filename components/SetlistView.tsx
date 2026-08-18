@@ -29,6 +29,13 @@ const HeartIcon = ({ filled }: { filled: boolean }) => (
   </svg>
 );
 
+// 유튜브 링크에서 영상 id — 썸네일(img.youtube.com)에 쓴다. 못 찾으면 null
+const ytId = (u?: string | null): string | null => {
+  if (!u) return null;
+  const m = u.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);
+  return m ? m[1] : null;
+};
+
 // 스킴 없는 링크도 새창에서 열리도록 보정
 const normalizeUrl = (u: string) => {
   const t = u.trim();
@@ -162,24 +169,29 @@ export default function SetlistView({
   };
 
   // 팀 삭제 — 추가와 동일하게 즉시 반영(저장 버튼 대기 없음)
-  const removeTeamInModal = async (t: Team) => {
+  const removeTeamInModal = (t: Team) => {
     setTeamError("");
     const n = songs.filter((s) => s.team_id === t.id).length;
-    if (!window.confirm(`"${t.name}" 팀을 삭제할까요?\n이 팀의 곡 ${n}개도 함께 삭제되고, 팀원은 미배정이 됩니다. 되돌릴 수 없습니다.`)) return;
-    setTeamBusy(true);
-    const res = await deleteTeam(t.id);
-    setTeamBusy(false);
-    if ("error" in res) {
-      setTeamError(res.error);
-      return;
-    }
-    setDraft((prev) => prev.filter((x) => x.id !== t.id));
-    setTeamList((prev) => prev.filter((x) => x.id !== t.id));
-    setSongs((prev) => prev.filter((s) => s.team_id !== t.id));
-    if (activeTeam === t.id)
-      setActiveTeam(
-        teamList.find((x) => x.id !== t.id && teamCategory(x) === activeCat)?.id ?? "",
-      );
+    setConfirmAsk({
+      msg: `"${t.name}" 팀을 삭제할까요?
+이 팀의 곡 ${n}개도 함께 삭제되고, 팀원은 미배정이 됩니다. 되돌릴 수 없습니다.`,
+      onOk: async () => {
+        setTeamBusy(true);
+        const res = await deleteTeam(t.id);
+        setTeamBusy(false);
+        if ("error" in res) {
+          setTeamError(res.error);
+          return;
+        }
+        setDraft((prev) => prev.filter((x) => x.id !== t.id));
+        setTeamList((prev) => prev.filter((x) => x.id !== t.id));
+        setSongs((prev) => prev.filter((s) => s.team_id !== t.id));
+        if (activeTeam === t.id)
+          setActiveTeam(
+            teamList.find((x) => x.id !== t.id && teamCategory(x) === activeCat)?.id ?? "",
+          );
+      },
+    });
   };
 
   // 팝업에서 보여줄 행 — draft 원본 인덱스(i)를 함께 들고 있어야 ▲▼·수정이 정확히 꽂힌다
@@ -228,6 +240,10 @@ export default function SetlistView({
     [songs, activeTeam, canManageActive, sortByLikes],
   );
 
+  // 선정곡을 위로 — 팀원이 이 화면에 오는 첫 이유가 목록 중간에 파묻히지 않게 나눠 그린다
+  const confirmedSongs = teamSongs.filter((s) => s.status === "confirmed");
+  const candidateSongs = teamSongs.filter((s) => s.status !== "confirmed");
+
   const activeTeamName = teamList.find((t) => t.id === activeTeam)?.name ?? "";
   const activeMembers = members
     .filter(
@@ -235,6 +251,12 @@ export default function SetlistView({
         m.team_id === activeTeam || m.team_id_2 === activeTeam || m.team_id_3 === activeTeam,
     )
     .sort((a, b) => a.name.localeCompare(b.name, "ko"));
+
+  const teamSize = activeMembers.length; // 좋아요를 "N/팀원수" 로 보여주기 위한 분모
+
+  const onAddKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") addSong();
+  };
 
   // 좋아요 — 회원별 1인 1투표 (서버 액션이 song_votes에 저장, 확정값 반환)
   const [likeBusy, setLikeBusy] = useState(false);
@@ -256,7 +278,7 @@ export default function SetlistView({
       setSongs((prev) =>
         prev.map((s) => (s.id === id ? { ...s, voted: cur.voted, likes: cur.likes } : s)),
       );
-      alert(res.error);
+      setNotice(res.error);
     } else {
       // 서버 확정값으로 동기화 (다른 회원 투표까지 반영된 수)
       setSongs((prev) =>
@@ -267,7 +289,10 @@ export default function SetlistView({
 
   // 곡 선정/후보 저장 (서버 액션) + 완료 팝업
   const [statusBusy, setStatusBusy] = useState("");
-  const [statusMsg, setStatusMsg] = useState("");
+  const [notice, setNotice] = useState(""); // 저장 결과·오류 공용 안내 (alert 대신 앱 팝업)
+  const [addBusy, setAddBusy] = useState(false); // 곡 등록 연타 방지
+  // 삭제 확인 팝업 — window.confirm 대신 앱 안에서 물어본다
+  const [confirmAsk, setConfirmAsk] = useState<{ msg: string; onOk: () => void } | null>(null);
 
   const changeStatus = async (id: string, next: "confirmed" | "candidate") => {
     if (!canManageActive) return;
@@ -275,16 +300,17 @@ export default function SetlistView({
     const res = await setSongStatus(id, next);
     setStatusBusy("");
     if ("error" in res) {
-      setStatusMsg(res.error);
+      setNotice(res.error);
       return;
     }
     setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, status: next } : s)));
-    setStatusMsg(next === "confirmed" ? "선정곡으로 저장했습니다." : "후보로 되돌렸습니다.");
+    setNotice(next === "confirmed" ? "선정곡으로 저장했습니다." : "후보로 되돌렸습니다.");
     router.refresh();
   };
 
   const addSong = async () => {
-    if (!canManageActive || !title.trim() || !artist.trim()) return;
+    if (!canManageActive || addBusy || !title.trim() || !artist.trim()) return;
+    setAddBusy(true);
     const payload = {
       team_id: activeTeam,
       title: title.trim(),
@@ -305,7 +331,8 @@ export default function SetlistView({
       }
       if (res.error || !res.data) {
         // 저장 실패 — 입력값을 지우지 않고 알린다
-        alert("곡 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        setAddBusy(false);
+        setNotice("곡 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.");
         return;
       }
       setSongs((prev) => [...prev, res.data as Song]);
@@ -315,10 +342,12 @@ export default function SetlistView({
     } else {
       setSongs((prev) => [...prev, { id: `song-${activeTeam}-${prev.length}`, ...payload }]);
     }
+    setAddBusy(false);
     setTitle("");
     setArtist("");
     setYoutube("");
     setShowForm(false);
+    setNotice(`"${payload.title}" 을(를) 후보곡으로 올렸습니다.`);
   };
 
   const startEdit = (s: Song) => {
@@ -348,22 +377,182 @@ export default function SetlistView({
     }
   };
 
-  const deleteSong = async (id: string) => {
+  const deleteSong = (id: string) => {
     if (!canManageActive) return;
-    if (!window.confirm("이 곡을 삭제할까요? 되돌릴 수 없습니다.")) return;
-    setSongs((prev) => prev.filter((s) => s.id !== id));
-    if (editId === id) setEditId("");
-    const sb = getSupabase();
-    if (sb) {
-      await sb.from("songs").delete().eq("id", id);
-      router.refresh();
-    }
+    const song = songs.find((s) => s.id === id);
+    setConfirmAsk({
+      msg: `"${song?.title ?? "이 곡"}" 을(를) 삭제할까요?
+되돌릴 수 없습니다.`,
+      onOk: async () => {
+        setSongs((prev) => prev.filter((s) => s.id !== id));
+        if (editId === id) setEditId("");
+        const sb = getSupabase();
+        if (sb) {
+          await sb.from("songs").delete().eq("id", id);
+          router.refresh();
+        }
+      },
+    });
   };
+
+  // 곡 카드 1개 — 선정곡/후보곡 두 섹션에서 같은 모양으로 쓴다
+  const renderSong = (s: Song) =>
+    editId === s.id ? (
+      <div className="card" key={s.id}>
+        <div className="form-grid">
+          <div className="field">
+            <label>곡 제목</label>
+            <input className="input" value={eTitle} onChange={(e) => setETitle(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>아티스트명</label>
+            <input className="input" value={eArtist} onChange={(e) => setEArtist(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>유튜브 링크</label>
+            <input className="input" type="url" inputMode="url" value={eYoutube} onChange={(e) => setEYoutube(e.target.value)} placeholder="https://youtu.be/..." autoCapitalize="none" />
+          </div>
+          {/* 올린 사람은 기존 곡 보정용 — 운영진만 고칠 수 있게 */}
+          {canManageTeams && (
+            <div className="field">
+              <label>올린 사람 (운영진만 수정 가능)</label>
+              <input className="input" value={eCreatedBy} onChange={(e) => setECreatedBy(e.target.value)} placeholder="예: 홍길동 (기존 곡은 비어 있어요)" maxLength={20} />
+            </div>
+          )}
+          <div className="btn-row">
+            <button className="btn amber btn-sm" onClick={() => saveEdit(s.id)}>저장</button>
+            <button className="btn ghost btn-sm" onClick={cancelEdit}>취소</button>
+          </div>
+        </div>
+      </div>
+    ) : (
+      // 선정곡 = 항상 펼침(기존 카드 그대로) · 후보곡 = 접이식(헤더 탭으로 토글)
+      (() => {
+        const isConfirmed = s.status === "confirmed";
+        const isOpen = isConfirmed || openIds.has(s.id);
+        return (
+          <div className="card" key={s.id}>
+            <div
+              className="title-row"
+              onClick={isConfirmed ? undefined : () => toggleOpen(s.id)}
+              style={isConfirmed ? undefined : { cursor: "pointer" }}
+              aria-expanded={isConfirmed ? undefined : isOpen}
+            >
+              <div className="grow">
+                {isOpen ? (
+                  <>
+                    <div className="flex items-center gap-8" style={{ flexWrap: "wrap" }}>
+                      <span className="item-name">{s.title}</span>
+                      <span className={`badge ${isConfirmed ? "amber" : ""}`}>
+                        {isConfirmed ? "★ 선정곡" : "후보"}
+                      </span>
+                    </div>
+                    <div className="item-sub">
+                      {s.artist}
+                      {s.created_by && <span className="dim"> · 올린이 {s.created_by}</span>}
+                    </div>
+                  </>
+                ) : (
+                  // 접힌 상태 — 곡명 - 아티스트 한 줄
+                  <div className="flex items-center gap-8" style={{ flexWrap: "wrap" }}>
+                    <span className="item-name">{s.title}</span>
+                    <span className="item-sub" style={{ margin: 0 }}>- {s.artist}</span>
+                  </div>
+                )}
+              </div>
+              {canManageActive ? (
+                <button
+                  className={`like-btn${s.voted ? " liked" : ""}`}
+                  onClick={(e) => {
+                    e.stopPropagation(); // 좋아요 탭이 접기/펼치기로 번지지 않게
+                    toggleLike(s.id);
+                  }}
+                  aria-pressed={s.voted}
+                  aria-label={`좋아요 ${s.likes}${teamSize ? ` / 팀원 ${teamSize}명` : ""}`}
+                >
+                  <HeartIcon filled={s.voted} />
+                  {s.likes}
+                  {teamSize > 0 && <span className="like-total">/{teamSize}</span>}
+                </button>
+              ) : (
+                // 다른 팀은 투표 불가 — 눌리는 버튼처럼 보이지 않게 숫자만 보여준다
+                <span className="like-count">
+                  <HeartIcon filled={false} />
+                  {s.likes}
+                </span>
+              )}
+              {!isConfirmed && (
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{
+                    flexShrink: 0,
+                    alignSelf: "center",
+                    opacity: 0.5,
+                    transform: isOpen ? "rotate(180deg)" : undefined,
+                    transition: "transform .15s",
+                  }}
+                >
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              )}
+            </div>
+
+            {isOpen && (
+              <>
+                {s.youtube_url &&
+                  (ytId(s.youtube_url) ? (
+                    <a href={s.youtube_url} target="_blank" rel="noopener noreferrer" aria-label={`${s.title} 유튜브로 보기`}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        className="yt-thumb"
+                        src={`https://img.youtube.com/vi/${ytId(s.youtube_url)}/mqdefault.jpg`}
+                        alt=""
+                        loading="lazy"
+                        // 오프라인·삭제된 영상이면 깨진 이미지 대신 숨긴다
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    </a>
+                  ) : (
+                    <a className="yt-link" href={s.youtube_url} target="_blank" rel="noopener noreferrer">
+                      ▶ 유튜브로 보기
+                    </a>
+                  ))}
+
+                {canManageActive && (
+                  <div className="btn-row" style={{ marginTop: 8 }}>
+                    {isConfirmed ? (
+                      <button className="btn ghost btn-sm" disabled={statusBusy === s.id} onClick={() => changeStatus(s.id, "candidate")}>
+                        {statusBusy === s.id ? "저장 중…" : "후보로 되돌리기"}
+                      </button>
+                    ) : (
+                      <button className="btn amber btn-sm" disabled={statusBusy === s.id} onClick={() => changeStatus(s.id, "confirmed")}>
+                        {statusBusy === s.id ? "저장 중…" : "★ 선정곡으로 하기"}
+                      </button>
+                    )}
+                    <button className="btn ghost btn-sm" onClick={() => startEdit(s)}>수정</button>
+                    <button className="btn danger btn-sm" onClick={() => deleteSong(s.id)}>삭제</button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        );
+      })()
+    );
 
   return (
     <>
       {/* 페이지 구분 — 정기공연 / 재롱페스티벌 */}
-      <div className="tab-row" style={{ marginBottom: 6 }}>
+      <div className="tab-row seg">
         {TEAM_CATEGORIES.map((c) => (
           <button
             key={c}
@@ -384,6 +573,8 @@ export default function SetlistView({
             onClick={() => setActiveTeam(t.id)}
           >
             {t.name}
+            {/* 본인 소속 팀 표시 — 팀이 많아도 내 탭을 바로 찾도록 */}
+            {myTeamIds.includes(t.id) && <span className="tab-dot" aria-label="내 팀" />}
           </button>
         ))}
       </div>
@@ -399,9 +590,11 @@ export default function SetlistView({
 
       {/* 팀 도구 버튼 */}
       <div className="flex items-center gap-8" style={{ marginTop: 8 }}>
-        <button className="btn ghost btn-sm" onClick={() => setShowMembers(true)}>
-          팀원 보기
-        </button>
+        {!!activeTeam && (
+          <button className="btn ghost btn-sm" onClick={() => setShowMembers(true)}>
+            팀원 보기 ({teamSize})
+          </button>
+        )}
         {canManageTeams && (
           <button className="btn ghost btn-sm" onClick={openTeamModal}>
             팀 수정
@@ -421,11 +614,11 @@ export default function SetlistView({
               <div className="form-grid">
                 <div className="field">
                   <label>곡 제목</label>
-                  <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="곡 제목" />
+                  <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={onAddKey} placeholder="곡 제목" />
                 </div>
                 <div className="field">
                   <label>아티스트명</label>
-                  <input className="input" value={artist} onChange={(e) => setArtist(e.target.value)} placeholder="아티스트명" />
+                  <input className="input" value={artist} onChange={(e) => setArtist(e.target.value)} onKeyDown={onAddKey} placeholder="아티스트명" />
                 </div>
                 <div className="field">
                   <label>유튜브 링크</label>
@@ -435,12 +628,13 @@ export default function SetlistView({
                     inputMode="url"
                     value={youtube}
                     onChange={(e) => setYoutube(e.target.value)}
+                    onKeyDown={onAddKey}
                     placeholder="https://youtu.be/..."
                     autoCapitalize="none"
                   />
                 </div>
-                <button className="btn amber" onClick={addSong}>
-                  합주곡에 올리기
+                <button className="btn amber" disabled={addBusy || !title.trim() || !artist.trim()} onClick={addSong}>
+                  {addBusy ? "올리는 중…" : "합주곡에 올리기"}
                 </button>
               </div>
             </div>
@@ -473,138 +667,16 @@ export default function SetlistView({
           </p>
         </div>
       ) : (
-        teamSongs.map((s) =>
-          editId === s.id ? (
-            <div className="card" key={s.id}>
-              <div className="form-grid">
-                <div className="field">
-                  <label>곡 제목</label>
-                  <input className="input" value={eTitle} onChange={(e) => setETitle(e.target.value)} />
-                </div>
-                <div className="field">
-                  <label>아티스트명</label>
-                  <input className="input" value={eArtist} onChange={(e) => setEArtist(e.target.value)} />
-                </div>
-                <div className="field">
-                  <label>유튜브 링크</label>
-                  <input className="input" type="url" inputMode="url" value={eYoutube} onChange={(e) => setEYoutube(e.target.value)} placeholder="https://youtu.be/..." autoCapitalize="none" />
-                </div>
-                <div className="field">
-                  <label>올린 사람</label>
-                  <input className="input" value={eCreatedBy} onChange={(e) => setECreatedBy(e.target.value)} placeholder="예: 홍길동 (기존 곡은 비어 있어요)" maxLength={20} />
-                </div>
-                <div className="btn-row">
-                  <button className="btn amber btn-sm" onClick={() => saveEdit(s.id)}>저장</button>
-                  <button className="btn ghost btn-sm" onClick={cancelEdit}>취소</button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            // 선정곡 = 항상 펼침(기존 카드 그대로) · 후보곡 = 접이식(헤더 탭으로 토글)
-            (() => {
-              const isConfirmed = s.status === "confirmed";
-              const isOpen = isConfirmed || openIds.has(s.id);
-              return (
-                <div className="card" key={s.id}>
-                  <div
-                    className="title-row"
-                    onClick={isConfirmed ? undefined : () => toggleOpen(s.id)}
-                    style={isConfirmed ? undefined : { cursor: "pointer" }}
-                    aria-expanded={isConfirmed ? undefined : isOpen}
-                  >
-                    <div className="grow">
-                      {isOpen ? (
-                        <>
-                          <div className="flex items-center gap-8" style={{ flexWrap: "wrap" }}>
-                            <span className="item-name">{s.title}</span>
-                            <span className={`badge ${isConfirmed ? "amber" : ""}`}>
-                              {isConfirmed ? "★ 선정곡" : "후보"}
-                            </span>
-                          </div>
-                          <div className="item-sub">
-                            {s.artist}
-                            {s.created_by && <span className="dim"> · 올린이 {s.created_by}</span>}
-                          </div>
-                        </>
-                      ) : (
-                        // 접힌 상태 — 곡명 - 아티스트 한 줄
-                        <div className="flex items-center gap-8" style={{ flexWrap: "wrap" }}>
-                          <span className="item-name">{s.title}</span>
-                          <span className="item-sub" style={{ margin: 0 }}>- {s.artist}</span>
-                        </div>
-                      )}
-                    </div>
-                    {canManageActive ? (
-                      <button
-                        className={`like-btn${s.voted ? " liked" : ""}`}
-                        onClick={(e) => {
-                          e.stopPropagation(); // 좋아요 탭이 접기/펼치기로 번지지 않게
-                          toggleLike(s.id);
-                        }}
-                        aria-pressed={s.voted}
-                      >
-                        <HeartIcon filled={s.voted} />
-                        {s.likes}
-                      </button>
-                    ) : (
-                      <span className="like-btn" style={{ cursor: "default", opacity: 0.7 }} title="본인 팀만 투표할 수 있어요">
-                        <HeartIcon filled={false} />
-                        {s.likes}
-                      </span>
-                    )}
-                    {!isConfirmed && (
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        style={{
-                          flexShrink: 0,
-                          alignSelf: "center",
-                          opacity: 0.5,
-                          transform: isOpen ? "rotate(180deg)" : undefined,
-                          transition: "transform .15s",
-                        }}
-                      >
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
-                    )}
-                  </div>
-
-                  {isOpen && (
-                    <>
-                      {s.youtube_url && (
-                        <a className="yt-link" href={s.youtube_url} target="_blank" rel="noopener noreferrer">
-                          ▶ 유튜브로 보기
-                        </a>
-                      )}
-
-                      {canManageActive && (
-                        <div className="btn-row" style={{ marginTop: 8 }}>
-                          {isConfirmed ? (
-                            <button className="btn ghost btn-sm" disabled={statusBusy === s.id} onClick={() => changeStatus(s.id, "candidate")}>
-                              {statusBusy === s.id ? "저장 중…" : "후보로 되돌리기"}
-                            </button>
-                          ) : (
-                            <button className="btn amber btn-sm" disabled={statusBusy === s.id} onClick={() => changeStatus(s.id, "confirmed")}>
-                              {statusBusy === s.id ? "저장 중…" : "★ 선정곡으로 하기"}
-                            </button>
-                          )}
-                          <button className="btn ghost btn-sm" onClick={() => startEdit(s)}>수정</button>
-                          <button className="btn danger btn-sm" onClick={() => deleteSong(s.id)}>삭제</button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              );
-            })()
-          ),
-        )
+        <>
+          {confirmedSongs.length > 0 && (
+            <div className="list-sub">★ 선정곡 ({confirmedSongs.length})</div>
+          )}
+          {confirmedSongs.map(renderSong)}
+          {candidateSongs.length > 0 && (
+            <div className="list-sub">후보곡 ({candidateSongs.length})</div>
+          )}
+          {candidateSongs.map(renderSong)}
+        </>
       )}
 
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 8 }}>
@@ -614,11 +686,38 @@ export default function SetlistView({
       )}
 
       {/* 선정/후보 저장 결과 팝업 */}
-      {statusMsg && (
-        <div className="modal-overlay" onClick={() => setStatusMsg("")}>
+      {notice && (
+        <div className="modal-overlay" onClick={() => setNotice("")}>
           <div className="card" style={{ margin: 0, width: "100%", maxWidth: 360, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-            <p style={{ fontWeight: 700, margin: "4px 0 12px", fontSize: 15 }}>{statusMsg}</p>
-            <button className="btn amber" style={{ width: "100%" }} onClick={() => setStatusMsg("")}>확인</button>
+            <p style={{ fontWeight: 700, margin: "4px 0 12px", fontSize: 15 }}>{notice}</p>
+            <button className="btn amber" style={{ width: "100%" }} onClick={() => setNotice("")}>확인</button>
+          </div>
+        </div>
+      )}
+
+      {/* 삭제 확인 팝업 — 브라우저 기본 confirm 대신 앱 팝업으로 통일 */}
+      {confirmAsk && (
+        <div className="modal-overlay" onClick={() => setConfirmAsk(null)}>
+          <div className="card" style={{ margin: 0, width: "100%", maxWidth: 360 }} onClick={(e) => e.stopPropagation()}>
+            <p style={{ margin: "4px 0 14px", fontSize: 14, lineHeight: 1.6, whiteSpace: "pre-line" }}>
+              {confirmAsk.msg}
+            </p>
+            <div className="btn-row">
+              <button
+                className="btn danger"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  const ok = confirmAsk.onOk;
+                  setConfirmAsk(null);
+                  ok();
+                }}
+              >
+                삭제
+              </button>
+              <button className="btn ghost" style={{ flex: 1 }} onClick={() => setConfirmAsk(null)}>
+                취소
+              </button>
+            </div>
           </div>
         </div>
       )}

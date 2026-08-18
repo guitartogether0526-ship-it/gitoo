@@ -351,6 +351,41 @@ body {
   font-weight: 700;
   cursor: pointer;
 }
+/* 좋아요 분모(팀 인원수) — 숫자보다 약하게 */
+.like-total {
+  font-weight: 700;
+  opacity: 0.55;
+  margin-left: -2px;
+}
+/* 다른 팀 곡의 좋아요 — 누를 수 없으니 버튼처럼 보이지 않게 숫자만 */
+.like-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+/* 곡 목록 안 소제목 (★ 선정곡 / 후보곡) */
+.list-sub {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  margin: 14px 2px 6px;
+}
+/* 유튜브 썸네일 — 곡 카드에서 바로 알아보게 */
+.yt-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-top: 8px;
+}
 .like-btn.liked {
   color: var(--accent);
   border-color: var(--accent-strong);
@@ -715,6 +750,38 @@ body {
   color: var(--on-accent);
   background: var(--accent-grad);
 }
+/* 상위 구분 탭 (합주곡: 정기공연/재롱페스티벌) — 아래 팀 탭과 층이 달라 보이게 작은 알약형 */
+.tab-row.seg {
+  background: transparent;
+  border: none;
+  padding: 0;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.tab-row.seg .tab {
+  flex: 0 1 auto;
+  font-size: 12px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.tab-row.seg .tab.active {
+  border-color: transparent;
+}
+/* 본인 소속 팀 표시 점 */
+.tab-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  vertical-align: middle;
+}
+.tab.active .tab-dot {
+  background: var(--on-accent);
+}
+
 /* 탭이 많을 때 여러 줄로 감싸기 — 한 줄에 4개 (합주곡 팀 탭: 1~4팀 / 5~8팀) */
 .tab-row.wrap {
   flex-wrap: wrap;
