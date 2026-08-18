@@ -3,7 +3,7 @@
 import { can } from "./roles";
 import { getSession } from "./session";
 import { getSupabaseAdmin } from "./supabase-admin";
-import { getAllMembers } from "./member-store";
+import { getMemberById } from "./member-store";
 import { koDateLabel } from "./date";
 import {
   isPushConfigured,
@@ -43,8 +43,7 @@ export async function sendSongPush(
   if (!session) return { error: "로그인이 필요합니다." };
 
   if (!can.manageTeams(session.role)) {
-    const members = await getAllMembers();
-    const me = members.find((m) => m.id === session.id);
+    const me = await getMemberById(session.id);
     const myTeams = me ? [me.team_id, me.team_id_2, me.team_id_3].filter(Boolean) : [];
     if (!myTeams.includes(teamId)) return { error: "본인 팀 곡만 알림을 보낼 수 있습니다." };
   }
@@ -103,8 +102,7 @@ export async function sendReservationPush(
 
   // 권한: 운영진이거나 본인 팀 (합주곡 알림과 동일 기준)
   if (!can.manageTeams(session.role)) {
-    const members = await getAllMembers();
-    const me = members.find((m) => m.id === session.id);
+    const me = await getMemberById(session.id);
     const myTeams = me ? [me.team_id, me.team_id_2, me.team_id_3].filter(Boolean) : [];
     if (!myTeams.includes(team.id)) return { error: "본인 팀 예약만 알림을 보낼 수 있습니다." };
   }

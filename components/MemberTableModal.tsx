@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import type { Member, Team } from "@/lib/types";
+import { useMemo, useState } from "react";
+import { type Member, type Team, type TeamCategory, TEAM_CATEGORIES, teamCategory } from "@/lib/types";
 import { PARTS } from "@/lib/parts";
 import { kstYmd } from "@/lib/date";
 
@@ -16,7 +16,7 @@ const guitarSlots = (cell: CellMember[]): (CellMember | null)[] =>
  * 팀↔악기 페어링: 팀1=악기1(part), 팀2=악기2(part2), 팀3=악기3(part3). 악기2·3이 비면 악기1을 쓴다.
  * 여러 팀에 속한 회원은 각 팀 컬럼에 해당 악기로 등장한다.
  */
-function groupByTeamPart(members: Member[], teams: Team[]) {
+function groupByTeamPart(members: Member[]) {
   const cell = new Map<string, CellMember[]>(); // key = `${teamId}|${part}`
   const extraParts = new Set<string>(); // PARTS 목록에 없는 파트 (part는 자유 텍스트)
   const unassigned: { id: string; name: string; part: string; resting: boolean }[] = [];
@@ -70,10 +70,11 @@ export default function MemberTableModal({
   teams: Team[];
   onClose: () => void;
 }) {
-  const { partRows, get, unassigned } = useMemo(
-    () => groupByTeamPart(members, teams),
-    [members, teams],
-  );
+  // 페이지 구분 탭 — 표가 팀 하나당 한 컬럼이라 두 페이지를 한 표에 담으면 너무 넓어진다
+  const [cat, setCat] = useState<TeamCategory>("정기공연");
+  const catTeams = useMemo(() => teams.filter((t) => teamCategory(t) === cat), [teams, cat]);
+
+  const { partRows, get, unassigned } = useMemo(() => groupByTeamPart(members), [members]);
   // 팀 헤더의 인원수 — 여러 팀 소속 회원은 각 팀에 1명씩 센다
   const teamCount = (teamId: string) =>
     members.filter(
@@ -84,6 +85,7 @@ export default function MemberTableModal({
 
   // 표를 캔버스에 그려 PNG로 저장 (다크 테마 색상은 CSS 토큰에서 가져옴)
   const downloadImage = () => {
+    if (catTeams.length === 0) return; // 이 페이지에 팀이 없으면 그릴 표가 없다
     const css = getComputedStyle(document.documentElement);
     const cv = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
     const color = {
@@ -104,14 +106,14 @@ export default function MemberTableModal({
     const HEAD_H = 34;
     const partColW = 64;
     const teamColW = 104;
-    const tableW = partColW + teams.length * teamColW;
+    const tableW = partColW + catTeams.length * teamColW;
     const rowHs = partRows.map((part) => {
       if (part === "기타") {
         // 기타 행 = 자리(최소 2개) × 자리 높이, 자리 경계가 곧 격자선
-        const slotCount = Math.max(2, ...teams.map((t) => get(t.id, part).length));
+        const slotCount = Math.max(2, ...catTeams.map((t) => get(t.id, part).length));
         return slotCount * SLOT;
       }
-      const maxLen = Math.max(1, ...teams.map((t) => get(t.id, part).length));
+      const maxLen = Math.max(1, ...catTeams.map((t) => get(t.id, part).length));
       return maxLen * LINE + PAD * 2;
     });
     const tableH = HEAD_H + rowHs.reduce((s, h) => s + h, 0);
@@ -154,7 +156,7 @@ export default function MemberTableModal({
     ctx.fillStyle = color.accent;
     ctx.font = `700 15px ${FONT}`;
     ctx.textAlign = "left";
-    ctx.fillText(`팀·파트별 회원표  ·  ${kstYmd()}`, M, M + TITLE_H / 2 - 4);
+    ctx.fillText(`${cat} 팀·파트별 회원표  ·  ${kstYmd()}`, M, M + TITLE_H / 2 - 4);
 
     const top = M + TITLE_H;
     const colX = (i: number) => M + partColW + i * teamColW; // i번째 팀 컬럼의 왼쪽 x
@@ -164,7 +166,7 @@ export default function MemberTableModal({
     ctx.font = `700 13px ${FONT}`;
     ctx.fillStyle = color.text;
     ctx.fillText("파트", M + partColW / 2, top + HEAD_H / 2);
-    teams.forEach((t, i) => {
+    catTeams.forEach((t, i) => {
       ctx.fillText(`${t.name} (${teamCount(t.id)}명)`, colX(i) + teamColW / 2, top + HEAD_H / 2);
     });
 
@@ -174,7 +176,7 @@ export default function MemberTableModal({
       ctx.font = `700 13px ${FONT}`;
       ctx.fillStyle = color.text;
       ctx.fillText(part, M + partColW / 2, y + rowHs[r] / 2);
-      teams.forEach((t, i) => {
+      catTeams.forEach((t, i) => {
         const cell = get(t.id, part);
         const slots: (CellMember | null)[] = part === "기타" ? guitarSlots(cell) : cell;
         if (slots.length === 0) {
@@ -226,7 +228,7 @@ export default function MemberTableModal({
       line(M, gy, M + tableW, gy);
     });
     line(M, top, M, gy); // 왼쪽 세로 테두리
-    for (let i = 0; i <= teams.length; i++) {
+    for (let i = 0; i <= catTeams.length; i++) {
       const x = M + partColW + i * teamColW;
       line(x, top, x, gy);
     }
@@ -243,7 +245,7 @@ export default function MemberTableModal({
       if (!blob) return;
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `회원표_${kstYmd()}.png`;
+      a.download = `회원표_${cat}_${kstYmd()}.png`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     }, "image/png");
@@ -287,13 +289,21 @@ export default function MemberTableModal({
           </button>
         </div>
 
+        <div className="tab-row" style={{ marginTop: 8 }}>
+          {TEAM_CATEGORIES.map((c) => (
+            <button key={c} className={`tab${cat === c ? " active" : ""}`} onClick={() => setCat(c)}>
+              {c}
+            </button>
+          ))}
+        </div>
+
         {/* partRows는 표준 PARTS를 항상 포함해 비지 않는다 */}
         <div className="table-wrap" style={{ marginTop: 8 }}>
             <table className="mtable member-grid">
               <thead>
                 <tr>
                   <th>파트</th>
-                  {teams.map((t) => (
+                  {catTeams.map((t) => (
                     <th key={t.id}>
                       {t.name} ({teamCount(t.id)}명)
                     </th>
@@ -304,7 +314,7 @@ export default function MemberTableModal({
                 {partRows.map((part) => (
                   <tr key={part}>
                     <th scope="row">{part}</th>
-                    {teams.map((t) => {
+                    {catTeams.map((t) => {
                       const cellMembers = get(t.id, part);
                       const slots: (CellMember | null)[] =
                         part === "기타" ? guitarSlots(cellMembers) : cellMembers;

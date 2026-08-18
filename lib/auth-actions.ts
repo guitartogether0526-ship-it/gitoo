@@ -9,6 +9,7 @@ import {
   createMember,
   findByEmail,
   getAllMembers,
+  getMemberById,
   getCredential,
   removeMember,
   setApproved,
@@ -288,8 +289,7 @@ export async function changeMyPassword(input: {
   if (session.id === ADMIN_USER.id) return { error: "관리자 계정은 여기서 변경할 수 없습니다." };
   if (input.newPassword.length < 4) return { error: "새 비밀번호는 4자 이상이어야 합니다." };
 
-  const members = await getAllMembers();
-  const me = members.find((m) => m.id === session.id);
+  const me = await getMemberById(session.id);
   if (!me) return { error: "회원 정보를 찾을 수 없습니다." };
 
   const cred = await getCredential(me.username);
@@ -372,8 +372,7 @@ export async function changeTeam(
 
   // 다른 슬롯에 이미 있는 팀을 중복 배정하지 못하게 (한 팀에 한 번만)
   if (teamId) {
-    const members = await getAllMembers();
-    const target = members.find((m) => m.id === id);
+    const target = await getMemberById(id);
     const others = [target?.team_id, target?.team_id_2, target?.team_id_3].filter(
       (_, i) => i + 1 !== slot,
     );

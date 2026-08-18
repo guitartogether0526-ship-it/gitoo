@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Member, MemberRole, MemberStatus, Team } from "@/lib/types";
+import {
+  type Member,
+  type MemberRole,
+  type MemberStatus,
+  type Team,
+  TEAM_CATEGORIES,
+  teamCategory,
+} from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { can, ROLE_LABEL, ROLE_ORDER } from "@/lib/roles";
 import { partLabel, partRank } from "@/lib/parts";
@@ -278,16 +285,27 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
                         aria-label={`${m.name} 팀${slot} 배정`}
                       >
                         <option value="">{slot === 1 ? "미배정" : "없음"}</option>
-                        {teams.map((t) => (
-                          <option
-                            key={t.id}
-                            value={t.id}
-                            /* 다른 슬롯에 이미 배정된 팀은 선택 불가 (한 팀에 한 번만) */
-                            disabled={TEAM_SLOTS.some((o) => o !== slot && m[TEAM_COL[o]] === t.id)}
-                          >
-                            {t.name}
-                          </option>
-                        ))}
+                        {/* 정기공연·재롱페스티벌 팀이 섞이지 않도록 페이지별로 묶는다 */}
+                        {TEAM_CATEGORIES.map((c) => {
+                          const catTeams = teams.filter((t) => teamCategory(t) === c);
+                          if (catTeams.length === 0) return null;
+                          return (
+                            <optgroup key={c} label={c}>
+                              {catTeams.map((t) => (
+                                <option
+                                  key={t.id}
+                                  value={t.id}
+                                  /* 다른 슬롯에 이미 배정된 팀은 선택 불가 (한 팀에 한 번만) */
+                                  disabled={TEAM_SLOTS.some(
+                                    (o) => o !== slot && m[TEAM_COL[o]] === t.id,
+                                  )}
+                                >
+                                  {t.name}
+                                </option>
+                              ))}
+                            </optgroup>
+                          );
+                        })}
                       </select>
                     </td>
                   ))}

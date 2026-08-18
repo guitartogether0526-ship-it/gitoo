@@ -3,7 +3,7 @@
 import { can } from "./roles";
 import { getSession } from "./session";
 import { getSupabaseAdmin } from "./supabase-admin";
-import { getAllMembers } from "./member-store";
+import { getMemberById } from "./member-store";
 
 /** 운영진이 아니면 본인 팀 곡만 허용 — 위반 시 오류 문구, 통과면 null */
 async function teamPermError(
@@ -14,7 +14,7 @@ async function teamPermError(
 ): Promise<string | null> {
   if (can.manageTeams(session.role)) return null;
   const { data: song } = await sb.from("songs").select("team_id").eq("id", songId).single();
-  const me = (await getAllMembers()).find((m) => m.id === session.id);
+  const me = await getMemberById(session.id);
   const myTeams = me ? [me.team_id, me.team_id_2, me.team_id_3].filter(Boolean) : [];
   if (!song || !me || !myTeams.includes((song as { team_id: string }).team_id)) return denied;
   return null;

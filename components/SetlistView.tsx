@@ -6,7 +6,7 @@ import { type Song, type Team, type TeamCategory, TEAM_CATEGORIES, teamCategory 
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
-import { addTeam, updateTeam, reorderTeams, deleteTeam } from "@/lib/team-actions";
+import { addTeam, saveTeams as saveTeamsAction, deleteTeam } from "@/lib/team-actions";
 import { setSongStatus, toggleSongVote } from "@/lib/song-actions";
 import { sendSongPush } from "@/lib/push-actions";
 import { useRefreshHold } from "@/lib/refresh-hold";
@@ -103,6 +103,7 @@ export default function SetlistView({
 
   // 팀 수정 팝업 (운영진)
   const [showTeamModal, setShowTeamModal] = useState(false);
+  const [modalCat, setModalCat] = useState<TeamCategory>("정기공연"); // 팀 수정 팝업 안의 탭
   const [draft, setDraft] = useState<Team[]>([]);
   const [newTeam, setNewTeam] = useState("");
   const [teamBusy, setTeamBusy] = useState(false);
@@ -125,21 +126,20 @@ export default function SetlistView({
   useRefreshHold(showForm || editId !== "" || showTeamModal);
 
   const openTeamModal = () => {
+    setModalCat(activeCat); // 지금 보고 있는 페이지 탭으로 열기
     setDraft(teamList.map((t) => ({ ...t })));
     setNewTeam("");
     setTeamError("");
     setShowTeamModal(true);
   };
 
-  const moveTeam = (i: number, dir: -1 | 1) => {
+  // ▲▼ 는 같은 페이지(구분) 안에서만 자리를 바꾼다 — a·b 는 draft 인덱스
+  const swapTeam = (a: number, b: number) =>
     setDraft((prev) => {
-      const j = i + dir;
-      if (j < 0 || j >= prev.length) return prev;
       const next = [...prev];
-      [next[i], next[j]] = [next[j], next[i]];
+      [next[a], next[b]] = [next[b], next[a]];
       return next;
     });
-  };
   const setDraftName = (i: number, name: string) =>
     setDraft((prev) => prev.map((t, idx) => (idx === i ? { ...t, name } : t)));
   const setDraftCat = (i: number, category: TeamCategory) =>
@@ -150,7 +150,7 @@ export default function SetlistView({
     const name = newTeam.trim();
     if (!name) return;
     setTeamBusy(true);
-    const res = await addTeam(name, activeCat); // 지금 보고 있는 페이지에 추가
+    const res = await addTeam(name, modalCat); // 팝업에서 보고 있는 페이지에 추가
     setTeamBusy(false);
     if ("error" in res) {
       setTeamError(res.error);
@@ -182,34 +182,29 @@ export default function SetlistView({
       );
   };
 
+  // 팝업에서 보여줄 행 — draft 원본 인덱스(i)를 함께 들고 있어야 ▲▼·수정이 정확히 꽂힌다
+  const modalRows = draft.map((t, i) => ({ t, i })).filter(({ t }) => teamCategory(t) === modalCat);
+
   const saveTeams = async () => {
     setTeamError("");
-    // 빈 이름 검사
     if (draft.some((t) => !t.name.trim())) {
       setTeamError("팀 이름은 비울 수 없습니다.");
       return;
     }
     setTeamBusy(true);
-    let failed = "";
-    // 이름·페이지 구분 변경분 저장
-    for (const t of draft) {
-      const orig = teamList.find((x) => x.id === t.id);
-      if (!orig) continue;
-      if (orig.name !== t.name.trim() || teamCategory(orig) !== teamCategory(t)) {
-        const res = await updateTeam(t.id, t.name.trim(), teamCategory(t));
-        if ("error" in res && !failed) failed = res.error;
-      }
-    }
-    // 순서 저장
-    const ro = await reorderTeams(draft.map((t) => t.id));
-    if ("error" in ro && !failed) failed = ro.error;
+    // 이름·페이지 구분·순서를 한 번에 저장 (배열 순서 = sort_order)
+    const res = await saveTeamsAction(
+      draft.map((t) => ({ id: t.id, name: t.name.trim(), category: teamCategory(t) })),
+    );
     setTeamBusy(false);
-    if (failed) {
+    if ("error" in res) {
       // 저장 실패를 성공처럼 닫지 않는다 — 모달 유지 + 오류 표시
-      setTeamError(failed);
+      setTeamError(res.error);
       return;
     }
-    setTeamList(draft.map((t, i) => ({ ...t, name: t.name.trim(), sort_order: i })));
+    setTeamList(
+      draft.map((t, i) => ({ ...t, name: t.name.trim(), category: teamCategory(t), sort_order: i })),
+    );
     setShowTeamModal(false);
     // 옮긴 팀이 지금 보는 페이지에서 사라졌으면 첫 팀으로
     if (!draft.some((t) => t.id === activeTeam && teamCategory(t) === activeCat))
@@ -667,15 +662,31 @@ export default function SetlistView({
               <div className="section-title" style={{ margin: 0 }}>팀 수정</div>
               <button className="btn ghost btn-sm" onClick={() => setShowTeamModal(false)}>닫기</button>
             </div>
-            <p className="dim" style={{ fontSize: 12, marginTop: 4 }}>이름·페이지(정기공연/재롱페스티벌)를 고르고 ▲▼로 순서를 바꾼 뒤 저장하세요. 추가·삭제는 즉시 반영됩니다.</p>
+            <p className="dim" style={{ fontSize: 12, marginTop: 4 }}>이름을 고치고 ▲▼로 순서를 바꾼 뒤 저장하세요. 페이지 구분을 바꾸면 저장 시 다른 탭으로 옮겨집니다. 추가·삭제는 즉시 반영됩니다.</p>
+
+            {/* 페이지 구분 탭 — 해당 페이지 팀만 보여준다 */}
+            <div className="tab-row" style={{ marginTop: 8 }}>
+              {TEAM_CATEGORIES.map((c) => (
+                <button
+                  key={c}
+                  className={`tab${modalCat === c ? " active" : ""}`}
+                  onClick={() => setModalCat(c)}
+                >
+                  {c} ({draft.filter((t) => teamCategory(t) === c).length})
+                </button>
+              ))}
+            </div>
 
             <div style={{ marginTop: 8 }}>
-              {draft.map((t, i) => (
+              {modalRows.length === 0 && (
+                <p className="dim" style={{ fontSize: 13 }}>{modalCat} 팀이 없습니다. 아래에서 추가하세요.</p>
+              )}
+              {modalRows.map(({ t, i }, k) => (
                 <div key={t.id} style={{ marginBottom: 10 }}>
                   <div className="flex items-center gap-8">
                     <input className="input grow" value={t.name} onChange={(e) => setDraftName(i, e.target.value)} maxLength={30} />
-                    <button className="btn ghost btn-sm" onClick={() => moveTeam(i, -1)} disabled={i === 0} aria-label="위로">▲</button>
-                    <button className="btn ghost btn-sm" onClick={() => moveTeam(i, 1)} disabled={i === draft.length - 1} aria-label="아래로">▼</button>
+                    <button className="btn ghost btn-sm" onClick={() => swapTeam(i, modalRows[k - 1].i)} disabled={k === 0} aria-label="위로">▲</button>
+                    <button className="btn ghost btn-sm" onClick={() => swapTeam(i, modalRows[k + 1].i)} disabled={k === modalRows.length - 1} aria-label="아래로">▼</button>
                   </div>
                   <div className="flex items-center gap-8" style={{ marginTop: 4 }}>
                     <select
@@ -695,7 +706,7 @@ export default function SetlistView({
             </div>
 
             <div className="field" style={{ marginTop: 4 }}>
-              <label>새 팀 추가 ({activeCat})</label>
+              <label>새 팀 추가 ({modalCat})</label>
               <div className="flex items-center gap-8">
                 <input
                   className="input grow"

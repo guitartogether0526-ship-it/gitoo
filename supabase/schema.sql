@@ -77,6 +77,23 @@ create table if not exists songs (
 
 -- 기존 songs 테이블 업그레이드(재실행 안전) — 유튜브 링크 컬럼
 alter table songs add column if not exists youtube_url text;
+-- songs.team_id 외래키를 on delete cascade 로 보정 (팀 삭제 시 그 팀 곡도 함께 삭제).
+-- 옛 스키마로 만들어진 테이블은 제약이 다를 수 있어, 이름과 무관하게 걷어내고 다시 건다.
+do $$
+declare c text;
+begin
+  for c in
+    select con.conname
+    from pg_constraint con
+    join pg_class rel on rel.oid = con.conrelid
+    join pg_attribute att on att.attrelid = rel.oid and att.attname = 'team_id'
+    where rel.relname = 'songs' and con.contype = 'f' and con.conkey = array[att.attnum]
+  loop
+    execute format('alter table songs drop constraint %I', c);
+  end loop;
+  alter table songs
+    add constraint songs_team_id_fkey foreign key (team_id) references teams(id) on delete cascade;
+end $$;
 -- 기존 songs 테이블 업그레이드(재실행 안전) — 올린 사람 이름 컬럼
 alter table songs add column if not exists created_by text;
 
