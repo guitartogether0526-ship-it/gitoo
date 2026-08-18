@@ -68,3 +68,17 @@ export async function reorderTeams(
   }
   return { ok: true };
 }
+
+/** 팀 삭제 — 운영진 전용. 해당 팀 곡은 함께 삭제되고, 팀원은 미배정으로 바뀝니다. */
+export async function deleteTeam(id: string): Promise<{ ok: true } | { error: string }> {
+  const session = await getSession();
+  if (!can.manageTeams(session?.role)) return { error: "권한이 없습니다. (운영진 전용)" };
+
+  const sb = getSupabaseAdmin();
+  if (sb) {
+    // songs.team_id는 on delete cascade, members.team_id(_2)는 on delete set null — DB가 정리한다
+    const { error } = await sb.from("teams").delete().eq("id", id);
+    if (error) return { error: "팀 삭제 실패: " + error.message };
+  }
+  return { ok: true };
+}

@@ -52,10 +52,11 @@ export async function getTeamUnavailable(): Promise<
 
   const members = await getAllMembers();
   const me = members.find((m) => m.id === session.id);
-  // 본인 소속 팀(최대 2개) — 두 팀에 속하면 팀별 섹션으로 각각 조회
+  // 본인 소속 팀(최대 3개) — 여러 팀에 속하면 팀별 섹션으로 각각 조회
   const myTeams = [
     me?.team_id ?? session.team_id ?? null,
     me?.team_id_2 ?? session.team_id_2 ?? null,
+    me?.team_id_3 ?? session.team_id_3 ?? null,
   ].filter((v): v is string => !!v);
   if (myTeams.length === 0)
     return { error: "팀이 배정되어야 일정을 볼 수 있습니다. 운영진에게 문의하세요." };
@@ -63,13 +64,13 @@ export async function getTeamUnavailable(): Promise<
   const sb = getSupabaseAdmin();
   if (!sb) return { error: "DB가 설정되지 않았습니다. (Supabase 환경변수 확인)" };
 
-  const teamMembers = members.filter(
-    (m) => (m.team_id && myTeams.includes(m.team_id)) || (m.team_id_2 && myTeams.includes(m.team_id_2)),
+  const teamMembers = members.filter((m) =>
+    [m.team_id, m.team_id_2, m.team_id_3].some((t) => t && myTeams.includes(t)),
   );
   const nameById = new Map(teamMembers.map((m) => [m.id, m.name]));
   const teamNameById = new Map((await getTeams()).map((t) => [t.id, t.name]));
 
-  // 오늘 이후만 (한국시간 기준) — 두 팀이면 인원이 겹칠 수 있어 한 번에 조회 후 팀별로 나눈다
+  // 오늘 이후만 (한국시간 기준) — 여러 팀이면 인원이 겹칠 수 있어 한 번에 조회 후 팀별로 나눈다
   const todayStr = kstYmd();
   const ids = teamMembers.map((m) => m.id);
   const { data, error } = ids.length
@@ -84,7 +85,9 @@ export async function getTeamUnavailable(): Promise<
 
   const teams = myTeams.map((teamId) => {
     const inTeam = new Set(
-      teamMembers.filter((m) => m.team_id === teamId || m.team_id_2 === teamId).map((m) => m.id),
+      teamMembers
+        .filter((m) => m.team_id === teamId || m.team_id_2 === teamId || m.team_id_3 === teamId)
+        .map((m) => m.id),
     );
     const byDate = new Map<string, string[]>();
     for (const r of data ?? []) {

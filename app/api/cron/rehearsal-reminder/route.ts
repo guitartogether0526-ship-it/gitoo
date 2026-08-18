@@ -39,7 +39,7 @@ export async function GET(req: Request) {
 
   const [{ data: teams }, { data: members }] = await Promise.all([
     sb.from("teams").select("id,name"),
-    sb.from("members").select("id,name,team_id,team_id_2"),
+    sb.from("members").select("id,name,team_id,team_id_2,team_id_3"),
   ]);
 
   let sent = 0;
@@ -47,7 +47,9 @@ export async function GET(req: Request) {
     const team = (teams ?? []).find((t) => t.name === r.reserved_by);
     const ids = team
       ? (members ?? [])
-          .filter((m) => m.team_id === team.id || m.team_id_2 === team.id)
+          .filter(
+            (m) => m.team_id === team.id || m.team_id_2 === team.id || m.team_id_3 === team.id,
+          )
           .map((m) => m.id)
       : (members ?? []).filter((m) => m.name === r.reserved_by).map((m) => m.id);
     if (ids.length === 0) continue;

@@ -6,7 +6,7 @@ import type { Song, Team } from "@/lib/types";
 import { getSupabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { can } from "@/lib/roles";
-import { addTeam, renameTeam, reorderTeams } from "@/lib/team-actions";
+import { addTeam, renameTeam, reorderTeams, deleteTeam } from "@/lib/team-actions";
 import { setSongStatus, toggleSongVote } from "@/lib/song-actions";
 import { sendSongPush } from "@/lib/push-actions";
 import { useRefreshHold } from "@/lib/refresh-hold";
@@ -17,8 +17,10 @@ type MemberLite = {
   name: string;
   part: string;
   part2?: string | null;
+  part3?: string | null;
   team_id: string | null;
   team_id_2: string | null;
+  team_id_3: string | null;
 };
 
 const HeartIcon = ({ filled }: { filled: boolean }) => (
@@ -42,7 +44,7 @@ export default function SetlistView({
 }: {
   teams: Team[];
   initial: Song[];
-  myTeamIds: string[]; // 본인 소속 팀(최대 2개)
+  myTeamIds: string[]; // 본인 소속 팀(최대 3개)
   members: MemberLite[];
 }) {
   const { user } = useAuth();
@@ -142,6 +144,24 @@ export default function SetlistView({
     setNewTeam("");
   };
 
+  // 팀 삭제 — 추가와 동일하게 즉시 반영(저장 버튼 대기 없음)
+  const removeTeamInModal = async (t: Team) => {
+    setTeamError("");
+    const n = songs.filter((s) => s.team_id === t.id).length;
+    if (!window.confirm(`"${t.name}" 팀을 삭제할까요?\n이 팀의 곡 ${n}개도 함께 삭제되고, 팀원은 미배정이 됩니다. 되돌릴 수 없습니다.`)) return;
+    setTeamBusy(true);
+    const res = await deleteTeam(t.id);
+    setTeamBusy(false);
+    if ("error" in res) {
+      setTeamError(res.error);
+      return;
+    }
+    setDraft((prev) => prev.filter((x) => x.id !== t.id));
+    setTeamList((prev) => prev.filter((x) => x.id !== t.id));
+    setSongs((prev) => prev.filter((s) => s.team_id !== t.id));
+    if (activeTeam === t.id) setActiveTeam(teamList.find((x) => x.id !== t.id)?.id ?? "");
+  };
+
   const saveTeams = async () => {
     setTeamError("");
     // 빈 이름 검사
@@ -191,7 +211,10 @@ export default function SetlistView({
 
   const activeTeamName = teamList.find((t) => t.id === activeTeam)?.name ?? "";
   const activeMembers = members
-    .filter((m) => m.team_id === activeTeam || m.team_id_2 === activeTeam)
+    .filter(
+      (m) =>
+        m.team_id === activeTeam || m.team_id_2 === activeTeam || m.team_id_3 === activeTeam,
+    )
     .sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
   // 좋아요 — 회원별 1인 1투표 (서버 액션이 song_votes에 저장, 확정값 반환)
@@ -569,9 +592,13 @@ export default function SetlistView({
                 {activeMembers.map((m) => (
                   <div key={m.id} className="res-item">
                     <span className="m-name">{m.name}</span>
-                    {/* 팀1 소속이면 악기1, 팀2 소속이면 악기2(없으면 악기1과 동일) */}
+                    {/* 그 팀에 해당하는 악기 — 악기2·3이 비면 악기1 */}
                     <span className="dim" style={{ fontSize: 13 }}>
-                      {m.team_id === activeTeam ? m.part : m.part2 || m.part}
+                      {m.team_id === activeTeam
+                        ? m.part
+                        : m.team_id_2 === activeTeam
+                          ? m.part2 || m.part
+                          : m.part3 || m.part}
                     </span>
                   </div>
                 ))}
@@ -589,7 +616,7 @@ export default function SetlistView({
               <div className="section-title" style={{ margin: 0 }}>팀 수정</div>
               <button className="btn ghost btn-sm" onClick={() => setShowTeamModal(false)}>닫기</button>
             </div>
-            <p className="dim" style={{ fontSize: 12, marginTop: 4 }}>이름을 수정하고 ▲▼로 순서를 바꾼 뒤 저장하세요.</p>
+            <p className="dim" style={{ fontSize: 12, marginTop: 4 }}>이름을 수정하고 ▲▼로 순서를 바꾼 뒤 저장하세요. 추가·삭제는 즉시 반영됩니다.</p>
 
             <div style={{ marginTop: 8 }}>
               {draft.map((t, i) => (
@@ -597,6 +624,7 @@ export default function SetlistView({
                   <input className="input grow" value={t.name} onChange={(e) => setDraftName(i, e.target.value)} maxLength={30} />
                   <button className="btn ghost btn-sm" onClick={() => moveTeam(i, -1)} disabled={i === 0} aria-label="위로">▲</button>
                   <button className="btn ghost btn-sm" onClick={() => moveTeam(i, 1)} disabled={i === draft.length - 1} aria-label="아래로">▼</button>
+                  <button className="btn danger btn-sm" disabled={teamBusy} onClick={() => removeTeamInModal(t)} aria-label={`${t.name} 삭제`}>삭제</button>
                 </div>
               ))}
             </div>

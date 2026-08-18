@@ -17,10 +17,11 @@ export default async function ReservationPage() {
     getTeams(),
   ]);
 
-  // 로그인한 회원의 팀명(최대 2개, 미배정/관리자면 빈 배열) — 예약자 선택지에 사용
+  // 로그인한 회원의 팀명(최대 3개, 미배정/관리자면 빈 배열) — 예약자 선택지에 사용
   const myTeamIds = [
     me?.team_id ?? session?.team_id ?? null,
     me?.team_id_2 ?? session?.team_id_2 ?? null,
+    me?.team_id_3 ?? session?.team_id_3 ?? null,
   ].filter((v): v is string => !!v);
   const myTeamNames = myTeamIds
     .map((id) => teams.find((t) => t.id === id)?.name)

@@ -75,6 +75,7 @@ export async function createMember(input: {
     email: input.email,
     part: input.part,
     part2: input.part2 || null,
+    part3: null,
     status: "active",
     role: "member",
     initial: input.name.trim().charAt(0) || "?",
@@ -82,6 +83,7 @@ export async function createMember(input: {
     approved: false, // 관리자 승인 대기
     team_id: null, // 팀1 미배정 (운영진이 배정)
     team_id_2: null, // 팀2 없음
+    team_id_3: null, // 팀3 없음
   };
 
   const sb = getSupabaseAdmin();
@@ -153,10 +155,17 @@ export async function setRole(id: string, role: Member["role"]): Promise<void> {
   if (row) row.role = role;
 }
 
-/** 본인 기본정보 수정 (이름·휴대폰·이메일·악기1·악기2). 아바타 이니셜은 이름에서 재계산. */
+/** 본인 기본정보 수정 (이름·휴대폰·이메일·악기1~3). 아바타 이니셜은 이름에서 재계산. */
 export async function setProfile(
   id: string,
-  input: { name: string; phone: string; email: string; part: string; part2?: string | null },
+  input: {
+    name: string;
+    phone: string;
+    email: string;
+    part: string;
+    part2?: string | null;
+    part3?: string | null;
+  },
 ): Promise<void> {
   const initial = input.name.trim().charAt(0) || "?";
   const patch = {
@@ -165,6 +174,7 @@ export async function setProfile(
     email: input.email.trim().toLowerCase(),
     part: input.part.trim() || "미정",
     part2: input.part2?.trim() || null,
+    part3: input.part3?.trim() || null,
     initial,
   };
   const sb = getSupabaseAdmin();
@@ -186,23 +196,20 @@ export async function setStatus(id: string, status: Member["status"]): Promise<v
   if (row) row.status = status;
 }
 
-/** 팀 배정 — slot 1=team_id(팀1), slot 2=team_id_2(팀2). null=해제 */
+/** 팀 배정 — slot 1=team_id, 2=team_id_2, 3=team_id_3 (최대 3개 팀). null=해제 */
 export async function setTeam(
   id: string,
   teamId: string | null,
-  slot: 1 | 2 = 1,
+  slot: 1 | 2 | 3 = 1,
 ): Promise<void> {
-  const col = slot === 2 ? "team_id_2" : "team_id";
+  const col = (slot === 1 ? "team_id" : `team_id_${slot}`) as "team_id" | "team_id_2" | "team_id_3";
   const sb = getSupabaseAdmin();
   if (sb) {
     await sb.from("members").update({ [col]: teamId }).eq("id", id);
     return;
   }
   const row = mem.rows.find((r) => r.id === id);
-  if (row) {
-    if (slot === 2) row.team_id_2 = teamId;
-    else row.team_id = teamId;
-  }
+  if (row) row[col] = teamId;
 }
 
 export async function removeMember(id: string): Promise<void> {

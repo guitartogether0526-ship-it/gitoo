@@ -12,10 +12,10 @@ export default async function MembersPage() {
   const pending = members.length - approved.length;
   const staff = approved.filter((m) => m.role !== "member").length;
 
-  // 파트별 인원수 — 악기1·악기2 모두 집계(악기 2개인 회원은 양쪽에 포함). PARTS 순서, 그 외 파트는 뒤에.
+  // 파트별 인원수 — 악기1~3 모두 집계(여러 악기인 회원은 각각 포함). PARTS 순서, 그 외 파트는 뒤에.
   const partCounts = new Map<string, number>();
   for (const m of approved) {
-    for (const p of [m.part, m.part2]) {
+    for (const p of [m.part, m.part2, m.part3]) {
       if (p) partCounts.set(p, (partCounts.get(p) ?? 0) + 1);
     }
   }

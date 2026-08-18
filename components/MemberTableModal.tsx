@@ -13,8 +13,8 @@ const guitarSlots = (cell: CellMember[]): (CellMember | null)[] =>
 
 /**
  * 승인 회원을 팀×파트로 그루핑한다.
- * 팀↔악기 페어링: 팀1 소속이면 악기1(part), 팀2 소속이면 악기2(part2, 없으면 part).
- * 두 팀에 속한 회원은 두 팀 컬럼에 각자 해당 악기로 등장한다.
+ * 팀↔악기 페어링: 팀1=악기1(part), 팀2=악기2(part2), 팀3=악기3(part3). 악기2·3이 비면 악기1을 쓴다.
+ * 여러 팀에 속한 회원은 각 팀 컬럼에 해당 악기로 등장한다.
  */
 function groupByTeamPart(members: Member[], teams: Team[]) {
   const cell = new Map<string, CellMember[]>(); // key = `${teamId}|${part}`
@@ -32,7 +32,7 @@ function groupByTeamPart(members: Member[], teams: Team[]) {
 
   for (const m of members) {
     if (!m.approved) continue;
-    if (!m.team_id && !m.team_id_2) {
+    if (!m.team_id && !m.team_id_2 && !m.team_id_3) {
       unassigned.push({
         id: m.id,
         name: m.name,
@@ -43,6 +43,9 @@ function groupByTeamPart(members: Member[], teams: Team[]) {
     }
     if (m.team_id) put(m.team_id, m.part, m); // 팀1 = 악기1
     if (m.team_id_2 && m.team_id_2 !== m.team_id) put(m.team_id_2, m.part2 || m.part, m); // 팀2 = 악기2
+    // 팀3 = 악기3 (앞선 슬롯과 같은 팀이면 중복 표시하지 않음)
+    if (m.team_id_3 && m.team_id_3 !== m.team_id && m.team_id_3 !== m.team_id_2)
+      put(m.team_id_3, m.part3 || m.part, m);
   }
   for (const arr of cell.values()) arr.sort((a, b) => a.name.localeCompare(b.name, "ko"));
   unassigned.sort((a, b) => a.name.localeCompare(b.name, "ko"));
@@ -71,9 +74,13 @@ export default function MemberTableModal({
     () => groupByTeamPart(members, teams),
     [members, teams],
   );
-  // 팀 헤더의 인원수 — 두 팀 소속 회원은 각 팀에 1명씩 센다
+  // 팀 헤더의 인원수 — 여러 팀 소속 회원은 각 팀에 1명씩 센다
   const teamCount = (teamId: string) =>
-    members.filter((m) => m.approved && (m.team_id === teamId || m.team_id_2 === teamId)).length;
+    members.filter(
+      (m) =>
+        m.approved &&
+        (m.team_id === teamId || m.team_id_2 === teamId || m.team_id_3 === teamId),
+    ).length;
 
   // 표를 캔버스에 그려 PNG로 저장 (다크 테마 색상은 CSS 토큰에서 가져옴)
   const downloadImage = () => {

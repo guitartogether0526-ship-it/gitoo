@@ -65,6 +65,7 @@ export interface Member {
   email: string; // 이메일 (아이디/비밀번호 찾기 발송용)
   part: string; // 악기1 — 팀1(team_id)에서 담당하는 파트 (기타/베이스/드럼/보컬/키보드 등)
   part2?: string | null; // 악기2 — 팀2(team_id_2)에서 담당하는 파트. null이면 팀2에서도 악기1과 동일
+  part3?: string | null; // 악기3 — 팀3(team_id_3)에서 담당하는 파트. null이면 팀3에서도 악기1과 동일
   status: MemberStatus;
   role: MemberRole; // 권한 등급
   initial: string; // 아바타 이니셜
@@ -72,6 +73,7 @@ export interface Member {
   approved: boolean; // 관리자 승인 여부 (false = 가입 승인 대기)
   team_id: string | null; // 소속 팀1 (운영진이 배정, 미배정 = null)
   team_id_2: string | null; // 소속 팀2 (한 사람이 2개 팀 참여, 없으면 null)
+  team_id_3: string | null; // 소속 팀3 (최대 3개 팀, 없으면 null)
 }
 
 /** 로그인 세션 사용자 (쿠키에 저장 — 비밀번호 등 민감정보 미포함) */
@@ -83,4 +85,5 @@ export interface SessionUser {
   initial: string;
   team_id: string | null; // 소속 팀1 (운영진 배정)
   team_id_2: string | null; // 소속 팀2 (한 사람이 2개 팀 참여, 없으면 null)
+  team_id_3: string | null; // 소속 팀3 (최대 3개 팀, 없으면 null)
 }

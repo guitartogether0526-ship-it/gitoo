@@ -127,14 +127,15 @@ export async function sendToTeam(
   const sb = getSupabaseAdmin();
   if (!sb) return { sent: 0 };
 
-  // 팀1·팀2 소속을 각각 조회해 합침 (한 사람이 두 팀 참여 가능)
-  const [t1, t2] = await Promise.all([
-    sb.from("members").select("id").eq("team_id", teamId),
-    sb.from("members").select("id").eq("team_id_2", teamId),
-  ]);
-  const ids = [...new Set([...(t1.data ?? []), ...(t2.data ?? [])].map((m) => m.id))].filter(
-    (id) => id !== excludeMemberId,
+  // 팀1~팀3 슬롯을 각각 조회해 합침 (한 사람이 최대 3개 팀 참여 가능)
+  const slots = await Promise.all(
+    ["team_id", "team_id_2", "team_id_3"].map((col) =>
+      sb.from("members").select("id").eq(col, teamId),
+    ),
   );
+  const ids = [
+    ...new Set(slots.flatMap((r) => (r.data ?? []).map((m) => m.id))),
+  ].filter((id) => id !== excludeMemberId);
   return sendToMembers(ids, payload);
 }
 

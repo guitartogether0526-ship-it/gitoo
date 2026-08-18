@@ -12,4 +12,5 @@ export const ADMIN_USER: SessionUser = {
   initial: "A",
   team_id: null,
   team_id_2: null,
+  team_id_3: null,
 };

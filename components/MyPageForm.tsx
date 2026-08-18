@@ -22,6 +22,7 @@ export default function MyPageForm({
   const [email, setEmail] = useState(member?.email ?? "");
   const [part, setPart] = useState(member?.part ?? "기타");
   const [part2, setPart2] = useState(member?.part2 ?? ""); // 악기2 (선택, "" = 없음)
+  const [part3, setPart3] = useState(member?.part3 ?? ""); // 악기3 (선택, "" = 없음)
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -95,8 +96,12 @@ export default function MyPageForm({
       setError("악기 2가 악기 1과 같으면 '없음 (악기1과 동일)'을 선택하세요.");
       return;
     }
+    if (part3 && part3 === part) {
+      setError("악기 3이 악기 1과 같으면 '없음 (악기1과 동일)'을 선택하세요.");
+      return;
+    }
     setBusy(true);
-    const res = await updateMyProfile({ name, phone, email, part, part2 });
+    const res = await updateMyProfile({ name, phone, email, part, part2, part3 });
     setBusy(false);
     if ("error" in res) {
       setError(res.error);
@@ -135,6 +140,7 @@ export default function MyPageForm({
               onChange={(e) => {
                 setPart(e.target.value);
                 if (part2 === e.target.value) setPart2(""); // 악기2와 겹치면 악기2 해제
+                if (part3 === e.target.value) setPart3(""); // 악기3도 동일
               }}
             >
               {PARTS.map((p) => (
@@ -155,6 +161,18 @@ export default function MyPageForm({
               {!!part2 && !PARTS.includes(part2) && <option>{part2}</option>}
             </select>
           </div>
+          <div className="field">
+            <label>악기 3 (팀3 담당)</label>
+            <select className="select" value={part3} onChange={(e) => setPart3(e.target.value)}>
+              <option value="">없음 (악기1과 동일)</option>
+              {PARTS.map((p) => (
+                <option key={p} value={p} disabled={p === part}>
+                  {p}
+                </option>
+              ))}
+              {!!part3 && !PARTS.includes(part3) && <option>{part3}</option>}
+            </select>
+          </div>
           {error && <p className="form-error">{error}</p>}
           {saved && <p className="dim" style={{ color: "var(--ok, #5ac88a)", fontSize: 13, margin: 0 }}>저장되었습니다.</p>}
           <button className="btn amber" disabled={busy} onClick={submit}>
@@ -163,7 +181,7 @@ export default function MyPageForm({
         </div>
       </div>
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 10 }}>
-        팀2에서 다른 악기를 맡는 경우에만 악기 2를 선택하세요. 권한·팀 변경은 운영진에게 문의하세요. (아이디는 변경할 수 없습니다)
+        팀2·팀3에서 다른 악기를 맡는 경우에만 악기 2·3을 선택하세요. 권한·팀 변경은 운영진에게 문의하세요. (아이디는 변경할 수 없습니다)
       </p>
 
       <div className="section-title">비밀번호 변경</div>

@@ -44,6 +44,7 @@ function toSession(m: {
   initial: string;
   team_id: string | null;
   team_id_2?: string | null;
+  team_id_3?: string | null;
 }): SessionUser {
   return {
     id: m.id,
@@ -53,6 +54,7 @@ function toSession(m: {
     initial: m.initial,
     team_id: m.team_id ?? null,
     team_id_2: m.team_id_2 ?? null,
+    team_id_3: m.team_id_3 ?? null,
   };
 }
 
@@ -306,6 +308,7 @@ export async function updateMyProfile(input: {
   email: string;
   part: string;
   part2?: string;
+  part3?: string;
 }): Promise<{ user: SessionUser } | { error: string }> {
   const session = await getSession();
   if (!session) return { error: "로그인이 필요합니다." };
@@ -316,13 +319,14 @@ export async function updateMyProfile(input: {
   const email = input.email.trim().toLowerCase();
   const part = input.part.trim();
   const part2 = (input.part2 ?? "").trim() || null;
+  const part3 = (input.part3 ?? "").trim() || null;
 
   if (!name) return { error: "이름을 입력하세요." };
   if (!phone) return { error: "휴대폰번호를 입력하세요." };
   if (!EMAIL_RE.test(email)) return { error: "올바른 이메일 주소를 입력하세요." };
   if (part2 && part2 === part) return { error: "악기 2는 악기 1과 다른 악기를 선택하세요." };
 
-  await setProfile(session.id, { name, phone, email, part, part2 });
+  await setProfile(session.id, { name, phone, email, part, part2, part3 });
 
   // 세션(쿠키)에 들어가는 값만 갱신 — 이름/파트/이니셜
   const user: SessionUser = {
@@ -356,22 +360,24 @@ export async function kickMember(id: string): Promise<{ ok: true } | { error: st
   return { ok: true };
 }
 
-/** 팀 배정/변경 (STAFF 이상) — slot 1=팀1, slot 2=팀2. teamId=null 이면 해당 슬롯 해제 */
+/** 팀 배정/변경 (STAFF 이상) — slot 1~3(팀1~팀3). teamId=null 이면 해당 슬롯 해제 */
 export async function changeTeam(
   id: string,
   teamId: string | null,
-  slot: 1 | 2 = 1,
+  slot: 1 | 2 | 3 = 1,
 ): Promise<{ ok: true } | { error: string }> {
   const session = await getSession();
   if (!can.manageMembers(session?.role)) return { error: "권한이 없습니다." };
-  if (slot !== 1 && slot !== 2) return { error: "잘못된 팀 슬롯입니다." };
+  if (slot !== 1 && slot !== 2 && slot !== 3) return { error: "잘못된 팀 슬롯입니다." };
 
-  // 두 슬롯에 같은 팀을 중복 배정하지 못하게 (한 팀에 한 번만)
+  // 다른 슬롯에 이미 있는 팀을 중복 배정하지 못하게 (한 팀에 한 번만)
   if (teamId) {
     const members = await getAllMembers();
     const target = members.find((m) => m.id === id);
-    const otherTeam = slot === 2 ? target?.team_id : target?.team_id_2;
-    if (otherTeam && otherTeam === teamId) {
+    const others = [target?.team_id, target?.team_id_2, target?.team_id_3].filter(
+      (_, i) => i + 1 !== slot,
+    );
+    if (others.includes(teamId)) {
       return { error: "이미 다른 슬롯에 배정된 팀입니다. 서로 다른 팀을 선택하세요." };
     }
   }

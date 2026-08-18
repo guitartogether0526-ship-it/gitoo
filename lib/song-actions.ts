@@ -15,7 +15,7 @@ async function teamPermError(
   if (can.manageTeams(session.role)) return null;
   const { data: song } = await sb.from("songs").select("team_id").eq("id", songId).single();
   const me = (await getAllMembers()).find((m) => m.id === session.id);
-  const myTeams = me ? [me.team_id, me.team_id_2].filter(Boolean) : [];
+  const myTeams = me ? [me.team_id, me.team_id_2, me.team_id_3].filter(Boolean) : [];
   if (!song || !me || !myTeams.includes((song as { team_id: string }).team_id)) return denied;
   return null;
 }

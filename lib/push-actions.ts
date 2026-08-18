@@ -45,7 +45,7 @@ export async function sendSongPush(
   if (!can.manageTeams(session.role)) {
     const members = await getAllMembers();
     const me = members.find((m) => m.id === session.id);
-    const myTeams = me ? [me.team_id, me.team_id_2].filter(Boolean) : [];
+    const myTeams = me ? [me.team_id, me.team_id_2, me.team_id_3].filter(Boolean) : [];
     if (!myTeams.includes(teamId)) return { error: "본인 팀 곡만 알림을 보낼 수 있습니다." };
   }
 
@@ -105,7 +105,7 @@ export async function sendReservationPush(
   if (!can.manageTeams(session.role)) {
     const members = await getAllMembers();
     const me = members.find((m) => m.id === session.id);
-    const myTeams = me ? [me.team_id, me.team_id_2].filter(Boolean) : [];
+    const myTeams = me ? [me.team_id, me.team_id_2, me.team_id_3].filter(Boolean) : [];
     if (!myTeams.includes(team.id)) return { error: "본인 팀 예약만 알림을 보낼 수 있습니다." };
   }
 

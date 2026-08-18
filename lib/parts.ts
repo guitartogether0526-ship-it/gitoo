@@ -4,9 +4,9 @@
  */
 export const PARTS = ["기타", "베이스", "드럼", "보컬", "키보드", "투게더"];
 
-/** "기타 · 베이스" 처럼 악기1·악기2를 한 줄로 표시 (악기2 없으면 악기1만) */
-export function partLabel(part: string, part2?: string | null): string {
-  return part2 ? `${part} · ${part2}` : part;
+/** "기타 · 베이스" 처럼 악기1~3을 한 줄로 표시 (비어 있는 악기는 생략) */
+export function partLabel(part: string, part2?: string | null, part3?: string | null): string {
+  return [part, part2, part3].filter(Boolean).join(" · ");
 }
 
 /** 정렬용 — PARTS 순서 랭크. 목록에 없는 파트는 맨 뒤 */

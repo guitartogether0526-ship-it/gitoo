@@ -595,7 +595,7 @@ function ReservationEditor({
   const mtEnd = mtEndOf(res.date, endDate, isMulti);
   const mtLabel = mtEnd ? nightsLabelOf(res.date, mtEnd) : "";
 
-  // 예약자 선택지: 현재 값 + 본인 이름 + 소속 팀명(최대 2개)
+  // 예약자 선택지: 현재 값 + 본인 이름 + 소속 팀명(최대 3개)
   const reserverOpts = Array.from(new Set([res.reserved_by, myName, ...myTeamNames]));
   // 용도 선택지: 현재 값 + 기본. 레슨/정기공연/MT/운영진회의는 운영진만
   const purposeOpts = Array.from(

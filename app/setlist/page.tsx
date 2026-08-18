@@ -26,11 +26,12 @@ export default async function SetlistPage() {
     voted: myVotes.has(s.id),
   }));
 
-  // 로그인한 회원의 팀 (본인팀 곡만 수정·삭제 가능; 운영진은 전체) — 최대 2개 팀
+  // 로그인한 회원의 팀 (본인팀 곡만 수정·삭제 가능; 운영진은 전체) — 최대 3개 팀
   const me = members.find((m) => m.id === session?.id);
   const myTeamIds = [
     me?.team_id ?? session?.team_id ?? null,
     me?.team_id_2 ?? session?.team_id_2 ?? null,
+    me?.team_id_3 ?? session?.team_id_3 ?? null,
   ].filter((v): v is string => !!v);
 
   // 팀원 보기용 — 이름·파트만 전달(연락처 등 민감정보 제외)
@@ -39,8 +40,10 @@ export default async function SetlistPage() {
     name: m.name,
     part: m.part,
     part2: m.part2 ?? null,
+    part3: m.part3 ?? null,
     team_id: m.team_id,
     team_id_2: m.team_id_2,
+    team_id_3: m.team_id_3,
   }));
 
   return (

@@ -38,15 +38,16 @@ export default async function DashboardPage() {
   const noticeBoardIds = new Set(boards.filter((b) => b.is_notice).map((b) => b.id));
   const pinnedNotices = posts.filter((p) => noticeBoardIds.has(p.board_id) && p.pinned);
 
-  // 본인 팀 — 회원 테이블의 최신 배정값 우선(미배정 시 세션값). 최대 2개 팀.
+  // 본인 팀 — 회원 테이블의 최신 배정값 우선(미배정 시 세션값). 최대 3개 팀.
   const myTeamIds = [
     me?.team_id ?? session?.team_id ?? null,
     me?.team_id_2 ?? session?.team_id_2 ?? null,
+    me?.team_id_3 ?? session?.team_id_3 ?? null,
   ].filter((v): v is string => !!v);
   const myTeams = teams.filter((t) => myTeamIds.includes(t.id));
   const myTeamNames = myTeams.map((t) => t.name);
   const hasTeam = myTeams.length > 0;
-  const multiTeam = myTeams.length > 1; // 2팀 소속이면 항목마다 팀명 표시(구분용)
+  const multiTeam = myTeams.length > 1; // 여러 팀 소속이면 항목마다 팀명 표시(구분용)
   const teamNameById = new Map(teams.map((t) => [t.id, t.name]));
   const scheduleTitle = myTeams.length === 1 ? `${myTeams[0].name} 합주일정` : "내 합주일정";
   const songTitle = myTeams.length === 1 ? `${myTeams[0].name} 선정곡` : "우리 팀 선정곡";

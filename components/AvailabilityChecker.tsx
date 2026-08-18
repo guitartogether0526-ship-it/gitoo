@@ -17,7 +17,7 @@ export default function AvailabilityChecker({
   myTeamNames: string[];
 }) {
   const { user } = useAuth();
-  // 두 팀에 속하면 팀명을 함께 표시 (예: "1팀·2팀")
+  // 여러 팀에 속하면 팀명을 함께 표시 (예: "1팀·2팀")
   const teamLabel = myTeamNames.length > 0 ? myTeamNames.join("·") : "내 팀";
 
   // 오늘 = 한국시간 기준
@@ -177,7 +177,7 @@ export default function AvailabilityChecker({
               <p className="form-error" style={{ marginBottom: 0 }}>{listError}</p>
             ) : (
               <>
-                {/* 두 팀 소속이면 팀 선택 탭 */}
+                {/* 여러 팀 소속이면 팀 선택 탭 */}
                 {teamGroups.length > 1 && (
                   <div className="tab-row" style={{ marginTop: 10 }}>
                     {teamGroups.map((g) => (

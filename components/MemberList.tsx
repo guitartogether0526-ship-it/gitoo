@@ -18,7 +18,11 @@ import {
   kickMember,
 } from "@/lib/auth-actions";
 
-type SortKey = "name" | "part" | "team1" | "team2" | "role" | "status";
+// 팀 슬롯 1~3 — 회원 한 명이 최대 3개 팀에 소속될 수 있다
+const TEAM_SLOTS = [1, 2, 3] as const;
+const TEAM_COL = { 1: "team_id", 2: "team_id_2", 3: "team_id_3" } as const;
+
+type SortKey = "name" | "part" | "team1" | "team2" | "team3" | "role" | "status";
 
 /** 정렬 가능한 테이블 헤더 — 클릭 시 오름차순 ↔ 내림차순 토글 */
 function SortTh({
@@ -116,6 +120,9 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
           case "team2":
             d = teamName(a.team_id_2).localeCompare(teamName(b.team_id_2), "ko");
             break;
+          case "team3":
+            d = teamName(a.team_id_3).localeCompare(teamName(b.team_id_3), "ko");
+            break;
           case "role":
             d = ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role);
             break;
@@ -164,8 +171,8 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
     }
   };
 
-  const onTeam = (id: string, teamId: string | null, slot: 1 | 2) =>
-    patchField(id, slot === 2 ? "team_id_2" : "team_id", teamId, () => changeTeam(id, teamId, slot));
+  const onTeam = (id: string, teamId: string | null, slot: 1 | 2 | 3) =>
+    patchField(id, TEAM_COL[slot], teamId, () => changeTeam(id, teamId, slot));
   const onRole = (id: string, role: MemberRole) =>
     patchField(id, "role", role, () => changeRole(id, role));
   const onStatus = (id: string, status: MemberStatus) =>
@@ -204,7 +211,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
               <div className="title-row">
                 <div className="grow">
                   <span className="m-name">{m.name}</span>
-                  <span className="m-cohort">{partLabel(m.part, m.part2)}</span>
+                  <span className="m-cohort">{partLabel(m.part, m.part2, m.part3)}</span>
                   <div className="dim" style={{ fontSize: 12, marginTop: 2 }}>
                     아이디: {m.username} · {m.phone} · {m.email}
                   </div>
@@ -246,6 +253,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
                 <SortTh label="파트" k="part" sortKey={sortKey} dir={sortDir} onSort={onSort} />
                 <SortTh label="팀1" k="team1" sortKey={sortKey} dir={sortDir} onSort={onSort} className="role-cell" />
                 <SortTh label="팀2" k="team2" sortKey={sortKey} dir={sortDir} onSort={onSort} className="role-cell" />
+                <SortTh label="팀3" k="team3" sortKey={sortKey} dir={sortDir} onSort={onSort} className="role-cell" />
                 <SortTh label="권한" k="role" sortKey={sortKey} dir={sortDir} onSort={onSort} className="role-cell" />
                 <SortTh label="상태" k="status" sortKey={sortKey} dir={sortDir} onSort={onSort} className="role-cell" />
                 <th>관리</th>
@@ -260,37 +268,29 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
                       {m.username}
                     </span>
                   </td>
-                  <td>{partLabel(m.part, m.part2)}</td>
-                  <td className="role-cell">
-                    <select
-                      className="select sm"
-                      value={m.team_id ?? ""}
-                      onChange={(e) => onTeam(m.id, e.target.value || null, 1)}
-                      aria-label={`${m.name} 팀1 배정`}
-                    >
-                      <option value="">미배정</option>
-                      {teams.map((t) => (
-                        <option key={t.id} value={t.id} disabled={t.id === m.team_id_2}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="role-cell">
-                    <select
-                      className="select sm"
-                      value={m.team_id_2 ?? ""}
-                      onChange={(e) => onTeam(m.id, e.target.value || null, 2)}
-                      aria-label={`${m.name} 팀2 배정`}
-                    >
-                      <option value="">없음</option>
-                      {teams.map((t) => (
-                        <option key={t.id} value={t.id} disabled={t.id === m.team_id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
+                  <td>{partLabel(m.part, m.part2, m.part3)}</td>
+                  {TEAM_SLOTS.map((slot) => (
+                    <td className="role-cell" key={slot}>
+                      <select
+                        className="select sm"
+                        value={m[TEAM_COL[slot]] ?? ""}
+                        onChange={(e) => onTeam(m.id, e.target.value || null, slot)}
+                        aria-label={`${m.name} 팀${slot} 배정`}
+                      >
+                        <option value="">{slot === 1 ? "미배정" : "없음"}</option>
+                        {teams.map((t) => (
+                          <option
+                            key={t.id}
+                            value={t.id}
+                            /* 다른 슬롯에 이미 배정된 팀은 선택 불가 (한 팀에 한 번만) */
+                            disabled={TEAM_SLOTS.some((o) => o !== slot && m[TEAM_COL[o]] === t.id)}
+                          >
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  ))}
                   <td className="role-cell">
                     <select
                       className="select sm"
@@ -333,7 +333,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
         </div>
       )}
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 10 }}>
-        표 제목을 누르면 해당 항목으로 정렬됩니다(재클릭 시 역순). 팀1·팀2(두 팀 참여 가능)·권한·상태 변경과 강퇴(계정 삭제)는 운영진(STAFF 이상) 전용입니다. (좌우 스크롤)
+        표 제목을 누르면 해당 항목으로 정렬됩니다(재클릭 시 역순). 팀1~팀3(최대 3개 팀 참여 가능)·권한·상태 변경과 강퇴(계정 삭제)는 운영진(STAFF 이상) 전용입니다. (좌우 스크롤)
       </p>
 
       {/* 팀·파트별 회원표 팝업 */}
