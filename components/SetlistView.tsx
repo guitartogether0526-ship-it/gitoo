@@ -96,7 +96,7 @@ export default function SetlistView({
   const canManageActive = canManageTeams || myTeamIds.includes(activeTeam);
 
   // 재롱페스티벌 — 팀 탭·좋아요·선정곡/후보·유튜브 없이 "곡명 - 참여인원" 한 줄 목록.
-  // 참여인원은 자유 텍스트라 songs.artist 칸을 그대로 쓴다(컬럼 추가 없음).
+  // 참여인원은 회원 이름을 골라 ", " 로 이어 붙인 문자열이라 songs.artist 칸을 그대로 쓴다(컬럼 추가 없음).
   const isFestival = activeCat === "재롱페스티벌";
   // 올리기는 로그인 회원 누구나, 고치고 지우는 건 운영진 또는 올린 본인
   const canAdd = isFestival ? !!user : canManageActive;
@@ -258,7 +258,38 @@ export default function SetlistView({
     )
     .sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
+  const sortedMembers = useMemo(
+    () => members.slice().sort((a, b) => a.name.localeCompare(b.name, "ko")),
+    [members],
+  );
+
   const teamSize = activeMembers.length; // 좋아요를 "N/팀원수" 로 보여주기 위한 분모
+
+  // 참여인원 고르기 — 이름 목록 문자열("A, B")을 토글한다. 별도 상태 없이 artist 칸을 그대로 쓴다.
+  const names = (v: string) => v.split(",").map((n) => n.trim()).filter(Boolean);
+  const toggleName = (cur: string, set: (v: string) => void, name: string) => {
+    const list = names(cur);
+    set((list.includes(name) ? list.filter((n) => n !== name) : [...list, name]).join(", "));
+  };
+  // 이름 선택 칩 — 곡 올리기·수정 폼에서 같은 모양으로 쓴다
+  const memberPicker = (value: string, onChange: (v: string) => void) => (
+    <div className="field">
+      <label>참여인원 ({names(value).length}명)</label>
+      <div className="tab-row wrap">
+        {sortedMembers.map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            className={`tab${names(value).includes(m.name) ? " active" : ""}`}
+            onClick={() => toggleName(value, onChange, m.name)}
+            aria-pressed={names(value).includes(m.name)}
+          >
+            {m.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   const onAddKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") addSong();
@@ -410,10 +441,7 @@ export default function SetlistView({
             <label>곡명</label>
             <input className="input" value={eTitle} onChange={(e) => setETitle(e.target.value)} />
           </div>
-          <div className="field">
-            <label>참여인원</label>
-            <input className="input" value={eArtist} onChange={(e) => setEArtist(e.target.value)} placeholder="예: 홍길동, 김철수" />
-          </div>
+          {memberPicker(eArtist, setEArtist)}
           <div className="btn-row">
             <button className="btn amber btn-sm" onClick={() => saveEdit(s.id)}>저장</button>
             <button className="btn ghost btn-sm" onClick={cancelEdit}>취소</button>
@@ -658,10 +686,14 @@ export default function SetlistView({
                   <label>곡 제목</label>
                   <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={onAddKey} placeholder="곡 제목" />
                 </div>
+                {isFestival ? (
+                  memberPicker(artist, setArtist)
+                ) : (
                 <div className="field">
-                  <label>{isFestival ? "참여인원" : "아티스트명"}</label>
-                  <input className="input" value={artist} onChange={(e) => setArtist(e.target.value)} onKeyDown={onAddKey} placeholder={isFestival ? "예: 홍길동, 김철수" : "아티스트명"} />
+                  <label>아티스트명</label>
+                  <input className="input" value={artist} onChange={(e) => setArtist(e.target.value)} onKeyDown={onAddKey} placeholder="아티스트명" />
                 </div>
+                )}
                 {!isFestival && (
                 <div className="field">
                   <label>유튜브 링크</label>
