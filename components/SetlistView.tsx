@@ -95,6 +95,16 @@ export default function SetlistView({
   // 현재 보고 있는 팀을 관리할 수 있는가 (본인 소속 팀 또는 운영진)
   const canManageActive = canManageTeams || myTeamIds.includes(activeTeam);
 
+  // 재롱페스티벌 — 팀 탭·좋아요·선정곡/후보·유튜브 없이 "곡명 - 참여인원" 한 줄 목록.
+  // 참여인원은 자유 텍스트라 songs.artist 칸을 그대로 쓴다(컬럼 추가 없음).
+  const isFestival = activeCat === "재롱페스티벌";
+  // 올리기는 로그인 회원 누구나, 고치고 지우는 건 운영진 또는 올린 본인
+  const canAdd = isFestival ? !!user : canManageActive;
+  const canEditSong = (s: Song) =>
+    isFestival
+      ? canManageTeams || (!!s.created_by && s.created_by === user?.name)
+      : canManageActive;
+
   // 곡 올리기 폼
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
@@ -110,7 +120,6 @@ export default function SetlistView({
 
   // 팀 수정 팝업 (운영진)
   const [showTeamModal, setShowTeamModal] = useState(false);
-  const [modalCat, setModalCat] = useState<TeamCategory>("정기공연"); // 팀 수정 팝업 안의 탭
   const [draft, setDraft] = useState<Team[]>([]);
   const [newTeam, setNewTeam] = useState("");
   const [teamBusy, setTeamBusy] = useState(false);
@@ -133,7 +142,6 @@ export default function SetlistView({
   useRefreshHold(showForm || editId !== "" || showTeamModal);
 
   const openTeamModal = () => {
-    setModalCat(activeCat); // 지금 보고 있는 페이지 탭으로 열기
     setDraft(teamList.map((t) => ({ ...t })));
     setNewTeam("");
     setTeamError("");
@@ -149,15 +157,13 @@ export default function SetlistView({
     });
   const setDraftName = (i: number, name: string) =>
     setDraft((prev) => prev.map((t, idx) => (idx === i ? { ...t, name } : t)));
-  const setDraftCat = (i: number, category: TeamCategory) =>
-    setDraft((prev) => prev.map((t, idx) => (idx === i ? { ...t, category } : t)));
 
   const addTeamInModal = async () => {
     setTeamError("");
     const name = newTeam.trim();
     if (!name) return;
     setTeamBusy(true);
-    const res = await addTeam(name, modalCat); // 팝업에서 보고 있는 페이지에 추가
+    const res = await addTeam(name, "정기공연"); // 팀 관리는 정기공연 전용 (재롱은 팀 없음)
     setTeamBusy(false);
     if ("error" in res) {
       setTeamError(res.error);
@@ -195,7 +201,7 @@ export default function SetlistView({
   };
 
   // 팝업에서 보여줄 행 — draft 원본 인덱스(i)를 함께 들고 있어야 ▲▼·수정이 정확히 꽂힌다
-  const modalRows = draft.map((t, i) => ({ t, i })).filter(({ t }) => teamCategory(t) === modalCat);
+  const modalRows = draft.map((t, i) => ({ t, i })).filter(({ t }) => teamCategory(t) === "정기공연");
 
   const saveTeams = async () => {
     setTeamError("");
@@ -231,7 +237,7 @@ export default function SetlistView({
     () =>
       songs
         .filter((s) => s.team_id === activeTeam)
-        .filter((s) => canManageActive || s.status === "confirmed")
+        .filter((s) => isFestival || canManageActive || s.status === "confirmed")
         .sort((a, b) =>
           sortByLikes
             ? b.likes - a.likes || a.title.localeCompare(b.title, "ko")
@@ -309,7 +315,7 @@ export default function SetlistView({
   };
 
   const addSong = async () => {
-    if (!canManageActive || addBusy || !title.trim() || !artist.trim()) return;
+    if (!canAdd || addBusy || !title.trim() || !artist.trim()) return;
     setAddBusy(true);
     const payload = {
       team_id: activeTeam,
@@ -336,8 +342,8 @@ export default function SetlistView({
         return;
       }
       setSongs((prev) => [...prev, res.data as Song]);
-      // 같은 팀 소속 회원에게만 푸시 알림 (올린 본인 제외)
-      void sendSongPush(activeTeam, payload.title, payload.artist);
+      // 같은 팀 소속 회원에게만 푸시 알림 (올린 본인 제외) — 재롱은 팀 개념이 없어 생략
+      if (!isFestival) void sendSongPush(activeTeam, payload.title, payload.artist);
       router.refresh();
     } else {
       setSongs((prev) => [...prev, { id: `song-${activeTeam}-${prev.length}`, ...payload }]);
@@ -347,7 +353,7 @@ export default function SetlistView({
     setArtist("");
     setYoutube("");
     setShowForm(false);
-    setNotice(`"${payload.title}" 을(를) 후보곡으로 올렸습니다.`);
+    setNotice(`"${payload.title}" 을(를) ${isFestival ? "목록에 추가했습니다" : "후보곡으로 올렸습니다"}.`);
   };
 
   const startEdit = (s: Song) => {
@@ -378,10 +384,10 @@ export default function SetlistView({
   };
 
   const deleteSong = (id: string) => {
-    if (!canManageActive) return;
     const song = songs.find((s) => s.id === id);
+    if (!song || !canEditSong(song)) return;
     setConfirmAsk({
-      msg: `"${song?.title ?? "이 곡"}" 을(를) 삭제할까요?
+      msg: `"${song.title}" 을(를) 삭제할까요?
 되돌릴 수 없습니다.`,
       onOk: async () => {
         setSongs((prev) => prev.filter((s) => s.id !== id));
@@ -394,6 +400,38 @@ export default function SetlistView({
       },
     });
   };
+
+  // 재롱페스티벌 한 줄 — 왼쪽 곡명, 오른쪽 참여인원
+  const renderFestivalRow = (s: Song) =>
+    editId === s.id ? (
+      <div className="res-item" key={s.id} style={{ display: "block" }}>
+        <div className="form-grid">
+          <div className="field">
+            <label>곡명</label>
+            <input className="input" value={eTitle} onChange={(e) => setETitle(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>참여인원</label>
+            <input className="input" value={eArtist} onChange={(e) => setEArtist(e.target.value)} placeholder="예: 홍길동, 김철수" />
+          </div>
+          <div className="btn-row">
+            <button className="btn amber btn-sm" onClick={() => saveEdit(s.id)}>저장</button>
+            <button className="btn ghost btn-sm" onClick={cancelEdit}>취소</button>
+          </div>
+        </div>
+      </div>
+    ) : (
+      <div className="res-item" key={s.id}>
+        <span className="item-name grow">{s.title}</span>
+        <span className="item-sub" style={{ margin: 0, textAlign: "right" }}>{s.artist}</span>
+        {canEditSong(s) && (
+          <>
+            <button className="btn ghost btn-sm" onClick={() => startEdit(s)}>수정</button>
+            <button className="btn danger btn-sm" onClick={() => deleteSong(s.id)}>삭제</button>
+          </>
+        )}
+      </div>
+    );
 
   // 곡 카드 1개 — 선정곡/후보곡 두 섹션에서 같은 모양으로 쓴다
   const renderSong = (s: Song) =>
@@ -565,6 +603,7 @@ export default function SetlistView({
       </div>
 
       {/* 팀별 탭 — 4개씩 줄바꿈 (1~4팀 / 5~8팀) */}
+      {!isFestival && (
       <div className="tab-row wrap">
         {catTeams.map((t) => (
           <button
@@ -578,8 +617,9 @@ export default function SetlistView({
           </button>
         ))}
       </div>
+      )}
 
-      {catTeams.length === 0 && (
+      {!isFestival && catTeams.length === 0 && (
         <div className="card">
           <p className="dim" style={{ margin: 0, fontSize: 13 }}>
             {activeCat} 팀이 아직 없습니다.
@@ -589,6 +629,7 @@ export default function SetlistView({
       )}
 
       {/* 팀 도구 버튼 */}
+      {!isFestival && (
       <div className="flex items-center gap-8" style={{ marginTop: 8 }}>
         {!!activeTeam && (
           <button className="btn ghost btn-sm" onClick={() => setShowMembers(true)}>
@@ -601,12 +642,13 @@ export default function SetlistView({
           </button>
         )}
       </div>
+      )}
 
       {/* 곡 올리기 — 본인팀/운영진만 */}
-      {canManageActive && !!activeTeam && (
+      {canAdd && !!activeTeam && (
         <>
           <button className="btn amber" style={{ width: "100%", marginTop: 8 }} onClick={() => setShowForm((v) => !v)}>
-            {showForm ? "닫기" : "＋ 곡 올리기"}
+            {showForm ? "닫기" : isFestival ? "＋ 곡 추가" : "＋ 곡 올리기"}
           </button>
 
           {showForm && (
@@ -617,9 +659,10 @@ export default function SetlistView({
                   <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={onAddKey} placeholder="곡 제목" />
                 </div>
                 <div className="field">
-                  <label>아티스트명</label>
-                  <input className="input" value={artist} onChange={(e) => setArtist(e.target.value)} onKeyDown={onAddKey} placeholder="아티스트명" />
+                  <label>{isFestival ? "참여인원" : "아티스트명"}</label>
+                  <input className="input" value={artist} onChange={(e) => setArtist(e.target.value)} onKeyDown={onAddKey} placeholder={isFestival ? "예: 홍길동, 김철수" : "아티스트명"} />
                 </div>
+                {!isFestival && (
                 <div className="field">
                   <label>유튜브 링크</label>
                   <input
@@ -633,8 +676,9 @@ export default function SetlistView({
                     autoCapitalize="none"
                   />
                 </div>
+                )}
                 <button className="btn amber" disabled={addBusy || !title.trim() || !artist.trim()} onClick={addSong}>
-                  {addBusy ? "올리는 중…" : "합주곡에 올리기"}
+                  {addBusy ? "올리는 중…" : isFestival ? "목록에 추가" : "합주곡에 올리기"}
                 </button>
               </div>
             </div>
@@ -644,6 +688,20 @@ export default function SetlistView({
 
       {/* 곡 목록 — 팀이 없는 페이지에서는 감춘다 */}
       {!!activeTeam && (
+        <>
+      {isFestival ? (
+        // 재롱페스티벌 — 곡명 / 참여인원 한 줄 목록
+        <>
+          <div className="section-title">재롱페스티벌 ({teamSongs.length})</div>
+          <div className="card">
+            {teamSongs.length === 0 ? (
+              <p className="dim" style={{ margin: 0, fontSize: 13 }}>아직 등록된 곡이 없습니다.</p>
+            ) : (
+              teamSongs.map(renderFestivalRow)
+            )}
+          </div>
+        </>
+      ) : (
         <>
       <div className="section-title flex items-center" style={{ justifyContent: "space-between", gap: 8 }}>
         <span>
@@ -682,6 +740,8 @@ export default function SetlistView({
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 8 }}>
         본인 팀 곡은 올리기·수정·삭제·선정이 가능하고, 다른 팀은 선정곡만 볼 수 있어요. (운영진은 전체 관리)
       </p>
+        </>
+      )}
         </>
       )}
 
@@ -761,24 +821,11 @@ export default function SetlistView({
               <div className="section-title" style={{ margin: 0 }}>팀 수정</div>
               <button className="btn ghost btn-sm" onClick={() => setShowTeamModal(false)}>닫기</button>
             </div>
-            <p className="dim" style={{ fontSize: 12, marginTop: 4 }}>이름을 고치고 ▲▼로 순서를 바꾼 뒤 저장하세요. 페이지 구분을 바꾸면 저장 시 다른 탭으로 옮겨집니다. 추가·삭제는 즉시 반영됩니다.</p>
-
-            {/* 페이지 구분 탭 — 해당 페이지 팀만 보여준다 */}
-            <div className="tab-row" style={{ marginTop: 8 }}>
-              {TEAM_CATEGORIES.map((c) => (
-                <button
-                  key={c}
-                  className={`tab${modalCat === c ? " active" : ""}`}
-                  onClick={() => setModalCat(c)}
-                >
-                  {c} ({draft.filter((t) => teamCategory(t) === c).length})
-                </button>
-              ))}
-            </div>
+            <p className="dim" style={{ fontSize: 12, marginTop: 4 }}>이름을 고치고 ▲▼로 순서를 바꾼 뒤 저장하세요. 추가·삭제는 즉시 반영됩니다.</p>
 
             <div style={{ marginTop: 8 }}>
               {modalRows.length === 0 && (
-                <p className="dim" style={{ fontSize: 13 }}>{modalCat} 팀이 없습니다. 아래에서 추가하세요.</p>
+                <p className="dim" style={{ fontSize: 13 }}>정기공연 팀이 없습니다. 아래에서 추가하세요.</p>
               )}
               {modalRows.map(({ t, i }, k) => (
                 <div key={t.id} style={{ marginBottom: 10 }}>
@@ -788,16 +835,6 @@ export default function SetlistView({
                     <button className="btn ghost btn-sm" onClick={() => swapTeam(i, modalRows[k + 1].i)} disabled={k === modalRows.length - 1} aria-label="아래로">▼</button>
                   </div>
                   <div className="flex items-center gap-8" style={{ marginTop: 4 }}>
-                    <select
-                      className="select sm grow"
-                      value={teamCategory(t)}
-                      onChange={(e) => setDraftCat(i, e.target.value as TeamCategory)}
-                      aria-label={`${t.name} 페이지 구분`}
-                    >
-                      {TEAM_CATEGORIES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
                     <button className="btn danger btn-sm" disabled={teamBusy} onClick={() => removeTeamInModal(t)} aria-label={`${t.name} 삭제`}>삭제</button>
                   </div>
                 </div>
@@ -805,7 +842,7 @@ export default function SetlistView({
             </div>
 
             <div className="field" style={{ marginTop: 4 }}>
-              <label>새 팀 추가 ({modalCat})</label>
+              <label>새 팀 추가</label>
               <div className="flex items-center gap-8">
                 <input
                   className="input grow"

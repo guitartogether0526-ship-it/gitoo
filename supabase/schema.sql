@@ -241,4 +241,10 @@ insert into teams (id, name) values
   ('t1','1팀'),('t2','2팀'),('t3','3팀')
 on conflict (id) do nothing;
 
+-- 재롱페스티벌은 팀 구분 없이 "곡명 - 참여인원" 한 줄 목록이라, 곡을 담을 그릇 팀 하나만 둔다.
+-- (songs.team_id 가 not null 이라 필요 — 화면에는 팀으로 노출되지 않음)
+insert into teams (id, name, category, sort_order) values
+  ('festival','재롱페스티벌','재롱페스티벌',99)
+on conflict (id) do nothing;
+
 -- posts / reservations / songs / dues / expenses 는 시드하지 않음(운영 데이터로만 채움).
