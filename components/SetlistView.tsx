@@ -451,7 +451,16 @@ export default function SetlistView({
     ) : (
       <div className="res-item" key={s.id}>
         <span className="item-name grow">{s.title}</span>
-        <span className="item-sub" style={{ margin: 0, textAlign: "right" }}>{s.artist}</span>
+        {/* 참여인원 — 3명씩 끊어 줄바꿈. 남는 폭은 곡 제목이 가져간다 */}
+        <span className="item-sub" style={{ margin: 0, textAlign: "right", flexShrink: 0, lineHeight: 1.5 }}>
+          {names(s.artist).reduce<string[][]>((rows, n, i) => {
+            if (i % 3 === 0) rows.push([]);
+            rows[rows.length - 1].push(n);
+            return rows;
+          }, []).map((row, i) => (
+            <div key={i}>{row.join(", ")}</div>
+          ))}
+        </span>
         {canEditSong(s) && (
           <>
             <button className="btn ghost btn-sm" onClick={() => startEdit(s)}>수정</button>
