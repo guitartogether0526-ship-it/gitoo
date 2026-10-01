@@ -82,7 +82,7 @@ const dotClassFor = (purpose: string) =>
     ? "perf" // 빨강 (정기공연/리허설/중간점검/재롱페스티벌)
     : purpose === "MT"
       ? "mt" // 초록
-      : purpose === "운영진회의"
+      : purpose === "운영진회의" || purpose === "기투 정비"
         ? "meeting" // 파랑
         : ""; // 앰버 (합주/개인연습/레슨)
 // 점 표시 순서(색상별)
@@ -520,7 +520,7 @@ export default function ReservationCalendar({
       </div>
 
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 8 }}>
-        날짜를 선택해 예약을 등록하세요 (앰버 = 예약, 빨강 = 정기공연, 초록 = MT, 파랑 = 운영진회의)
+        날짜를 선택해 예약을 등록하세요 (앰버 = 예약, 빨강 = 정기공연, 초록 = MT, 파랑 = 운영진회의·기투 정비)
       </p>
     </>
   );
