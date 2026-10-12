@@ -536,8 +536,8 @@ body {
 }
 .cal-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(7, minmax(0, 1fr)); /* 칸이 내용보다 작아질 수 있게 — 안 그러면 좁은 폰에서 7열이 밀려 잘린다 */
+  gap: 3px;
 }
 .cal-dow {
   text-align: center;
@@ -547,6 +547,8 @@ body {
   padding-bottom: 4px;
 }
 .cal-cell {
+  min-width: 0;
+  overflow: hidden;
   min-height: 64px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -561,7 +563,7 @@ body {
   font-weight: 700;
   cursor: pointer;
   position: relative;
-  padding: 4px 3px;
+  padding: 4px 2px;
 }
 .cal-cell.empty {
   background: transparent;
@@ -592,10 +594,12 @@ body {
   font-size: 9px;
   font-weight: 700;
   line-height: 1.2;
-  padding: 2px 3px;
+  letter-spacing: -0.2px;
+  padding: 2px 2px;
   border-radius: 4px;
   text-align: left;
   word-break: keep-all;
+  overflow-wrap: anywhere; /* BLACKOUT 같은 긴 영문도 칸 안에서 줄바꿈 */
   background: var(--accent-soft);
   color: var(--accent);
 }
