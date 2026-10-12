@@ -537,7 +537,7 @@ body {
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
+  gap: 4px;
 }
 .cal-dow {
   text-align: center;
@@ -547,21 +547,21 @@ body {
   padding-bottom: 4px;
 }
 .cal-cell {
-  aspect-ratio: 1 / 1;
+  min-height: 64px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
   color: var(--text);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  font-size: 13px;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 2px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   position: relative;
-  padding: 0;
+  padding: 4px 3px;
 }
 .cal-cell.empty {
   background: transparent;
@@ -578,29 +578,51 @@ body {
   box-shadow: 0 0 0 1px var(--accent-strong), 0 0 16px var(--accent-glow);
   color: var(--accent);
 }
-.cal-cell .cal-dots {
-  display: flex;
-  align-items: center;
-  gap: 3px;
+.cal-cell .cal-day {
+  text-align: center;
+  line-height: 1.2;
+  margin-bottom: 1px;
 }
-.cal-cell .cal-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent-glow);
+/* 예약 칩 — 칸 안에 "1팀 합주" · "홍길동 개인연습" 식으로 표시, 최대 2줄 */
+.cal-chip {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 2px 3px;
+  border-radius: 4px;
+  text-align: left;
+  word-break: keep-all;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
-.cal-cell .cal-dot.perf {
-  background: var(--danger, #e5484d);
-  box-shadow: 0 0 8px rgba(229, 72, 77, 0.6);
+.cal-chip.personal {
+  background: var(--surface-2);
+  color: var(--text-muted);
 }
-.cal-cell .cal-dot.mt {
-  background: var(--ok, #6bbf73);
-  box-shadow: 0 0 8px rgba(107, 191, 115, 0.6);
+.cal-chip.perf {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
-.cal-cell .cal-dot.meeting {
-  background: var(--info, #5b9bd5);
-  box-shadow: 0 0 8px rgba(91, 155, 213, 0.6);
+.cal-chip.mt {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.cal-chip.meeting {
+  background: rgba(91, 155, 213, 0.18);
+  color: var(--info, #5b9bd5);
+}
+.cal-cell .cal-more {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-align: left;
+  padding-left: 3px;
+}
+.cal-cell.selected .cal-chip {
+  background: rgba(0, 0, 0, 0.25);
 }
 
 /* ---------- 안되는 일정 체크 (2주 그리드) ---------- */
@@ -1576,4 +1598,28 @@ body {
   font-size: 15px;
   line-height: 1.8;
   color: var(--text);
+}
+/* 캘린더 아래 색상 범례 */
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.cal-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.cal-legend .cal-chip {
+  display: inline-block;
+  font-size: 9px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-weight: 700;
+  line-height: 1.2;
 }

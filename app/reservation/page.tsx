@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { kstYmd } from "@/lib/date";
 import ReservationCalendar from "@/components/ReservationCalendar";
 import AvailabilityChecker from "@/components/AvailabilityChecker";
+import ReservationTabs from "@/components/ReservationTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +32,12 @@ export default async function ReservationPage() {
     <>
       <div className="page-head">
         <h1>연습실 예약</h1>
-        <p>캘린더에서 날짜를 골라 예약하세요.</p>
+        <p>캘린더에서 날짜를 골라 예약하세요. 합주 못 가는 날은 "안되는 날 체크"에서.</p>
       </div>
-      <AvailabilityChecker myTeamNames={myTeamNames} />
-      <ReservationCalendar initial={reservations} myTeamNames={myTeamNames} />
+      <ReservationTabs
+        reserve={<ReservationCalendar initial={reservations} myTeamNames={myTeamNames} />}
+        unavailable={<AvailabilityChecker myTeamNames={myTeamNames} />}
+      />
     </>
   );
 }

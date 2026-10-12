@@ -76,17 +76,34 @@ const spans = (r: Reservation, dateStr: string) =>
     ? r.date <= dateStr && dateStr <= r.end_date
     : r.date === dateStr;
 
-// 용도 → 캘린더 점 색상 클래스 (""=앰버 기본)
-const dotClassFor = (purpose: string) =>
+// 용도 → 캘린더 칩 색상 클래스 (""=앰버 기본)
+const chipClassFor = (purpose: string) =>
   RED_DOT_PURPOSES.includes(purpose)
     ? "perf" // 빨강 (정기공연/리허설/중간점검/재롱페스티벌)
     : purpose === "MT"
       ? "mt" // 초록
       : purpose === "운영진회의" || purpose === "기투 정비"
         ? "meeting" // 파랑
-        : ""; // 앰버 (합주/개인연습/레슨)
-// 점 표시 순서(색상별)
-const DOT_ORDER = ["perf", "mt", "meeting", ""];
+        : purpose === "개인연습"
+          ? "personal" // 회색
+          : ""; // 앰버 (합주/레슨)
+// 캘린더 칸에 쓰는 짧은 라벨: 합주 = 팀명(노랑), 개인연습 = 이름(회색) — 색이 종류를 말해 주므로 문구는 생략
+const chipLabelOf = (r: Reservation) =>
+  r.purpose === "합주" || r.purpose === "개인연습"
+    ? r.reserved_by
+    : r.purpose === "리허설(음향체크)"
+      ? "리허설"
+      : r.purpose;
+// 캘린더 아래 색상 범례
+const LEGEND: [string, string, string][] = [
+  ["", "6팀", "합주 (팀명)"],
+  ["personal", "홍길동", "개인연습 (이름)"],
+  ["perf", "공연", "공연 · 행사"],
+  ["mt", "MT", "MT"],
+  ["meeting", "회의", "운영진회의 · 기투 정비"],
+];
+// 한 칸에 보여줄 최대 칩 수 (넘치면 "+n")
+const MAX_CHIPS = 3;
 
 export default function ReservationCalendar({
   initial,
@@ -349,10 +366,10 @@ export default function ReservationCalendar({
             if (day === null) return <div key={`e${i}`} className="cal-cell empty" />;
             const dateStr = ymd(view.y, view.m, day);
             const dow = (firstDay + day - 1) % 7;
-            // 이 날짜에 걸치는 예약들의 색상 카테고리(순서 고정)
-            const dayCats = DOT_ORDER.filter((cat) =>
-              reservations.some((r) => spans(r, dateStr) && dotClassFor(r.purpose) === cat),
-            );
+            // 이 날짜에 걸치는 예약들 — 시간순, 칩으로 표시
+            const dayRes = reservations
+              .filter((r) => spans(r, dateStr))
+              .sort((a, b) => a.time_label.localeCompare(b.time_label));
             const cls = [
               "cal-cell",
               dow === 0 ? "sun" : "",
@@ -363,17 +380,29 @@ export default function ReservationCalendar({
               .join(" ");
             return (
               <button key={dateStr} className={cls} onClick={() => setSelected(dateStr)}>
-                <span>{day}</span>
-                {dayCats.length > 0 && (
-                  <span className="cal-dots">
-                    {dayCats.map((cat) => (
-                      <span key={cat || "band"} className={`cal-dot${cat ? " " + cat : ""}`} />
-                    ))}
-                  </span>
+                <span className="cal-day">{day}</span>
+                {dayRes.slice(0, MAX_CHIPS).map((r) => {
+                  const cat = chipClassFor(r.purpose);
+                  return (
+                    <span key={r.id} className={`cal-chip${cat ? " " + cat : ""}`}>
+                      {chipLabelOf(r)}
+                    </span>
+                  );
+                })}
+                {dayRes.length > MAX_CHIPS && (
+                  <span className="cal-more">+{dayRes.length - MAX_CHIPS}</span>
                 )}
               </button>
             );
           })}
+        </div>
+        <div className="cal-legend">
+          {LEGEND.map(([cat, sample, label]) => (
+            <span key={cat || "band"} className="cal-legend-item">
+              <span className={`cal-chip${cat ? " " + cat : ""}`}>{sample}</span>
+              {label}
+            </span>
+          ))}
         </div>
       </div>
 
@@ -520,7 +549,7 @@ export default function ReservationCalendar({
       </div>
 
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 8 }}>
-        날짜를 선택해 예약을 등록하세요 (앰버 = 예약, 빨강 = 정기공연, 초록 = MT, 파랑 = 운영진회의·기투 정비)
+        날짜를 누르면 그날 예약 현황과 등록 폼이 아래에 나옵니다.
       </p>
     </>
   );
