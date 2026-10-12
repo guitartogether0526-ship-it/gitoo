@@ -96,8 +96,8 @@ const chipLabelOf = (r: Reservation) =>
       : r.purpose;
 // 캘린더 아래 색상 범례
 const LEGEND: [string, string, string][] = [
-  ["", "6팀", "합주 (팀명)"],
-  ["personal", "홍길동", "개인연습 (이름)"],
+  ["", "합주", ""],
+  ["personal", "개인연습", ""],
   ["perf", "공연", "공연 · 행사"],
   ["mt", "MT", "MT"],
   ["meeting", "회의", "운영진회의 · 기투 정비"],
@@ -400,7 +400,7 @@ export default function ReservationCalendar({
           {LEGEND.map(([cat, sample, label]) => (
             <span key={cat || "band"} className="cal-legend-item">
               <span className={`cal-chip${cat ? " " + cat : ""}`}>{sample}</span>
-              {label}
+              {label || null}
             </span>
           ))}
         </div>
