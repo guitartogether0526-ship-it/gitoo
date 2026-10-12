@@ -53,7 +53,7 @@ export default async function RootLayout({
     <html lang="ko" className={`${inter.variable} ${notoSansKr.variable}`}>
       <body>
         <AuthProvider initialUser={session}>
-          <AuthGate>
+          <AuthGate page={children}>
             <div className="app-shell">
               <AppHeader />
               <PushBanner />

@@ -13,6 +13,7 @@ const TITLES: Record<string, { page: string; sub: string }> = {
   "/members": { page: "회원 / 관리자", sub: "운영진 전용 대시보드" },
   "/finance": { page: "회비 · 총무 장부", sub: "구글시트 장부 · 자동 반영" },
   "/mypage": { page: "마이페이지", sub: "내 기본 정보 수정" },
+  "/sound-guide": { page: "음향 사용방법", sub: "믹서 · 모니터 앰프 안내" },
 };
 
 export default function AppHeader() {
