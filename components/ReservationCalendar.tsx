@@ -98,9 +98,9 @@ const chipLabelOf = (r: Reservation) =>
 const LEGEND: [string, string, string][] = [
   ["", "합주", ""],
   ["personal", "개인연습", ""],
-  ["perf", "공연", "공연 · 행사"],
-  ["mt", "MT", "MT"],
-  ["meeting", "회의", "운영진회의 · 기투 정비"],
+  ["perf", "행사", ""],
+  ["mt", "MT", ""],
+  ["meeting", "운영진", ""],
 ];
 // 한 칸에 보여줄 최대 칩 수 (넘치면 "+n")
 const MAX_CHIPS = 3;
