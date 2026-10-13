@@ -57,15 +57,15 @@ const str = (v: unknown, max: number) => (typeof v === "string" && v.length <= m
 const num = (v: unknown, lo: number, hi: number) =>
   typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi ? Math.round(v) : null;
 
-/** 저장/로드 시 형태 검증 — 통과하면 정리된 데이터, 아니면 null */
-export function normalizeSoundGuide(input: unknown): SoundGuideData | null {
-  if (!input || typeof input !== "object") return null;
-  const o = input as Record<string, unknown>;
-  if (!Array.isArray(o.items) || !Array.isArray(o.monitors)) return null;
-  if (o.items.length > 30 || o.monitors.length > 10) return null;
+export const MAX_ITEMS = 30;
+export const MAX_MONITORS = 10;
+export const MAX_TEXT = 6000;
+
+function normItems(raw: unknown): MapItem[] | null {
+  if (!Array.isArray(raw) || raw.length > MAX_ITEMS) return null;
   const items: MapItem[] = [];
-  for (const raw of o.items) {
-    const r = (raw ?? {}) as Record<string, unknown>;
+  for (const it of raw) {
+    const r = (it ?? {}) as Record<string, unknown>;
     const id = str(r.id, 40);
     const label = str(r.label, 20);
     const sub = r.sub == null ? undefined : str(r.sub, 20);
@@ -75,24 +75,51 @@ export function normalizeSoundGuide(input: unknown): SoundGuideData | null {
     if (r.shape !== "rect" && r.shape !== "ellipse") return null;
     items.push({ id, kind: r.kind, shape: r.shape, x, y, w, h, label, ...(sub ? { sub } : {}) });
   }
+  return items;
+}
+
+function normMonitors(raw: unknown): SoundGuideData["monitors"] | null {
+  if (!Array.isArray(raw) || raw.length > MAX_MONITORS) return null;
   const monitors: SoundGuideData["monitors"] = [];
-  for (const row of o.monitors) {
+  for (const row of raw) {
     if (!Array.isArray(row) || row.length !== 4) return null;
     const cells = row.map((c) => str(c, 40));
     if (cells.some((c) => c == null)) return null;
     monitors.push(cells as [string, string, string, string]);
   }
-  // texts: 아는 키만, 없는 키는 기본 문장 (옛 저장본 호환)
+  return monitors;
+}
+
+/** texts: 아는 키만. 없는 키는 기본 문장(옛 저장본 호환). 잘못된 값은 strict면 전체 실패, 아니면 그 키만 기본값 */
+function normTexts(raw: unknown, strict: boolean): Record<string, string> | null {
+  const src = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const texts: Record<string, string> = {};
-  const src = (o.texts && typeof o.texts === "object" ? o.texts : {}) as Record<string, unknown>;
   for (const f of TEXT_FIELDS) {
     const v = src[f.key];
-    if (v === undefined) {
-      texts[f.key] = DEFAULT_TEXTS[f.key];
-      continue;
-    }
-    if (typeof v !== "string" || v.length > 6000) return null;
-    texts[f.key] = v;
+    if (typeof v === "string" && v.length <= MAX_TEXT) texts[f.key] = v;
+    else if (v === undefined || !strict) texts[f.key] = DEFAULT_TEXTS[f.key];
+    else return null;
   }
+  return texts;
+}
+
+/** 저장 시 검증 — 한 곳이라도 틀리면 null (잘못된 데이터를 DB에 넣지 않는다) */
+export function normalizeSoundGuide(input: unknown): SoundGuideData | null {
+  if (!input || typeof input !== "object") return null;
+  const o = input as Record<string, unknown>;
+  const items = normItems(o.items);
+  const monitors = normMonitors(o.monitors);
+  const texts = normTexts(o.texts, true);
+  if (!items || !monitors || !texts) return null;
   return { items, monitors, texts };
+}
+
+/** 로드 시 정리 — 틀린 구역만 기본값으로 (한 칸 때문에 저장본 전체를 버리지 않는다) */
+export function normalizeSoundGuideLoose(input: unknown): SoundGuideData {
+  const o = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
+  return {
+    items: normItems(o.items) ?? DEFAULT_SOUND_GUIDE.items,
+    monitors: normMonitors(o.monitors) ?? DEFAULT_SOUND_GUIDE.monitors,
+    texts: normTexts(o.texts, false) ?? DEFAULT_TEXTS,
+  };
 }

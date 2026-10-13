@@ -1,17 +1,31 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { StageMapSvg } from "./SoundGuide";
 import { saveSoundGuide } from "@/lib/sound-guide-actions";
-import { DEFAULT_SOUND_GUIDE, MAP_VIEWBOX, type MapItem, type SoundGuideData } from "@/lib/sound-guide-data";
+import {
+  DEFAULT_SOUND_GUIDE,
+  MAP_VIEWBOX,
+  MAX_ITEMS,
+  MAX_MONITORS,
+  MAX_TEXT,
+  type MapItem,
+  type SoundGuideData,
+} from "@/lib/sound-guide-data";
 import { DEFAULT_TEXTS, TEXT_FIELDS } from "@/lib/sound-guide-texts";
 
 const TEXT_TABS = [...new Set(TEXT_FIELDS.map((f) => f.tab))];
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-export default function SoundGuideEditor({ initial }: { initial: SoundGuideData }) {
+export default function SoundGuideEditor({
+  initial,
+  updatedAt,
+}: {
+  initial: SoundGuideData;
+  updatedAt: string | null; // 로드 시점 저장본 시각 — 저장 시 서버가 비교(동시 편집 방지)
+}) {
   const router = useRouter();
   const [items, setItems] = useState(initial.items);
   const [monitors, setMonitors] = useState(initial.monitors);
@@ -22,6 +36,17 @@ export default function SoundGuideEditor({ initial }: { initial: SoundGuideData 
   const [error, setError] = useState("");
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<{ id: string; dx: number; dy: number } | null>(null);
+
+  // 수정 여부 — 저장 바 표시 + 이탈 경고
+  const dirty = JSON.stringify({ items, monitors, texts }) !== JSON.stringify(initial);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
   // 화면 좌표 → SVG viewBox 좌표
   const toSvg = (e: React.PointerEvent) => {
@@ -82,14 +107,19 @@ export default function SoundGuideEditor({ initial }: { initial: SoundGuideData 
   const save = async () => {
     setSaving(true);
     setError("");
-    const res = await saveSoundGuide({ items, monitors, texts });
-    setSaving(false);
-    if ("error" in res) {
-      setError(res.error);
-      return;
+    try {
+      const res = await saveSoundGuide({ items, monitors, texts }, updatedAt);
+      if ("error" in res) {
+        setError(res.error);
+        return;
+      }
+      router.push("/sound-guide?tab=1");
+      router.refresh();
+    } catch {
+      setError("저장 요청이 실패했습니다. 네트워크를 확인하고 다시 눌러 주세요.");
+    } finally {
+      setSaving(false);
     }
-    router.push("/sound-guide?tab=1");
-    router.refresh();
   };
 
   return (
@@ -107,10 +137,10 @@ export default function SoundGuideEditor({ initial }: { initial: SoundGuideData 
           style={{ touchAction: "none", userSelect: "none" }}
         />
         <div className="btn-row">
-          <button className="btn btn-sm" onClick={() => add("amp")}>
+          <button className="btn btn-sm" onClick={() => add("amp")} disabled={items.length >= MAX_ITEMS}>
             + 앰프
           </button>
-          <button className="btn btn-sm" onClick={() => add("player")}>
+          <button className="btn btn-sm" onClick={() => add("player")} disabled={items.length >= MAX_ITEMS}>
             + 자리
           </button>
           <button className="btn btn-sm ghost" onClick={() => setItems(DEFAULT_SOUND_GUIDE.items)}>
@@ -197,7 +227,11 @@ export default function SoundGuideEditor({ initial }: { initial: SoundGuideData 
         </table>
       </div>
       <div className="btn-row">
-        <button className="btn btn-sm" onClick={() => setMonitors((p) => [...p, ["", "", "", ""]])}>
+        <button
+          className="btn btn-sm"
+          onClick={() => setMonitors((p) => [...p, ["", "", "", ""]])}
+          disabled={monitors.length >= MAX_MONITORS}
+        >
           + 줄 추가
         </button>
       </div>
@@ -217,42 +251,42 @@ export default function SoundGuideEditor({ initial }: { initial: SoundGuideData 
         </div>
         {TEXT_FIELDS.filter((f) => f.tab === TEXT_TABS[textTab]).map((f) => (
           <div key={f.key} className="field" style={{ marginTop: 12 }}>
-            <label>
-              {f.label}
+            {/* 되돌리기 버튼은 label 밖에 — label 안에 두면 라벨 글자만 눌러도 버튼이 눌려 수정이 날아간다 */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <label htmlFor={`sg-${f.key}`}>{f.label}</label>
               {texts[f.key] !== DEFAULT_TEXTS[f.key] && (
                 <button
                   className="btn btn-sm ghost"
-                  style={{ marginLeft: 8 }}
                   onClick={() => setTexts((p) => ({ ...p, [f.key]: DEFAULT_TEXTS[f.key] }))}
                 >
                   기본 문장으로
                 </button>
               )}
-            </label>
+            </div>
             <textarea
+              id={`sg-${f.key}`}
               className="input"
               rows={f.rows ?? 1}
               value={texts[f.key]}
-              maxLength={6000}
+              maxLength={MAX_TEXT}
               onChange={(e) => setTexts((p) => ({ ...p, [f.key]: e.target.value }))}
             />
           </div>
         ))}
       </div>
 
-      {error && (
-        <p className="guide-note" style={{ color: "var(--danger)", marginTop: 12 }}>
-          {error}
-        </p>
+      {/* 저장 바 — 수정이 있을 때만 하단 내비 위에 고정 표시 */}
+      {dirty && (
+        <div className="save-bar">
+          {error ? <span className="save-bar-msg danger">{error}</span> : <span className="save-bar-msg">수정한 내용이 있습니다</span>}
+          <button className="btn ghost btn-sm" onClick={() => router.push("/sound-guide?tab=1")} disabled={saving}>
+            취소
+          </button>
+          <button className="btn amber btn-sm" onClick={save} disabled={saving}>
+            {saving ? "저장 중…" : "저장"}
+          </button>
+        </div>
       )}
-      <div className="btn-row" style={{ marginTop: 16 }}>
-        <button className="btn amber" onClick={save} disabled={saving}>
-          {saving ? "저장 중…" : "저장"}
-        </button>
-        <button className="btn ghost" onClick={() => router.push("/sound-guide?tab=1")} disabled={saving}>
-          취소
-        </button>
-      </div>
     </>
   );
 }

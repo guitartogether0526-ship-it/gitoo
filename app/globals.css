@@ -1646,3 +1646,31 @@ body {
   font-size: 13px;
   padding: 6px 8px;
 }
+
+/* 음향 사용방법 편집 — 수정이 있을 때만 하단 내비 위에 뜨는 저장 바 (오른쪽은 새로고침 FAB 자리) */
+.save-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(78px + env(safe-area-inset-bottom));
+  width: calc(100% - 24px);
+  max-width: calc(var(--maxw) - 24px);
+  z-index: 46;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 70px 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--accent-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.save-bar-msg {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 0;
+}
+.save-bar-msg.danger {
+  color: var(--danger);
+}

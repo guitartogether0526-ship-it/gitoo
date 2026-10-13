@@ -350,8 +350,8 @@ function StageMap({ data }: { data: SoundGuideData }) {
             </tr>
           </thead>
           <tbody>
-            {data.monitors.map(([aux, what, model, where]) => (
-              <tr key={aux}>
+            {data.monitors.map(([aux, what, model, where], i) => (
+              <tr key={i}>
                 <td className="m-name">{aux}</td>
                 <td>{what}</td>
                 <td>{model}</td>

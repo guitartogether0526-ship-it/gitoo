@@ -3,7 +3,8 @@ import type { Board, Post, Reservation, Team, Song, Member } from "./types";
 import { getSupabase } from "./supabase";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { getAllMembers } from "./member-store";
-import { DEFAULT_SOUND_GUIDE, normalizeSoundGuide, type SoundGuideData } from "./sound-guide-data";
+import { unstable_cache } from "next/cache";
+import { DEFAULT_SOUND_GUIDE, normalizeSoundGuideLoose, type SoundGuideData } from "./sound-guide-data";
 
 /**
  * 데이터 접근 계층 (Data Access Layer).
@@ -138,14 +139,27 @@ export async function getMembers(): Promise<Member[]> {
 /** 회원 1명 — "나"만 필요한 화면(홈·예약·마이페이지)에서 전체 명단 조회 대신 사용 */
 export { getMemberById as getMember } from "./member-store";
 
-/** 음향 사용방법 편집 데이터(배치도·모니터 표). 미저장·미연결·오류 시 코드 기본값. */
-export async function getSoundGuide(): Promise<SoundGuideData> {
-  const sb = getSupabaseAdmin();
-  if (!sb) return DEFAULT_SOUND_GUIDE;
-  const { data, error } = await sb.from("app_settings").select("value").eq("key", "sound_guide").maybeSingle();
-  if (error) {
-    console.error("[db] 'app_settings' 조회 실패 — 기본값 사용:", error.message);
-    return DEFAULT_SOUND_GUIDE;
-  }
-  return normalizeSoundGuide(data?.value) ?? DEFAULT_SOUND_GUIDE;
-}
+/**
+ * 음향 사용방법 편집 데이터(배치도·모니터 표·문장). 미저장·미연결·오류 시 코드 기본값.
+ * 공개 QR 페이지가 매 요청 DB를 치지 않도록 태그 캐시 — saveSoundGuide 가 revalidateTag('sound-guide').
+ * updatedAt: 편집 페이지가 저장 시 되돌려 보내 동시 편집 덮어쓰기를 막는다.
+ */
+export const getSoundGuide = unstable_cache(
+  async (): Promise<{ data: SoundGuideData; updatedAt: string | null }> => {
+    const sb = getSupabaseAdmin();
+    if (!sb) return { data: DEFAULT_SOUND_GUIDE, updatedAt: null };
+    const { data, error } = await sb
+      .from("app_settings")
+      .select("value, updated_at")
+      .eq("key", "sound_guide")
+      .maybeSingle();
+    if (error) {
+      console.error("[db] 'app_settings' 조회 실패 — 기본값 사용:", error.message);
+      return { data: DEFAULT_SOUND_GUIDE, updatedAt: null };
+    }
+    if (!data) return { data: DEFAULT_SOUND_GUIDE, updatedAt: null };
+    return { data: normalizeSoundGuideLoose(data.value), updatedAt: data.updated_at ?? null };
+  },
+  ["sound-guide"],
+  { tags: ["sound-guide"] },
+);
