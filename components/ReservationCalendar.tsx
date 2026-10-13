@@ -142,6 +142,7 @@ export default function ReservationCalendar({
   const [endDate, setEndDate] = useState(""); // MT 종료 날짜(YYYY-MM-DD)
   const [timeError, setTimeError] = useState(""); // 등록 폼 내 시간/겹침 오류
   const [notice, setNotice] = useState(""); // 저장 결과 안내(실패·부분저장). 등록/수정 공용
+  const [busy, setBusy] = useState(false); // 등록 저장 중 — 버튼 잠금 + 스피너
 
   // 개인연습이면 개인 이름으로만 등록 → 팀 합주일정에 안 뜸
   const isPersonal = purpose === "개인연습";
@@ -173,6 +174,16 @@ export default function ReservationCalendar({
     });
 
   const addReservation = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await addReservationInner();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addReservationInner = async () => {
     setTimeError("");
     const range: [number, number] = [startMin, endMin];
     if (!isMulti) {
@@ -542,8 +553,9 @@ export default function ReservationCalendar({
               {canManage && OP_PURPOSES.map((p) => <option key={p}>{p}</option>)}
             </select>
           </div>
-          <button className="btn amber" onClick={addReservation}>
-            {selectedLabel}에 예약 추가
+          <button className="btn amber" disabled={busy} onClick={addReservation}>
+            {busy && <span className="spinner" />}
+            {busy ? "저장 중…" : `${selectedLabel}에 예약 추가`}
           </button>
         </div>
       </div>
@@ -632,7 +644,9 @@ function ReservationEditor({
     new Set([res.purpose, "합주", "개인연습", ...(canManage ? OP_PURPOSES : [])]),
   );
 
+  const [busy, setBusy] = useState(false);
   const save = async () => {
+    if (busy) return;
     setErr("");
     if (!isMulti) {
       const startMin = sh * 60 + sm;
@@ -649,13 +663,18 @@ function ReservationEditor({
     }
     const reservedBy = by.trim();
     if (!reservedBy) return;
-    const msg = await onSave({
-      time_label: isMulti ? mtLabel : `${pad(sh)}:${pad(sm)} - ${pad(eh)}:${pad(em)}`,
-      reserved_by: reservedBy,
-      purpose,
-      end_date: isMulti ? mtEnd : null,
-    });
-    if (msg) setErr(msg); // 서버 최신 데이터와 겹침 — 폼 유지한 채 오류 표시
+    setBusy(true);
+    try {
+      const msg = await onSave({
+        time_label: isMulti ? mtLabel : `${pad(sh)}:${pad(sm)} - ${pad(eh)}:${pad(em)}`,
+        reserved_by: reservedBy,
+        purpose,
+        end_date: isMulti ? mtEnd : null,
+      });
+      if (msg) setErr(msg); // 서버 최신 데이터와 겹침 — 폼 유지한 채 오류 표시
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -705,10 +724,11 @@ function ReservationEditor({
           </select>
         </div>
         <div className="flex items-center gap-8">
-          <button className="btn amber grow" onClick={save}>
-            수정 저장
+          <button className="btn amber grow" disabled={busy} onClick={save}>
+            {busy && <span className="spinner" />}
+            {busy ? "저장 중…" : "수정 저장"}
           </button>
-          <button className="btn ghost" onClick={onCancel}>
+          <button className="btn ghost" disabled={busy} onClick={onCancel}>
             취소
           </button>
         </div>

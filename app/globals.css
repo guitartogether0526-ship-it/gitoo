@@ -1035,6 +1035,41 @@ body {
   }
 }
 
+/* ---------- Loading ---------- */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: fab-spin 0.7s linear infinite;
+}
+.btn .spinner {
+  width: 13px;
+  height: 13px;
+  vertical-align: -2px;
+  margin-right: 6px;
+}
+/* 페이지 이동 로딩 — 0.4초 안에 끝나면 보이지 않게 지연 표시 */
+.loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 40vh;
+  color: var(--accent);
+  opacity: 0;
+  animation: fade-in 0.2s ease 0.4s forwards;
+}
+@keyframes fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
 /* ---------- Misc helpers ---------- */
 .muted {
   color: var(--text-muted);
