@@ -14,6 +14,7 @@ const TITLES: Record<string, { page: string; sub: string }> = {
   "/finance": { page: "회비 · 총무 장부", sub: "구글시트 장부 · 자동 반영" },
   "/mypage": { page: "마이페이지", sub: "내 기본 정보 수정" },
   "/sound-guide": { page: "음향 사용방법", sub: "믹서 · 모니터 앰프 안내" },
+  "/sound-guide/edit": { page: "음향 사용방법 수정", sub: "배치도 · 모니터 앰프 표" },
 };
 
 export default function AppHeader() {

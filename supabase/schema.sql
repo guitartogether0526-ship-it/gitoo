@@ -189,6 +189,14 @@ create table if not exists unavailable_dates (
   primary key (member_id, date)
 );
 
+-- 앱 설정(키-값 jsonb) — 음향 사용방법 배치도 등 운영진 편집 데이터. service_role만 접근.
+create table if not exists app_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table app_settings enable row level security;
+
 -- ---------- RLS (Row Level Security) ----------
 -- ⚠️ 현재는 인증(로그인)이 없으므로 anon 에게 읽기/쓰기를 모두 허용합니다.
 --    운영 전환 시 Supabase Auth 를 붙이고 정책을 사용자 기준으로 조이세요.

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { can } from "@/lib/roles";
 import { PARTS, partRank } from "@/lib/parts";
 import MemberList from "@/components/MemberList";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,14 @@ export default async function MembersPage() {
   return (
     <>
       <div className="page-head">
-        <h1>회원 / 관리자</h1>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <h1>회원 / 관리자</h1>
+          {can.manageMembers(session?.role) && (
+            <Link href="/sound-guide/edit" className="btn btn-sm" style={{ textDecoration: "none" }}>
+              음향 사용방법 수정
+            </Link>
+          )}
+        </div>
         <p>
           회원 {approved.length}명 · 운영진 {staff}명
           {pending > 0 ? ` · 승인 대기 ${pending}명` : ""}

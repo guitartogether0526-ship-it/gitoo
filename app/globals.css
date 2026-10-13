@@ -1627,3 +1627,22 @@ body {
   font-weight: 700;
   line-height: 1.2;
 }
+
+/* 배치도 편집 — 드래그 가능한 항목 */
+.guide-map .map-item.draggable {
+  cursor: grab;
+}
+.guide-map .map-item.selected .amp,
+.guide-map .map-item.selected .player {
+  stroke: var(--text);
+  stroke-width: 4;
+}
+.mtable tr.selected td {
+  background: var(--surface-2);
+}
+.mtable .input {
+  width: 100%;
+  min-width: 70px;
+  font-size: 13px;
+  padding: 6px 8px;
+}
