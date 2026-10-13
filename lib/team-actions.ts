@@ -71,9 +71,16 @@ export async function saveTeams(
 
   const sb = getSupabaseAdmin();
   if (sb && payload.length) {
+    // 이름이 바뀐 팀 — 예약(reserved_by 는 팀명 텍스트)도 새 이름으로 맞춰 준다
+    const { data: before } = await sb.from("teams").select("id,name");
     const { error } = await sb.from("teams").upsert(payload);
     if (error)
       return { error: "팀 저장 실패(스키마에 sort_order·category 컬럼이 필요합니다): " + error.message };
+    for (const t of payload) {
+      const prev = (before ?? []).find((b) => b.id === t.id)?.name;
+      if (prev && prev !== t.name)
+        await sb.from("reservations").update({ reserved_by: t.name }).eq("reserved_by", prev);
+    }
   }
   return { ok: true };
 }
