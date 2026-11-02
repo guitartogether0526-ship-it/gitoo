@@ -29,11 +29,16 @@ export default async function MembersPage() {
     <>
       <div className="page-head">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-          <h1>회원 / 관리자</h1>
+          <h1>운영진</h1>
           {can.manageMembers(session?.role) && (
-            <Link href="/sound-guide/edit" className="btn btn-sm" style={{ textDecoration: "none" }}>
-              음향 사용방법 수정
-            </Link>
+            <div className="btn-row" style={{ margin: 0 }}>
+              <Link href="/schedule" className="btn amber btn-sm" style={{ textDecoration: "none" }}>
+                일정관리
+              </Link>
+              <Link href="/sound-guide/edit" className="btn btn-sm" style={{ textDecoration: "none" }}>
+                음향 사용방법 수정
+              </Link>
+            </div>
           )}
         </div>
         <p>

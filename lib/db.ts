@@ -163,3 +163,21 @@ export const getSoundGuide = unstable_cache(
   ["sound-guide"],
   { tags: ["sound-guide"] },
 );
+
+/** 월별 정기모임 일정(일정관리). app_settings key='schedule:YYYY-MM'. 없으면 빈 배열. */
+export type ScheduleRow = { date: string; topic: string; detail: string };
+export async function getSchedule(ym: string): Promise<{ rows: ScheduleRow[]; updatedAt: string | null }> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return { rows: [], updatedAt: null };
+  const { data, error } = await sb
+    .from("app_settings")
+    .select("value, updated_at")
+    .eq("key", `schedule:${ym}`)
+    .maybeSingle();
+  if (error || !data) return { rows: [], updatedAt: null };
+  const raw = Array.isArray(data.value) ? data.value : [];
+  const rows = raw
+    .filter((r): r is Record<string, unknown> => !!r && typeof r === "object")
+    .map((r) => ({ date: String(r.date ?? ""), topic: String(r.topic ?? ""), detail: String(r.detail ?? "") }));
+  return { rows, updatedAt: data.updated_at ?? null };
+}

@@ -60,7 +60,7 @@ const ITEMS: Item[] = [
   { href: "/reservation", label: "예약", icon: I.calendar },
   { href: "/board", label: "게시판", icon: I.board },
   { href: "/setlist", label: "합주곡", icon: I.music },
-  { href: "/members", label: "회원", icon: I.users, opOnly: true },
+  { href: "/members", label: "운영진", icon: I.users, opOnly: true },
   { href: "/finance", label: "회비", icon: I.wallet },
   { href: "/mypage", label: "마이페이지", icon: I.profile },
 ];
@@ -69,10 +69,10 @@ export default function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
   const isOperator = can.manageMembers(user?.role);
-  // 회원 탭은 운영진(관리자·회장·총무·STAFF)에게만 노출
+  // 운영진 탭은 운영진(관리자·회장·총무·STAFF)에게만 노출
   const items = ITEMS.filter((it) => !it.opOnly || isOperator);
 
-  // 승인 대기 가입 신청 수 (운영진만) — 회원 탭 빨간 배지
+  // 승인 대기 가입 신청 수 (운영진만) — 운영진 탭 빨간 배지
   const [pending, setPending] = useState(0);
   useEffect(() => {
     if (!isOperator) {
