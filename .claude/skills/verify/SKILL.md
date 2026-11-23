@@ -20,6 +20,9 @@ COOKIE="gt-user=$(node --env-file=.env.local -e "const c=require('crypto');const
 curl -s -H "Cookie: $COOKIE" http://localhost:3000/<페이지> -o out.html
 ```
 - role을 `admin`/`treasurer` 등으로 바꿔 권한 분기 확인. 쿠키 없이(또는 서명이 틀리면) 로그인 화면(AuthGate).
+- ⚠️ Supabase env가 있으면 getSession이 **members에 그 id가 실제로 있는지** 확인한다(탈퇴·강퇴 쿠키 차단).
+  `id:'verify'` 같은 가짜 id는 로그인 화면이 된다 — 실제 회원 id를 service_role로 조회해 넣을 것
+  (`/rest/v1/members?select=id&limit=1`). `id:'admin'`은 예외로 통과.
 - env가 하나도 없는 순수 데모 모드는 빈 키로 서명되므로 위 명령 그대로 동작한다.
 - 클라이언트 내비게이션이 치는 요청은 `-H "RSC: 1"` 로 흉내 낼 수 있다.
 

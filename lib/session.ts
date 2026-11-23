@@ -2,6 +2,9 @@ import { cookies } from "next/headers";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { SessionUser } from "./types";
 import { SESSION_COOKIE } from "./session-cookie";
+import { cache } from "react";
+import { ADMIN_USER } from "./admin";
+import { memberExists } from "./member-store";
 
 /**
  * 로그인 세션 쿠키 — HMAC 서명으로 위조 방지.
@@ -33,20 +36,27 @@ export async function setSessionCookie(user: SessionUser): Promise<void> {
   });
 }
 
-/** 서버 컴포넌트/액션에서 로그인 세션 읽기 — 서명 검증 실패 시 null */
-export async function getSession(): Promise<SessionUser | null> {
+/**
+ * 서버 컴포넌트/액션에서 로그인 세션 읽기 — 서명 검증 실패 시 null.
+ * 서명이 맞아도 회원이 삭제(탈퇴·강퇴)됐으면 null — 다른 기기에 남은 쿠키 차단.
+ * cache: 한 요청 안에서 여러 번 불려도 DB 조회는 한 번.
+ */
+export const getSession = cache(async (): Promise<SessionUser | null> => {
   const store = await cookies();
   const raw = store.get(SESSION_COOKIE)?.value;
   if (!raw) return null;
   const dot = raw.lastIndexOf(".");
   if (dot < 0) return null;
   const payload = raw.slice(0, dot);
+  let user: SessionUser;
   try {
     const a = Buffer.from(raw.slice(dot + 1));
     const b = Buffer.from(sign(payload));
     if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-    return JSON.parse(Buffer.from(payload, "base64url").toString()) as SessionUser;
+    user = JSON.parse(Buffer.from(payload, "base64url").toString()) as SessionUser;
   } catch {
     return null;
   }
-}
+  if (user.id !== ADMIN_USER.id && !(await memberExists(user.id))) return null;
+  return user;
+});

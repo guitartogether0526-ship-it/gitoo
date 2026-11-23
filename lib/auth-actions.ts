@@ -263,7 +263,11 @@ export async function approveMember(id: string): Promise<{ ok: true } | { error:
 export async function rejectMember(id: string): Promise<{ ok: true } | { error: string }> {
   const session = await getSession();
   if (!can.manageMembers(session?.role)) return { error: "권한이 없습니다." };
-  await removeMember(id);
+  try {
+    await removeMember(id);
+  } catch {
+    return { error: "삭제 처리에 실패했습니다. 잠시 후 다시 시도하세요." };
+  }
   return { ok: true };
 }
 
@@ -356,7 +360,11 @@ export async function kickMember(id: string): Promise<{ ok: true } | { error: st
   const session = await getSession();
   if (!can.manageMembers(session?.role)) return { error: "권한이 없습니다." };
   if (session?.id === id) return { error: "본인 계정은 강퇴할 수 없습니다." };
-  await removeMember(id);
+  try {
+    await removeMember(id);
+  } catch {
+    return { error: "강퇴 처리에 실패했습니다. 잠시 후 다시 시도하세요." };
+  }
   return { ok: true };
 }
 
@@ -373,7 +381,11 @@ export async function withdrawMe(password: string): Promise<{ ok: true } | { err
     return { error: "비밀번호가 올바르지 않습니다." };
   }
 
-  await removeMember(me.id);
+  try {
+    await removeMember(me.id);
+  } catch {
+    return { error: "탈퇴 처리에 실패했습니다. 잠시 후 다시 시도하세요." };
+  }
   return { ok: true };
 }
 

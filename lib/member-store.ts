@@ -212,11 +212,26 @@ export async function setTeam(
   if (row) row[col] = teamId;
 }
 
+/** 세션 검증용 — 탈퇴·강퇴된 회원의 쿠키를 거부. DB 오류·DB 없음(데모)이면 true(전원 로그아웃 방지). */
+export async function memberExists(id: string): Promise<boolean> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return true;
+  const { data, error } = await sb.from("members").select("id").eq("id", id).maybeSingle();
+  return !!error || !!data;
+}
+
+/** 계정 삭제(강퇴·탈퇴). 회원 삭제 실패 시 throw. 푸시 구독·좋아요는 FK가 없어 직접 정리. */
 export async function removeMember(id: string): Promise<void> {
   const sb = getSupabaseAdmin();
   if (sb) {
-    await sb.from("member_auth").delete().eq("member_id", id);
-    await sb.from("members").delete().eq("id", id);
+    // member_auth·unavailable_dates 는 on delete cascade
+    const { error } = await sb.from("members").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    const cleanup = await Promise.all([
+      sb.from("push_subscriptions").delete().eq("member_id", id),
+      sb.from("song_votes").delete().eq("member_id", id),
+    ]);
+    for (const r of cleanup) if (r.error) console.error("removeMember cleanup:", r.error.message);
     return;
   }
   mem.rows = mem.rows.filter((r) => r.id !== id);

@@ -72,13 +72,18 @@ export default function MyPageForm({
     }
     if (!window.confirm("정말 탈퇴할까요?\n계정이 삭제되며 되돌릴 수 없습니다. (같은 아이디로 재가입은 가능)")) return;
     setWdBusy(true);
-    const res = await withdrawMe(wdPw);
-    setWdBusy(false);
-    if ("error" in res) {
-      setWdError(res.error);
-      return;
+    try {
+      const res = await withdrawMe(wdPw);
+      if ("error" in res) {
+        setWdError(res.error);
+        return;
+      }
+      logout();
+    } catch {
+      setWdError("네트워크 오류로 탈퇴하지 못했습니다. 다시 시도하세요.");
+    } finally {
+      setWdBusy(false);
     }
-    logout();
   };
 
   if (!session) {
