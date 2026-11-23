@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Member, SessionUser } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { ROLE_LABEL } from "@/lib/roles";
-import { updateMyProfile, changeMyPassword } from "@/lib/auth-actions";
+import { updateMyProfile, changeMyPassword, withdrawMe } from "@/lib/auth-actions";
 import { PARTS } from "@/lib/parts";
 
 export default function MyPageForm({
@@ -15,7 +15,7 @@ export default function MyPageForm({
   session: SessionUser | null;
   member: Member | null;
 }) {
-  const { login: setSession } = useAuth();
+  const { login: setSession, logout } = useAuth();
 
   const [name, setName] = useState(member?.name ?? "");
   const [phone, setPhone] = useState(member?.phone ?? "");
@@ -57,6 +57,28 @@ export default function MyPageForm({
     setCurPw("");
     setNewPw("");
     setNewPw2("");
+  };
+
+  // 회원 탈퇴
+  const [wdPw, setWdPw] = useState("");
+  const [wdError, setWdError] = useState("");
+  const [wdBusy, setWdBusy] = useState(false);
+
+  const submitWithdraw = async () => {
+    setWdError("");
+    if (!wdPw) {
+      setWdError("비밀번호를 입력하세요.");
+      return;
+    }
+    if (!window.confirm("정말 탈퇴할까요?\n계정이 삭제되며 되돌릴 수 없습니다. (같은 아이디로 재가입은 가능)")) return;
+    setWdBusy(true);
+    const res = await withdrawMe(wdPw);
+    setWdBusy(false);
+    if ("error" in res) {
+      setWdError(res.error);
+      return;
+    }
+    logout();
   };
 
   if (!session) {
@@ -203,6 +225,23 @@ export default function MyPageForm({
           {pwSaved && <p className="dim" style={{ color: "var(--ok, #5ac88a)", fontSize: 13, margin: 0 }}>비밀번호가 변경되었습니다.</p>}
           <button className="btn amber" disabled={pwBusy} onClick={submitPw}>
             {pwBusy ? "변경 중…" : "비밀번호 변경"}
+          </button>
+        </div>
+      </div>
+
+      <div className="section-title">회원 탈퇴</div>
+      <div className="card">
+        <div className="form-grid">
+          <p className="dim" style={{ fontSize: 13, margin: 0 }}>
+            탈퇴하면 계정이 삭제되어 바로 로그아웃됩니다. 같은 아이디로 다시 가입 신청할 수 있습니다.
+          </p>
+          <div className="field">
+            <label>비밀번호 확인</label>
+            <input className="input" type="password" value={wdPw} onChange={(e) => setWdPw(e.target.value)} placeholder="현재 비밀번호" autoComplete="current-password" />
+          </div>
+          {wdError && <p className="form-error">{wdError}</p>}
+          <button className="btn danger" disabled={wdBusy} onClick={submitWithdraw}>
+            {wdBusy ? "탈퇴 처리 중…" : "회원 탈퇴"}
           </button>
         </div>
       </div>

@@ -360,6 +360,23 @@ export async function kickMember(id: string): Promise<{ ok: true } | { error: st
   return { ok: true };
 }
 
+/** 회원 탈퇴 = 본인 계정 삭제 (비밀번호 확인). 강퇴와 같은 삭제라 같은 아이디로 재가입 가능. */
+export async function withdrawMe(password: string): Promise<{ ok: true } | { error: string }> {
+  const session = await getSession();
+  if (!session) return { error: "로그인이 필요합니다." };
+  if (session.id === ADMIN_USER.id) return { error: "관리자 계정은 탈퇴할 수 없습니다." };
+
+  const me = await getMemberById(session.id);
+  if (!me) return { error: "회원 정보를 찾을 수 없습니다." };
+  const cred = await getCredential(me.username);
+  if (!cred || !verifyPassword(password, cred.passwordHash)) {
+    return { error: "비밀번호가 올바르지 않습니다." };
+  }
+
+  await removeMember(me.id);
+  return { ok: true };
+}
+
 /** 팀 배정/변경 (STAFF 이상) — slot 1~3(팀1~팀3). teamId=null 이면 해당 슬롯 해제 */
 export async function changeTeam(
   id: string,
