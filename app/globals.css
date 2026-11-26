@@ -1709,3 +1709,378 @@ body {
 .save-bar-msg.danger {
   color: var(--danger);
 }
+
+/* ---------- 큐시트 (운영진 · 공연 음향 기록) ---------- */
+.cue-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text);
+  text-decoration: none;
+}
+.cue-item span {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+/* 1줄: ‹ + 공연 이름 / 2줄: 날짜 + 삭제 */
+.cue-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.cue-head .input {
+  flex: 1 1 calc(100% - 56px);
+  min-width: 0;
+}
+.cue-head .cue-date {
+  flex: 1 1 0;
+}
+.cue-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.cue-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+.cue-table th,
+.cue-table td {
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 0;
+}
+.cue-table th {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  padding: 8px 6px;
+}
+.cue-table tr:last-child td {
+  border-bottom: none;
+}
+.cue-table th:last-child,
+.cue-table td:last-child {
+  border-right: none;
+}
+/* 가로 스크롤해도 채널 이름은 왼쪽에 고정 */
+.cue-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+.cue-table th.cue-sticky {
+  background: var(--surface-2);
+}
+.cue-cell {
+  display: block;
+  width: 100%;
+  min-width: 48px;
+  height: 58px;
+  padding: 0 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.cue-cell.set {
+  color: var(--text);
+  font-weight: 700;
+}
+.cue-cell.muted {
+  color: var(--danger);
+  background: var(--danger-soft);
+  font-weight: 800;
+  font-size: 11px;
+}
+.cue-cell:active {
+  background: var(--accent-soft);
+}
+.cue-name,
+.cue-memo {
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  padding: 0 8px;
+}
+.cue-table th.cue-ch {
+  padding: 0;
+}
+.cue-name {
+  width: 84px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  padding: 0 4px;
+}
+.cue-memo {
+  width: 140px;
+}
+.cue-memo.short {
+  width: 64px;
+  text-align: center;
+}
+.cue-name:focus,
+.cue-memo:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* 값 선택 시트 — 셀을 누르면 아래에서 올라와 탭 한 번에 입력 */
+.cue-picker-back {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.cue-picker {
+  width: 100%;
+  max-width: var(--maxw);
+  padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--border-strong);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.cue-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+.cue-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.cue-opt {
+  height: 66px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.cue-opt.center {
+  border-color: var(--border-strong);
+  font-weight: 800;
+}
+.cue-opt.on {
+  background: var(--accent-grad);
+  color: var(--on-accent);
+  border-color: transparent;
+  font-weight: 800;
+}
+.cue-clear {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+/* 노브·페이더 그림 (큐시트 셀 · 선택 팝업) */
+.cue-val {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  line-height: 1;
+}
+.cue-val.row {
+  flex-direction: row;
+  gap: 6px;
+}
+.cue-val-txt {
+  font-size: 11px;
+}
+.cue-knob {
+  display: block;
+  flex: none;
+}
+.knob-track,
+.knob-fill {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.knob-track {
+  stroke: var(--border-strong);
+}
+.knob-fill {
+  stroke: var(--accent);
+}
+.knob-cap {
+  fill: var(--surface-2);
+  stroke: var(--text-dim);
+  stroke-width: 1;
+}
+.knob-ptr {
+  stroke: var(--text);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.cue-opt.on .knob-track {
+  stroke: rgba(42, 29, 5, 0.25);
+}
+.cue-opt.on .knob-fill,
+.cue-opt.on .knob-ptr {
+  stroke: var(--on-accent);
+}
+.cue-opt.on .knob-cap {
+  fill: transparent;
+  stroke: var(--on-accent);
+}
+.cue-opt span {
+  font-size: 12px;
+}
+.cue-fader {
+  display: block;
+  flex: none;
+}
+.fader-track {
+  stroke: var(--border-strong);
+  stroke-width: 2;
+}
+.fader-zero {
+  stroke: var(--text-dim);
+  stroke-width: 1;
+}
+.fader-cap {
+  fill: var(--text);
+}
+
+/* 페이더 팝업 — 왼쪽 값·▲▼ / 가운데 눈금(누르면 그 값) / 오른쪽 트랙(캡 드래그) */
+.fader-pick {
+  display: grid;
+  grid-template-columns: 1fr 52px 64px;
+  gap: var(--space-3);
+  height: 400px;
+  padding: var(--space-2) 0;
+}
+.fader-pick-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  justify-content: center;
+}
+.fader-pick-val {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  margin-bottom: var(--space-2);
+}
+.fader-pick-side .btn {
+  height: 52px;
+  font-size: 16px;
+}
+.fader-pick-scale {
+  position: relative;
+}
+.fader-mark {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  padding: 4px 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.fader-mark::after {
+  content: "";
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  width: 8px;
+  border-top: 1px solid var(--text-dim);
+}
+.fader-pick-track {
+  position: relative;
+  touch-action: none;
+  cursor: grab;
+}
+.fader-pick-slot {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  transform: translateX(-50%);
+  border-radius: 3px;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+}
+.fader-pick-cap {
+  position: absolute;
+  left: 50%;
+  width: 44px;
+  height: 26px;
+  transform: translate(-50%, -50%);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #d9d2ca, #a49b92);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.3), var(--shadow);
+}
+.fader-pick-cap::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  border-top: 2px solid var(--bg);
+}
+.knob-tick {
+  stroke: var(--text-dim);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+.knob-tick.major {
+  stroke-width: 1.5;
+}
+.knob-tick.on {
+  stroke: var(--accent);
+}
+.cue-opt.on .knob-tick {
+  stroke: rgba(42, 29, 5, 0.35);
+}
+.cue-opt.on .knob-tick.on {
+  stroke: var(--on-accent);
+}
+/* 페이더 칸은 길게 (믹서 페이더처럼 세로로 읽히게) */
+.cue-cell:has(.cue-fader) {
+  height: 132px;
+}
+.fader-tick {
+  stroke: var(--text-dim);
+  stroke-width: 1;
+}
+.fader-cap-line {
+  stroke: var(--bg);
+  stroke-width: 1.5;
+}
+.cue-fader .fader-zero {
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+}

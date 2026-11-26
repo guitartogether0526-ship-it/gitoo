@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "./supabase-admin";
 import { getAllMembers } from "./member-store";
 import { unstable_cache } from "next/cache";
 import { DEFAULT_SOUND_GUIDE, normalizeSoundGuideLoose, type SoundGuideData } from "./sound-guide-data";
+import { isCueId, normalizeCuesheetLoose, type Cuesheet } from "./cuesheet";
 
 /**
  * 데이터 접근 계층 (Data Access Layer).
@@ -180,4 +181,26 @@ export async function getSchedule(ym: string): Promise<{ rows: ScheduleRow[]; up
     .filter((r): r is Record<string, unknown> => !!r && typeof r === "object")
     .map((r) => ({ date: String(r.date ?? ""), topic: String(r.topic ?? ""), detail: String(r.detail ?? "") }));
   return { rows, updatedAt: data.updated_at ?? null };
+}
+
+/** 큐시트 목록(운영진 · 공연 음향 기록). app_settings key='cuesheet:<uuid>'. 날짜 내림차순. */
+export async function listCuesheets(): Promise<{ id: string; title: string; date: string }[]> {
+  const sb = getSupabaseAdmin();
+  if (!sb) return [];
+  const { data, error } = await sb.from("app_settings").select("key, value").like("key", "cuesheet:%");
+  if (error || !data) return [];
+  return data
+    .map((r) => {
+      const v = normalizeCuesheetLoose(r.value);
+      return { id: String(r.key).slice("cuesheet:".length), title: v.title, date: v.date };
+    })
+    .sort((a, b) => b.date.localeCompare(a.date) || byKo(a.title, b.title));
+}
+
+export async function getCuesheet(id: string): Promise<Cuesheet | null> {
+  const sb = getSupabaseAdmin();
+  if (!sb || !isCueId(id)) return null;
+  const { data, error } = await sb.from("app_settings").select("value").eq("key", `cuesheet:${id}`).maybeSingle();
+  if (error || !data) return null;
+  return normalizeCuesheetLoose(data.value);
 }

@@ -12,6 +12,7 @@ const TITLES: Record<string, { page: string; sub: string }> = {
   "/setlist": { page: "합주곡", sub: "팀별 합주곡 & 투표" },
   "/members": { page: "운영진", sub: "회원 관리 · 일정 · 음향 안내" },
   "/schedule": { page: "일정관리", sub: "월별 정기모임 일정 · 공지 이미지" },
+  "/cuesheet": { page: "큐시트", sub: "공연 팀별 믹서 · 이펙터 세팅" },
   "/finance": { page: "회비 · 총무 장부", sub: "구글시트 장부 · 자동 반영" },
   "/mypage": { page: "마이페이지", sub: "내 기본 정보 수정" },
   "/sound-guide": { page: "음향 사용방법", sub: "믹서 · 모니터 앰프 안내" },

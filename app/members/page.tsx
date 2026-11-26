@@ -35,6 +35,9 @@ export default async function MembersPage() {
               <Link href="/schedule" className="btn amber btn-sm" style={{ textDecoration: "none" }}>
                 일정관리
               </Link>
+              <Link href="/cuesheet" className="btn amber btn-sm" style={{ textDecoration: "none" }}>
+                큐시트
+              </Link>
               <Link href="/sound-guide/edit" className="btn btn-sm" style={{ textDecoration: "none" }}>
                 음향 사용방법 수정
               </Link>
