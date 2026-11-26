@@ -1,7 +1,8 @@
 /* Hallmark · checked: 2026-11-26 · genre: modern-minimal (inferred) · shape: app screen · scope: app
  * stage 1 (common): tokens, type scale, controls, focus, reduced motion · stage 2 (home): motion on navigation, sheets, reveals
  * stage 3 (screens): calendar chips, checkbox label, finance figures, sticky member names, icon a11y, tab switch motion
- * stage 4 (restyle, owner's pick from the 모임 app): Pretendard, borderless filled cards, underline tabs, plain bottom nav, soft-fill secondary buttons · palette kept · copy: verbatim
+ * stage 4 (restyle, owner's pick from the 모임 app): Pretendard, borderless filled cards, underline tabs, plain bottom nav, soft-fill buttons and badges, toasts · palette kept
+ * copy: verbatim, except the owner-approved 63 edits (home "전체보기 ›", board/setlist subtitles, login link dots); "—" marks empty table values; icon-only ‹ › nav buttons carry aria-labels
  * brand kept: .logo-frame .lg-bot tracking is the GUITAR TOGETHER wordmark (67 left open by the brand rule)
  * built: the project · redesign: polish · v2.0.0 */
 /* Hallmark · dismissed 29 · checked header, bottom nav, FAB and modal scrim: the blurred glass over the warm stage glow is the Dark Stage theme's chrome the owner asked to keep, and the amber halo on a picked slot marks selection, not depth */
@@ -92,6 +93,8 @@
   --fill-subtle: rgba(255, 236, 214, 0.055);
   --fill: rgba(255, 236, 214, 0.085);
   --fill-strong: rgba(255, 236, 214, 0.14);
+
+  --toast-bg: #3a312c;
 
   /* 터치 영역 */
   --tap: 44px;
@@ -242,6 +245,10 @@ body {
   color: var(--logo-ink);
 }
 
+/* 페이지에 큰 제목(.page-head)이 있으면 상단바 제목은 숨긴다 — 같은 제목이 두 번 보이지 않게 */
+.app-shell:has(.page-head) .header-title {
+  visibility: hidden;
+}
 .header-title {
   display: flex;
   flex-direction: column;
@@ -306,23 +313,19 @@ body {
   font-weight: 700;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-pill);
-  border: 1px solid var(--border-strong);
   color: var(--text-muted);
-  background: var(--surface-2);
+  background: var(--fill);
 }
 .badge.amber {
   color: var(--accent);
-  border-color: var(--accent-strong);
   background: var(--accent-soft);
 }
 .badge.ok {
   color: var(--ok);
-  border-color: var(--ok);
   background: var(--ok-soft);
 }
 .badge.danger {
   color: var(--danger);
-  border-color: var(--danger);
   background: var(--danger-soft);
 }
 
@@ -1557,7 +1560,7 @@ body {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  gap: var(--space-5);
   margin-top: 14px;
 }
 .login-links button {
@@ -2286,6 +2289,52 @@ body {
 }
 .mtable.sticky-first th:first-child {
   background: var(--surface-2);
+}
+
+/* ---------- 토스트 알림 — 하단 내비·새로고침 버튼 위에 잠깐 ---------- */
+.toaster {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(136px + env(safe-area-inset-bottom));
+  z-index: 70;
+  width: calc(100% - 2 * var(--space-4));
+  max-width: calc(var(--maxw) - 2 * var(--space-4));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.toast {
+  max-width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--toast-bg);
+  color: var(--text);
+  font-size: var(--fs-base);
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  animation: toast-in var(--dur-short) var(--ease-out);
+  transition: opacity var(--dur-short) var(--ease-out), transform var(--dur-short) var(--ease-out);
+}
+.toast.ok {
+  color: var(--accent);
+}
+.toast.error {
+  color: var(--danger);
+}
+.toast.leaving {
+  opacity: 0;
+  transform: translateY(8px);
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
 }
 
 /* ---------- Motion — 이동·열림·누름만, transform과 opacity로 ---------- */

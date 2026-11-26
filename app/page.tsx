@@ -73,7 +73,7 @@ export default async function DashboardPage() {
       <div className="section-head">
         <div className="section-title">공지사항</div>
         <Link href="/board" className="section-link">
-          전체보기 ›
+          전체보기
         </Link>
       </div>
 
@@ -99,7 +99,7 @@ export default async function DashboardPage() {
       <div className="section-head">
         <div className="section-title">{scheduleTitle}</div>
         <Link href="/reservation" className="section-link">
-          전체보기 ›
+          전체보기
         </Link>
       </div>
 
@@ -135,7 +135,7 @@ export default async function DashboardPage() {
       <div className="section-head">
         <div className="section-title">{songTitle}</div>
         <Link href="/setlist" className="section-link">
-          전체보기 ›
+          전체보기
         </Link>
       </div>
 

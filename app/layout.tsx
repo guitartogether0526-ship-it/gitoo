@@ -8,6 +8,7 @@ import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import LiveRefresh from "@/components/LiveRefresh";
 import RefreshButton from "@/components/RefreshButton";
 import PushBanner from "@/components/PushBanner";
+import Toaster from "@/components/Toaster";
 import { AuthProvider } from "@/lib/auth";
 import AuthGate from "@/components/AuthGate";
 import { getSession } from "@/lib/session";
@@ -54,6 +55,7 @@ export default async function RootLayout({
           </AuthGate>
         </AuthProvider>
         <ServiceWorkerRegister />
+        <Toaster />
       </body>
     </html>
   );

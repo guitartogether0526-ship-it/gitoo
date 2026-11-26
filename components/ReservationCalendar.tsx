@@ -42,6 +42,9 @@ const parseRange = (label: string): [number, number] | null => {
   return [Number(m[1]) * 60 + Number(m[2]), Number(m[3]) * 60 + Number(m[4])];
 };
 
+// DB 겹침 제약 위반 (supabase/schema.sql reservations_no_overlap — 같은 날 시간 구간 겹침)
+const OVERLAP_CODE = "23P01";
+
 // 두 시간대가 겹치는지
 const overlaps = (a: [number, number] | null, b: [number, number] | null) =>
   !!a && !!b && a[0] < b[1] && b[0] < a[1];
@@ -230,6 +233,13 @@ export default function ReservationCalendar({
       let res = await sb.from("reservations").insert(payload).select().single();
       let noCreator = false; // 등록자 id를 저장하지 못함(본인 수정 권한 미반영)
       let noEndDate = false; // MT 기간(end_date)을 저장하지 못하고 당일로 저장됨
+      if (res.error?.code === OVERLAP_CODE) {
+        // 거의 동시에 들어온 다른 예약과 겹침 — DB 제약(reservations_no_overlap)이 막았다
+        const { data: now } = await sb.from("reservations").select();
+        if (now) setReservations(now as Reservation[]);
+        setTimeError("방금 다른 예약이 먼저 등록되어 시간이 겹칩니다. 예약 현황을 확인해 주세요.");
+        return;
+      }
       if (res.error) {
         const { created_by_id: _cb, ...withoutCreator } = payload;
         res = await sb.from("reservations").insert(withoutCreator).select().single();
@@ -329,13 +339,15 @@ export default function ReservationCalendar({
       // end_date 컬럼이 아직 없을 수 있어 실패 시 컬럼 없이 재시도
       let { error } = await sb.from("reservations").update(payload).eq("id", id);
       let degraded = false;
-      if (error) {
+      if (error && error.code !== OVERLAP_CODE) {
         const { end_date: _ed, ...rest } = payload;
         const retry = await sb.from("reservations").update(rest).eq("id", id);
         error = retry.error;
         degraded = !error && payload.end_date != null; // 기간(end_date)을 저장 못함
       }
-      if (error) {
+      if (error?.code === OVERLAP_CODE) {
+        setNotice("방금 등록된 다른 예약과 시간이 겹쳐 수정하지 못했습니다. 예약 현황을 확인해 주세요.");
+      } else if (error) {
         setNotice("수정 저장에 실패했습니다. 새로고침 후 다시 시도해 주세요.");
       } else if (degraded) {
         setNotice("수정은 저장됐지만 MT 기간(종료 날짜)이 반영되지 않았습니다. 스키마 반영(supabase/schema.sql 재실행)이 필요합니다.");

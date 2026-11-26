@@ -91,9 +91,7 @@ function LoginForm({
       </div>
       <div className="login-links">
         <button onClick={() => onNav("signup")}>회원가입</button>
-        <span>·</span>
         <button onClick={() => onNav("findId")}>아이디 찾기</button>
-        <span>·</span>
         <button onClick={() => onNav("findPw")}>비밀번호 찾기</button>
       </div>
     </>
@@ -273,7 +271,6 @@ function FindIdForm({ onNav }: { onNav: (v: View) => void }) {
       </div>
       <div className="login-links">
         <button onClick={() => onNav("login")}>← 로그인으로 돌아가기</button>
-        <span>·</span>
         <button onClick={() => onNav("findPw")}>비밀번호 찾기</button>
       </div>
     </>
@@ -350,7 +347,6 @@ function FindPwForm({ onNav }: { onNav: (v: View) => void }) {
       </div>
       <div className="login-links">
         <button onClick={() => onNav("login")}>← 로그인으로 돌아가기</button>
-        <span>·</span>
         <button onClick={() => onNav("findId")}>아이디 찾기</button>
       </div>
     </>

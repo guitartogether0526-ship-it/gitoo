@@ -50,7 +50,7 @@ export default async function SetlistPage() {
     <>
       <div className="page-head">
         <h1>합주곡</h1>
-        <p>팀별 합주곡 · 곡 선정 · 유튜브 · 투표</p>
+        <p>팀별로 곡을 올리고, 유튜브로 들어 보고, 투표로 선정해요.</p>
       </div>
       <SetlistView teams={teams} initial={songs} myTeamIds={myTeamIds} members={memberList} />
     </>

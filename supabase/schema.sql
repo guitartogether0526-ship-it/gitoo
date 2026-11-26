@@ -283,3 +283,30 @@ drop policy if exists "gitoo_live_receive" on realtime.messages;
 create policy "gitoo_live_receive" on realtime.messages
   for select to anon, authenticated
   using (realtime.topic() = 'gitoo-live' and realtime.messages.extension = 'broadcast');
+
+-- ---------- 예약 시간 겹침 방지 (DB가 최종 차단) ----------
+-- 앱도 저장 직전에 최신 목록으로 겹침을 검사하지만, 거의 동시에 누른 두 예약은 둘 다 통과할 수 있다.
+-- time_label("19:00 - 21:00")에서 분 단위 구간을 계산해 두고, 같은 날짜에 구간이 겹치면 DB가 거부한다(23P01).
+-- MT 같은 기간 예약(end_date 있음)·시간 형식이 아닌 라벨은 구간이 null 이라 검사에서 빠진다(앱 동작과 같음).
+create extension if not exists btree_gist;
+
+create or replace function reservation_slot(p_label text, p_end date)
+returns int4range language sql immutable as $$
+  select case
+    when p_end is null and m is not null
+     and m[3]::int * 60 + m[4]::int > m[1]::int * 60 + m[2]::int
+    then int4range(m[1]::int * 60 + m[2]::int, m[3]::int * 60 + m[4]::int)
+  end
+  from (select regexp_match(p_label, '(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})') as m) s
+$$;
+
+alter table reservations add column if not exists slot int4range
+  generated always as (reservation_slot(time_label, end_date)) stored;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'reservations_no_overlap') then
+    alter table reservations add constraint reservations_no_overlap
+      exclude using gist (date with =, slot with &&) where (slot is not null);
+  end if;
+end $$;

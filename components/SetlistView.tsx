@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "./Toaster";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { type Song, type Team, type TeamCategory, TEAM_CATEGORIES, teamCategory } from "@/lib/types";
@@ -315,7 +316,7 @@ export default function SetlistView({
       setSongs((prev) =>
         prev.map((s) => (s.id === id ? { ...s, voted: cur.voted, likes: cur.likes } : s)),
       );
-      setNotice(res.error);
+      toast(res.error, "error");
     } else {
       // 서버 확정값으로 동기화 (다른 회원 투표까지 반영된 수)
       setSongs((prev) =>
@@ -326,7 +327,6 @@ export default function SetlistView({
 
   // 곡 선정/후보 저장 (서버 액션) + 완료 팝업
   const [statusBusy, setStatusBusy] = useState("");
-  const [notice, setNotice] = useState(""); // 저장 결과·오류 공용 안내 (alert 대신 앱 팝업)
   const [addBusy, setAddBusy] = useState(false); // 곡 등록 연타 방지
   // 삭제 확인 팝업 — window.confirm 대신 앱 안에서 물어본다
   const [confirmAsk, setConfirmAsk] = useState<{ msg: string; onOk: () => void } | null>(null);
@@ -337,11 +337,11 @@ export default function SetlistView({
     const res = await setSongStatus(id, next);
     setStatusBusy("");
     if ("error" in res) {
-      setNotice(res.error);
+      toast(res.error, "error");
       return;
     }
     setSongs((prev) => prev.map((s) => (s.id === id ? { ...s, status: next } : s)));
-    setNotice(next === "confirmed" ? "선정곡으로 저장했습니다." : "후보로 되돌렸습니다.");
+    toast(next === "confirmed" ? "선정곡으로 저장했습니다." : "후보로 되돌렸습니다.", "ok");
     router.refresh();
   };
 
@@ -369,7 +369,7 @@ export default function SetlistView({
       if (res.error || !res.data) {
         // 저장 실패 — 입력값을 지우지 않고 알린다
         setAddBusy(false);
-        setNotice("곡 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        toast("곡 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.", "error");
         return;
       }
       setSongs((prev) => [...prev, res.data as Song]);
@@ -384,7 +384,7 @@ export default function SetlistView({
     setArtist("");
     setYoutube("");
     setShowForm(false);
-    setNotice(`"${payload.title}" 을(를) ${isFestival ? "목록에 추가했습니다" : "후보곡으로 올렸습니다"}.`);
+    toast(`"${payload.title}" 을(를) ${isFestival ? "목록에 추가했습니다" : "후보곡으로 올렸습니다"}.`, "ok");
   };
 
   const startEdit = (s: Song) => {
@@ -594,6 +594,10 @@ export default function SetlistView({
                         onError={(e) => {
                           e.currentTarget.style.display = "none";
                         }}
+                        // 삭제·비공개 영상은 404 대신 120px짜리 회색 대체 이미지가 오기도 한다 — 그것도 숨김
+                        onLoad={(e) => {
+                          if (e.currentTarget.naturalWidth <= 120) e.currentTarget.style.display = "none";
+                        }}
                       />
                     </a>
                   ) : (
@@ -783,16 +787,6 @@ export default function SetlistView({
       </p>
         </>
       )}
-        </div>
-      )}
-
-      {/* 선정/후보 저장 결과 팝업 */}
-      {notice && (
-        <div className="modal-overlay" onClick={() => setNotice("")}>
-          <div className="card" style={{ margin: 0, width: "100%", maxWidth: 360, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-            <p style={{ fontWeight: 700, margin: "4px 0 12px", fontSize: 15 }}>{notice}</p>
-            <button className="btn amber" style={{ width: "100%" }} onClick={() => setNotice("")}>확인</button>
-          </div>
         </div>
       )}
 

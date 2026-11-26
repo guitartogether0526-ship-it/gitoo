@@ -21,7 +21,7 @@ export default async function BoardPage() {
     <>
       <div className="page-head">
         <h1>게시판</h1>
-        <p>공지사항 · 자유게시판 · 운영진이 게시판 추가 가능</p>
+        <p>공지사항과 자유게시판이에요. 운영진은 게시판을 더 만들 수 있어요.</p>
       </div>
       <Link
         href="/sound-guide"

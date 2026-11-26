@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "./Toaster";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Board, Post } from "@/lib/types";
@@ -151,7 +152,7 @@ export default function BoardView({
       const { data, error } = await sb.from("posts").insert(payload).select().single();
       if (error || !data) {
         // 저장 실패 — 입력값을 지우거나 푸시를 보내지 않고 알린다
-        alert("글 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        toast("글 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.", "error");
         return;
       }
       setPosts((prev) => [...prev, data as Post]);

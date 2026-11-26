@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "./Toaster";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -149,7 +150,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
     if ("ok" in res) {
       setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, approved: true } : m)));
       router.refresh();
-    } else alert(res.error);
+    } else toast(res.error, "error");
   };
 
   const onReject = async (id: string) => {
@@ -159,7 +160,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
     if ("ok" in res) {
       setMembers((prev) => prev.filter((m) => m.id !== id));
       router.refresh();
-    } else alert(res.error);
+    } else toast(res.error, "error");
   };
 
   // 낙관적 갱신 공통 — 필드 패치 → 서버 액션 → 실패 시 원복 + 알림
@@ -174,7 +175,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
     const res = await action();
     if ("error" in res) {
       setMembers((prev) => prev.map((m) => (m.id === id ? ({ ...m, [key]: prevVal } as Member) : m)));
-      alert(res.error);
+      toast(res.error, "error");
     }
   };
 
@@ -193,7 +194,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
     if ("ok" in res) {
       setMembers((prev) => prev.filter((x) => x.id !== m.id));
       router.refresh();
-    } else alert(res.error);
+    } else toast(res.error, "error");
   };
 
   // 회원 목록은 운영진(관리자·회장·총무·STAFF)만 열람
