@@ -66,7 +66,7 @@ function SortTh({
         }}
       >
         {label}
-        <svg
+        <svg aria-hidden="true"
           width="10"
           height="10"
           viewBox="0 0 24 24"
@@ -253,7 +253,7 @@ export default function MemberList({ initial, teams }: { initial: Member[]; team
         </div>
       ) : (
         <div className="table-wrap">
-          <table className="mtable">
+          <table className="mtable sticky-first">
             <thead>
               <tr>
                 <SortTh label="이름" k="name" sortKey={sortKey} dir={sortDir} onSort={onSort} />

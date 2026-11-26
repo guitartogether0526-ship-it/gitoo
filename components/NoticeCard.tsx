@@ -47,13 +47,8 @@ export default function NoticeCard({
       </button>
       {open && (
         <>
-          <p
-            className="item-sub"
-            style={{ marginTop: 8, lineHeight: 1.5, whiteSpace: "pre-wrap" }}
-          >
-            {body}
-          </p>
-          {meta && <div className="meta-line">{meta}</div>}
+          <p className="item-sub notice-body">{body}</p>
+          {meta && <div className="meta-line notice-body">{meta}</div>}
         </>
       )}
     </div>

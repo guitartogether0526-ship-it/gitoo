@@ -24,7 +24,9 @@ export default function ReservationTabs({
           안되는 날 체크
         </button>
       </div>
-      {tab === "reserve" ? reserve : unavailable}
+      <div key={tab} className="tab-panel">
+        {tab === "reserve" ? reserve : unavailable}
+      </div>
     </>
   );
 }

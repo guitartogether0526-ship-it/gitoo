@@ -45,7 +45,7 @@ export default function PushBanner() {
 
   return (
     <div className="push-banner">
-      <svg
+      <svg aria-hidden="true"
         width="16"
         height="16"
         viewBox="0 0 24 24"

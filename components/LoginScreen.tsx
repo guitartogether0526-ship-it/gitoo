@@ -138,7 +138,7 @@ function SignupForm({ onNav }: { onNav: (v: View) => void }) {
     return (
       <>
         <div className="card" style={{ textAlign: "center" }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 36, height: 36, color: "var(--accent)", display: "block", margin: "0 auto" }}>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 36, height: 36, color: "var(--accent)", display: "block", margin: "0 auto" }}>
             <circle cx="12" cy="12" r="9" />
             <path d="M8 12.5l2.5 2.5L16 9.5" />
           </svg>
@@ -249,7 +249,7 @@ function FindIdForm({ onNav }: { onNav: (v: View) => void }) {
         {error && <p className="form-error">{error}</p>}
         {sent && (
           <div className="card" style={{ margin: 0, textAlign: "center" }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 32, height: 32, color: "var(--accent)", display: "block", margin: "0 auto" }}>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 32, height: 32, color: "var(--accent)", display: "block", margin: "0 auto" }}>
               <rect x="3" y="5" width="18" height="14" rx="2" />
               <path d="m3 7 9 6 9-6" />
             </svg>
@@ -307,7 +307,7 @@ function FindPwForm({ onNav }: { onNav: (v: View) => void }) {
     return (
       <>
         <div className="card" style={{ textAlign: "center" }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 36, height: 36, color: "var(--accent)", display: "block", margin: "0 auto" }}>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 36, height: 36, color: "var(--accent)", display: "block", margin: "0 auto" }}>
             <circle cx="8" cy="15" r="4.5" />
             <path d="M11.2 11.8 20 3M17 6l2.5 2.5" />
           </svg>

@@ -159,7 +159,7 @@ function Shot({
   const fs = w / 26; // 화면 폭 350px 기준 약 13px
   return (
     <figure className="guide-shot">
-      <svg viewBox={`${x} ${y} ${w} ${h}`} role="img">
+      <svg aria-hidden="true" viewBox={`${x} ${y} ${w} ${h}`} role="img">
         <image href="/sound-guide/mixer.jpg" x="0" y="0" width="1200" height="750" />
         {marks.map((m, i) =>
           m.w && m.h ? (
@@ -533,7 +533,9 @@ export default function SoundGuide({ data }: { data: SoundGuideData }) {
           </button>
         ))}
       </div>
-      <Pane data={data} />
+      <div key={tab} className="tab-panel">
+        <Pane data={data} />
+      </div>
       <div className="mt-12" style={{ textAlign: "center", padding: "8px 0 4px" }}>
         <Link href="/" className="section-link">
           기타투게더 앱 열기

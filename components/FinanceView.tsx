@@ -8,7 +8,7 @@ import { useSyncedState } from "@/lib/use-synced-state";
 /** 외부 링크(새 탭) 라인 아이콘 */
 function ExternalIcon() {
   return (
-    <svg
+    <svg aria-hidden="true"
       width="12"
       height="12"
       viewBox="0 0 24 24"
@@ -28,7 +28,7 @@ function ExternalIcon() {
 
 function Chevron({ dir }: { dir: "left" | "right" }) {
   return (
-    <svg
+    <svg aria-hidden="true"
       width="14"
       height="14"
       viewBox="0 0 24 24"
@@ -116,17 +116,17 @@ export default function FinanceView({
         <div className="flex between mt-12" style={{ gap: 12, textAlign: "center" }}>
           <div className="grow">
             <div className="dim" style={{ fontSize: 11 }}>이월</div>
-            <div style={{ fontWeight: 800 }}>{won(data?.carryover)}</div>
+            <div className="fin-figure">{won(data?.carryover)}</div>
           </div>
           <div className="grow">
             <div className="dim" style={{ fontSize: 11 }}>수입</div>
-            <div style={{ fontWeight: 800 }}>
+            <div className="fin-figure">
               {data?.incomeTotal != null ? `+${data.incomeTotal.toLocaleString("ko-KR")}원` : "—"}
             </div>
           </div>
           <div className="grow">
             <div className="dim" style={{ fontSize: 11 }}>지출</div>
-            <div style={{ fontWeight: 800, color: "var(--danger)" }}>{won(data?.expenseTotal)}</div>
+            <div className="fin-figure" style={{ color: "var(--danger)" }}>{won(data?.expenseTotal)}</div>
           </div>
         </div>
       </div>
@@ -201,7 +201,7 @@ export default function FinanceView({
         <div className="section-title">지출 내역</div>
       )}
 
-      <div style={{ opacity: isPending ? 0.55 : 1, transition: "opacity .15s" }}>
+      <div key={activeTab} className="tab-panel" style={{ opacity: isPending ? 0.55 : 1, transition: "opacity .15s" }}>
         {!data ? (
           <div className="card">
             <p className="dim" style={{ margin: 0, fontSize: 13 }}>

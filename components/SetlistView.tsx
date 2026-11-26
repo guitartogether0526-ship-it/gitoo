@@ -24,7 +24,7 @@ type MemberLite = {
 };
 
 const HeartIcon = ({ filled }: { filled: boolean }) => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 20s-7-4.6-9.3-9.1C1.2 8 2.5 5 5.5 5c1.9 0 3 1 2.5 1S10 5 12 7c2-2 4-2 4-2s.6 0 2.5 0c3 0 4.3 3 2.8 5.9C19 15.4 12 20 12 20Z" />
   </svg>
 );
@@ -557,7 +557,7 @@ export default function SetlistView({
                 </span>
               )}
               {!isConfirmed && (
-                <svg
+                <svg aria-hidden="true"
                   width="14"
                   height="14"
                   viewBox="0 0 24 24"
@@ -729,7 +729,7 @@ export default function SetlistView({
 
       {/* 곡 목록 — 팀이 없는 페이지에서는 감춘다 */}
       {!!activeTeam && (
-        <>
+        <div key={activeTeam} className="tab-panel">
       {isFestival ? (
         // 재롱페스티벌 — 곡명 / 참여인원 한 줄 목록
         <>
@@ -783,7 +783,7 @@ export default function SetlistView({
       </p>
         </>
       )}
-        </>
+        </div>
       )}
 
       {/* 선정/후보 저장 결과 팝업 */}

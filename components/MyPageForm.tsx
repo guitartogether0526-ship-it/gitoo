@@ -201,7 +201,7 @@ export default function MyPageForm({
             </select>
           </div>
           {error && <p className="form-error">{error}</p>}
-          {saved && <p className="dim" style={{ color: "var(--ok, #5ac88a)", fontSize: 13, margin: 0 }}>저장되었습니다.</p>}
+          {saved && <p className="form-ok">저장되었습니다.</p>}
           <button className="btn amber" disabled={busy} onClick={submit}>
             {busy ? "저장 중…" : "기본 정보 저장"}
           </button>
@@ -227,7 +227,7 @@ export default function MyPageForm({
             <input className="input" type="password" value={newPw2} onChange={(e) => setNewPw2(e.target.value)} placeholder="다시 입력" autoComplete="new-password" />
           </div>
           {pwError && <p className="form-error">{pwError}</p>}
-          {pwSaved && <p className="dim" style={{ color: "var(--ok, #5ac88a)", fontSize: 13, margin: 0 }}>비밀번호가 변경되었습니다.</p>}
+          {pwSaved && <p className="form-ok">비밀번호가 변경되었습니다.</p>}
           <button className="btn amber" disabled={pwBusy} onClick={submitPw}>
             {pwBusy ? "변경 중…" : "비밀번호 변경"}
           </button>

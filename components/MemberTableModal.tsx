@@ -267,7 +267,7 @@ export default function MemberTableModal({
             onClick={downloadImage}
             style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
           >
-              <svg
+              <svg aria-hidden="true"
                 width="12"
                 height="12"
                 viewBox="0 0 24 24"

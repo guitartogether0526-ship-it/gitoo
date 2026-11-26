@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Noto_Sans_KR } from "next/font/google";
+// 글꼴: Pretendard (한글 단정 · 숫자 폭 일정). 동적 서브셋이라 화면에 쓰인 글자만 내려받는다.
+import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./globals.css";
 import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
@@ -11,18 +12,6 @@ import { AuthProvider } from "@/lib/auth";
 import AuthGate from "@/components/AuthGate";
 import { getSession } from "@/lib/session";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const notoSansKr = Noto_Sans_KR({
-  subsets: ["latin"],
-  weight: ["400", "500", "700", "800"],
-  variable: "--font-noto-kr",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "GUITAR TOGETHER",
@@ -50,7 +39,7 @@ export default async function RootLayout({
   const session = await getSession();
 
   return (
-    <html lang="ko" className={`${inter.variable} ${notoSansKr.variable}`}>
+    <html lang="ko">
       <body>
         <AuthProvider initialUser={session}>
           <AuthGate page={children}>

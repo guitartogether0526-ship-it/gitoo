@@ -176,14 +176,14 @@ export default async function DashboardPage() {
       <div className="section-title">바로가기</div>
       <div className="stat-grid">
         <Link href="/reservation" className="stat">
-          <svg className="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg aria-hidden="true" className="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="4.5" width="18" height="16" rx="2" />
             <path d="M3 9h18M8 2.5v4M16 2.5v4" />
           </svg>
           <div className="s-label">연습실 예약</div>
         </Link>
         <Link href="/setlist" className="stat">
-          <svg className="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg aria-hidden="true" className="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 18V5l11-2v13" />
             <circle cx="6" cy="18" r="3" />
             <circle cx="17" cy="16" r="3" />

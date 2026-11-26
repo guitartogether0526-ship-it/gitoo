@@ -236,6 +236,7 @@ export default function BoardView({
         </div>
       )}
 
+      <div key={activeBoard} className="tab-panel">
       <div className="section-title">
         {current?.name} ({boardPosts.length})
       </div>
@@ -349,6 +350,7 @@ export default function BoardView({
           );
         })
       )}
+      </div>
 
       <p className="dim" style={{ fontSize: 12, textAlign: "center", marginTop: 8 }}>
         {isAnon

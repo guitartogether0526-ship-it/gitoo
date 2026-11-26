@@ -134,6 +134,7 @@ export default function CuesheetEditor({ id, initial, teams }: { id: string; ini
         ))}
       </div>
 
+      <div key={active} className="tab-panel">
       <div className="btn-row">
         <button className="btn amber btn-sm" onClick={() => downloadCuePng({ title, date, team: teams[idx].name, cue })}>
           {teams[idx].name} 이미지 저장
@@ -257,6 +258,8 @@ export default function CuesheetEditor({ id, initial, teams }: { id: string; ini
           <button className="btn btn-sm" onClick={() => update((t) => ({ ...t, fx: [...t.fx, blankFx()] }))}>이펙터 추가</button>
         </div>
       )}
+
+      </div>
 
       {sheet && (
         <div className="cue-picker-back" onClick={() => setPick(null)}>

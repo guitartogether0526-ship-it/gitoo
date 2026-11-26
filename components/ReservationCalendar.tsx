@@ -534,7 +534,7 @@ export default function ReservationCalendar({
                 <input className="input grow" value={myName} disabled readOnly />
               )}
               {(purpose === "합주" || purpose === "개인연습") && (
-                <label className="flex items-center gap-8" style={{ fontSize: 13, whiteSpace: "nowrap" }}>
+                <label className="check-label">
                   <input
                     type="checkbox"
                     checked={isPersonal}
