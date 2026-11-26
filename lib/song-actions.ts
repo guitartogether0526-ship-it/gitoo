@@ -1,5 +1,6 @@
 "use server";
 
+import { notifyChanged } from "./realtime";
 import { can } from "./roles";
 import { getSession } from "./session";
 import { getSupabaseAdmin } from "./supabase-admin";
@@ -92,5 +93,6 @@ export async function toggleSongVote(
     .from("song_votes")
     .select("*", { count: "exact", head: true })
     .eq("song_id", songId);
+  notifyChanged("song_votes");
   return { ok: true, voted: !existing, likes: count ?? 0 };
 }

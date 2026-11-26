@@ -5,6 +5,7 @@ import { can } from "./roles";
 import { getSession } from "./session";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { getTeams } from "./db";
+import { notifyChanged } from "./realtime";
 import { isCueId, normalizeCuesheetLoose, normalizeTeamCue, type TeamCue } from "./cuesheet";
 
 type Res = { ok: true } | { error: string };
@@ -29,6 +30,7 @@ export async function createCuesheet(formData: FormData): Promise<void> {
     .from("app_settings")
     .insert({ key: `cuesheet:${id}`, value: { title, date, teams: {} }, updated_at: new Date().toISOString() });
   if (error) throw new Error("큐시트 생성 실패: " + error.message);
+  notifyChanged("app_settings");
   redirect(`/cuesheet?id=${id}`);
 }
 
@@ -67,6 +69,7 @@ export async function saveCuesheet(
     updated_at: new Date().toISOString(),
   });
   if (error) return { error: "저장 실패: " + error.message };
+  notifyChanged("app_settings");
   return { ok: true };
 }
 
@@ -77,5 +80,6 @@ export async function deleteCuesheet(id: string): Promise<Res> {
   if (!sb) return { error: "Supabase 미연결" };
   const { error } = await sb.from("app_settings").delete().eq("key", `cuesheet:${id}`);
   if (error) return { error: "삭제 실패: " + error.message };
+  notifyChanged("app_settings");
   return { ok: true };
 }

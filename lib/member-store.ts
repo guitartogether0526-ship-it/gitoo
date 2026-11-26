@@ -2,6 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { Member } from "./types";
 import { getSupabaseAdmin } from "./supabase-admin";
+import { notifyChanged } from "./realtime";
 
 /**
  * 회원 + 자격증명(비밀번호) 저장소 — 서버 전용.
@@ -98,6 +99,7 @@ export async function createMember(input: {
       await sb.from("members").delete().eq("id", id);
       throw new Error(aErr.message);
     }
+    notifyChanged("members");
   } else {
     mem.rows.push({ ...member, password: input.passwordHash });
   }
@@ -139,6 +141,7 @@ export async function setApproved(id: string, approved: boolean): Promise<void> 
   const sb = getSupabaseAdmin();
   if (sb) {
     await sb.from("members").update({ approved }).eq("id", id);
+    notifyChanged("members");
     return;
   }
   const row = mem.rows.find((r) => r.id === id);
@@ -149,6 +152,7 @@ export async function setRole(id: string, role: Member["role"]): Promise<void> {
   const sb = getSupabaseAdmin();
   if (sb) {
     await sb.from("members").update({ role }).eq("id", id);
+    notifyChanged("members");
     return;
   }
   const row = mem.rows.find((r) => r.id === id);
@@ -180,6 +184,7 @@ export async function setProfile(
   const sb = getSupabaseAdmin();
   if (sb) {
     await sb.from("members").update(patch).eq("id", id);
+    notifyChanged("members");
     return;
   }
   const row = mem.rows.find((r) => r.id === id);
@@ -190,6 +195,7 @@ export async function setStatus(id: string, status: Member["status"]): Promise<v
   const sb = getSupabaseAdmin();
   if (sb) {
     await sb.from("members").update({ status }).eq("id", id);
+    notifyChanged("members");
     return;
   }
   const row = mem.rows.find((r) => r.id === id);
@@ -206,6 +212,7 @@ export async function setTeam(
   const sb = getSupabaseAdmin();
   if (sb) {
     await sb.from("members").update({ [col]: teamId }).eq("id", id);
+    notifyChanged("members");
     return;
   }
   const row = mem.rows.find((r) => r.id === id);
@@ -232,6 +239,7 @@ export async function removeMember(id: string): Promise<void> {
       sb.from("song_votes").delete().eq("member_id", id),
     ]);
     for (const r of cleanup) if (r.error) console.error("removeMember cleanup:", r.error.message);
+    notifyChanged("members");
     return;
   }
   mem.rows = mem.rows.filter((r) => r.id !== id);

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { setUnavailable, getMyUnavailable, getTeamUnavailable } from "@/lib/availability-actions";
+import { LIVE_EVENT } from "@/lib/live";
 import { kstParts } from "@/lib/date";
 
 const DOW = ["일", "월", "화", "수", "목", "금", "토"];
@@ -51,6 +52,38 @@ export default function AvailabilityChecker({
       .catch(() => {});
   }, []);
 
+  // 실시간 — 누군가 안되는 날을 바꾸면 다시 불러온다 (components/LiveRefresh 가 알림)
+  //  · 팀 일정 팝업: 열려 있을 때만. 요청 번호로 늦게 도착한 옛 응답은 버린다
+  //  · 내 날짜: 다른 기기에서 바꾼 것도 반영. 내가 저장 중이면 화면이 되돌아가지 않게 건너뛴다
+  const teamReq = useRef(0);
+  const myReq = useRef(0);
+  const savingRef = useRef(0);
+  const showListRef = useRef(showList);
+  showListRef.current = showList;
+  useEffect(() => {
+    const onLive = (e: Event) => {
+      if ((e as CustomEvent<string>).detail !== "unavailable_dates") return;
+      if (savingRef.current === 0) {
+        const n = ++myReq.current;
+        getMyUnavailable()
+          .then((dates) => {
+            if (n === myReq.current && savingRef.current === 0) setMyUnavail(new Set(dates));
+          })
+          .catch(() => {});
+      }
+      if (showListRef.current) {
+        const n = ++teamReq.current;
+        getTeamUnavailable()
+          .then((res) => {
+            if (n === teamReq.current && !("error" in res)) setTeamGroups(res.teams);
+          })
+          .catch(() => {});
+      }
+    };
+    window.addEventListener(LIVE_EVENT, onLive);
+    return () => window.removeEventListener(LIVE_EVENT, onLive);
+  }, []);
+
   const days = useMemo(
     () => Array.from({ length: 14 }, (_, i) => addDays(weekStart, i)),
     [weekStart],
@@ -73,7 +106,10 @@ export default function AvailabilityChecker({
         return next;
       });
     apply(!has);
-    const res = await setUnavailable(ymd, !has);
+    savingRef.current++;
+    const res = await setUnavailable(ymd, !has).finally(() => {
+      savingRef.current--;
+    });
     if ("error" in res) {
       apply(has); // 롤백
       setError(res.error);

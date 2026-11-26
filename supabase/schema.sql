@@ -256,3 +256,30 @@ insert into teams (id, name, category, sort_order) values
 on conflict (id) do nothing;
 
 -- posts / reservations / songs / dues / expenses 는 시드하지 않음(운영 데이터로만 채움).
+
+-- ---------- 실시간 반영 (Supabase Realtime) ----------
+-- 앱이 이 테이블들의 변경 신호(postgres_changes)를 구독해, 다른 사람이 바꾸면 화면을 바로 갱신한다
+-- (lib/live.ts LIVE_TABLES 와 같아야 함). 모두 공개 읽기(public_all) 테이블이라 새로 노출되는 데이터는 없다.
+-- 좋아요·안되는 날·회원은 공개 권한이 없어 여기 넣지 않고, 서버가 저장 직후 방송한다(lib/realtime.ts).
+-- 이미 추가된 테이블은 건너뛰므로 여러 번 실행해도 안전.
+do $$
+declare t text;
+begin
+  foreach t in array array['reservations','posts','boards','songs','teams']
+  loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I;', t);
+    end if;
+  end loop;
+end $$;
+
+-- ---------- 실시간 방송 채널 권한 (비공개 채널 gitoo-live) ----------
+-- 받기(select)만 누구나 허용하고, 보내기(insert) 정책은 두지 않는다 → 방송은 서버(service_role)만 가능.
+-- (공개 채널이면 앱에 들어 있는 anon 키로 누구나 "바뀌었음"을 보내 모든 화면을 새로고침시킬 수 있다)
+drop policy if exists "gitoo_live_receive" on realtime.messages;
+create policy "gitoo_live_receive" on realtime.messages
+  for select to anon, authenticated
+  using (realtime.topic() = 'gitoo-live' and realtime.messages.extension = 'broadcast');

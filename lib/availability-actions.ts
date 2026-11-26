@@ -1,5 +1,6 @@
 "use server";
 
+import { notifyChanged } from "./realtime";
 import { getSession } from "./session";
 import { getSupabaseAdmin } from "./supabase-admin";
 import { getAllMembers } from "./member-store";
@@ -29,6 +30,7 @@ export async function setUnavailable(
       .eq("date", date);
     if (error) return { error: "저장 실패: " + error.message };
   }
+  notifyChanged("unavailable_dates");
   return { ok: true };
 }
 

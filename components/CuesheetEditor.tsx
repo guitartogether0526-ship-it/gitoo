@@ -37,6 +37,19 @@ export default function CuesheetEditor({ id, initial, teams }: { id: string; ini
   );
   const dirty = title !== base.title || date !== base.date || Object.keys(changed).length > 0;
   useRefreshHold(dirty || pick !== null);
+  // 실시간 — 다른 운영진이 저장해 서버값이 바뀌면, 내 화면에 저장 안 한 변경이 없을 때만 따라간다
+  const initKey = JSON.stringify([initial, teams]);
+  const prevInitKey = useRef(initKey);
+  useEffect(() => {
+    if (initKey === prevInitKey.current) return;
+    prevInitKey.current = initKey;
+    if (dirty) return;
+    const next = fill(initial, teams);
+    setTitle(initial.title);
+    setDate(initial.date);
+    setData(next);
+    setBase({ title: initial.title, date: initial.date, teams: next });
+  }, [initKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!pick) return;

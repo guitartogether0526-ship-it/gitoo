@@ -3,6 +3,7 @@
 import { can } from "./roles";
 import { getSession } from "./session";
 import { getSupabaseAdmin } from "./supabase-admin";
+import { notifyChanged } from "./realtime";
 import type { ScheduleRow } from "./db";
 
 const MAX_ROWS = 8;
@@ -28,5 +29,6 @@ export async function saveSchedule(ym: string, input: unknown): Promise<{ ok: tr
     .from("app_settings")
     .upsert({ key: `schedule:${ym}`, value: rows, updated_at: new Date().toISOString() });
   if (error) return { error: "저장 실패(schema.sql의 app_settings 테이블이 필요합니다): " + error.message };
+  notifyChanged("app_settings");
   return { ok: true };
 }

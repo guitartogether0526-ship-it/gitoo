@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ScheduleRow } from "@/lib/db";
@@ -157,6 +157,15 @@ export default function ScheduleEditor({ ym, initial }: { ym: string; initial: S
   const [error, setError] = useState("");
   const dirty = JSON.stringify(rows) !== JSON.stringify(base);
   useRefreshHold(dirty);
+  // 실시간 — 다른 운영진이 저장해 서버값이 바뀌면, 내 화면에 저장 안 한 변경이 없을 때만 따라간다
+  const baseKey = JSON.stringify(base);
+  const prevBaseKey = useRef(baseKey);
+  useEffect(() => {
+    if (baseKey === prevBaseKey.current) return;
+    const prev = prevBaseKey.current;
+    prevBaseKey.current = baseKey;
+    setRows((cur) => (JSON.stringify(cur) === prev ? (JSON.parse(baseKey) as ScheduleRow[]) : cur));
+  }, [baseKey]);
 
   const [y, m] = ym.split("-").map(Number);
   const set = (i: number, k: keyof ScheduleRow, v: string) =>

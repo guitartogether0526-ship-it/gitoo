@@ -4,6 +4,7 @@ import { revalidateTag } from "next/cache";
 import { can } from "./roles";
 import { getSession } from "./session";
 import { getSupabaseAdmin } from "./supabase-admin";
+import { notifyChanged } from "./realtime";
 import { normalizeSoundGuide } from "./sound-guide-data";
 
 /**
@@ -32,5 +33,6 @@ export async function saveSoundGuide(
     .upsert({ key: "sound_guide", value: data, updated_at: new Date().toISOString() });
   if (error) return { error: "저장 실패: " + error.message };
   revalidateTag("sound-guide");
+  notifyChanged("app_settings");
   return { ok: true };
 }
